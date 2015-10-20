@@ -41,6 +41,7 @@ INSTALLED_APPS = (
     'ban.versioning',
     'ban.core',
     'ban.http',
+    'ban.importer',
 )
 
 MIDDLEWARE_CLASSES = (
