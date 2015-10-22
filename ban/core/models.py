@@ -70,7 +70,7 @@ class Municipality(NamedModel, VersionMixin, PublicMixin):
 class BaseFantoirModel(NamedModel, VersionMixin, PublicMixin):
     public_fields = ['name', 'fantoir', 'municipality']
 
-    fantoir = models.CharField(max_length=5, blank=True, null=True)
+    fantoir = models.CharField(max_length=9, blank=True, null=True)
     municipality = models.ForeignKey(Municipality)
 
     class Meta:
@@ -100,12 +100,15 @@ class HouseNumber(TrackedModel, VersionMixin, PublicMixin):
     ordinal = models.CharField(max_length=16, blank=True)
     street = models.ForeignKey(Street, blank=True, null=True)
     locality = models.ForeignKey(Locality, blank=True, null=True)
-    cia = models.CharField(max_length=100, blank=True)
+    cia = models.CharField(max_length=100, blank=True, editable=False)
 
     class Meta:
         # Does not work, as SQL does not consider NULL has values. Is there
         # any way to enforce that at the DB level anyway?
         unique_together = ('number', 'ordinal', 'street', 'locality')
+
+    def __str__(self):
+        return ' '.join([self.number, self.ordinal])
 
     def save(self, *args, **kwargs):
         if not getattr(self, '_clean_called', False):
