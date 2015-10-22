@@ -84,7 +84,7 @@ class BaseCRUD(URLMixin, View):
                 status = 409
                 self.object = self.get_object()
             else:
-                status = 200
+                status = 200 if self.ref else 201
             return self.to_json(status=status, **self.object.public_data)
         else:
             return self.to_json(status=422, errors=form.errors)

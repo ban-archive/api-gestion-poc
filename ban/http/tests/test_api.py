@@ -73,6 +73,7 @@ def test_create_position(loggedclient):
         "housenumber": housenumber.pk,
     }
     resp = loggedclient.post(url, data)
+    assert resp.status_code == 201
     content = json.loads(resp.content.decode())
     assert content['id']
     assert content['center']['lon'] == 3
@@ -191,7 +192,7 @@ def test_create_housenumber(loggedclient):
         "street": street.pk,
     }
     resp = loggedclient.post(url, data)
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     content = json.loads(resp.content.decode())
     assert content['id']
     assert content['number'] == '20'
@@ -208,7 +209,7 @@ def test_create_housenumber_does_not_use_version_field(loggedclient):
         "street": street.pk,
     }
     resp = loggedclient.post(url, data)
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     content = json.loads(resp.content.decode())
     assert content['id']
     assert content['version'] == 1
@@ -257,7 +258,7 @@ def test_create_street(loggedclient):
         "municipality": municipality.pk,
     }
     resp = loggedclient.post(url, data)
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     content = json.loads(resp.content.decode())
     assert content['id']
     assert content['name'] == 'Rue de la Plage'
