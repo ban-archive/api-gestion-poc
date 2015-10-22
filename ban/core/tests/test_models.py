@@ -2,8 +2,6 @@ import pytest
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 
-from ban.core import models
-
 from .factories import (HouseNumberFactory, MunicipalityFactory,
                         PositionFactory, StreetFactory)
 
@@ -30,16 +28,6 @@ def test_municipality_is_versioned():
     assert version2.name == "Orvanne"
 
 
-def test_municipality_from_ref_should_handle_pk():
-    municipality = MunicipalityFactory()
-    assert models.Municipality.from_ref(municipality.pk) == municipality
-
-
-def test_municipality_from_ref_should_handle_insee():
-    municipality = MunicipalityFactory(insee='11111')
-    assert models.Municipality.from_ref('11111') == municipality
-
-
 def test_street_is_versioned():
     initial_name = "Rue des Pommes"
     street = StreetFactory(name=initial_name)
@@ -53,16 +41,6 @@ def test_street_is_versioned():
     version2 = street.versions[1].load()
     assert version1.name == "Rue des Pommes"
     assert version2.name == "Rue des Poires"
-
-
-def test_street_from_ref_should_handle_pk():
-    street = StreetFactory()
-    assert models.Street.from_ref(street.pk) == street
-
-
-def test_street_from_ref_should_handle_insee():
-    street = StreetFactory(fantoir='0644M')
-    assert models.Street.from_ref('0644M') == street
 
 
 def test_tmp_fantoir_should_use_name():
@@ -107,16 +85,6 @@ def test_housenumber_is_versioned():
     assert version1.ordinal == "b"
     assert version2.ordinal == "bis"
     assert version2.street == street
-
-
-def test_housenumber_from_ref_should_handle_pk():
-    hn = HouseNumberFactory()
-    assert models.HouseNumber.from_ref(hn.pk) == hn
-
-
-def test_housenumber_from_ref_should_handle_insee():
-    hn = HouseNumberFactory()
-    assert models.HouseNumber.from_ref(hn.cia) == hn
 
 
 def test_cannot_duplicate_housenumber_on_same_street():

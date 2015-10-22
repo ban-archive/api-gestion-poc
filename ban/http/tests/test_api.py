@@ -10,32 +10,32 @@ from ban.core.tests.factories import (HouseNumberFactory, PositionFactory,
 pytestmark = pytest.mark.django_db
 
 
-def test_position_url():
-    assert reverse('api:position', kwargs={"ref": 1}) == '/api/position/1/'
-    assert reverse('api:position') == '/api/position/'
+@pytest.mark.parametrize('name,kwargs,expected', [
+    ['api:position', {"ref": 1, "key": "id"}, '/api/position/id/1/'],
+    ['api:position', {}, '/api/position/'],
+    ['api:housenumber', {"ref": 1, "key": "id"}, '/api/housenumber/id/1/'],
+    ['api:housenumber', {"ref": "93031_1491H_84_BIS", "key": "cia"}, '/api/housenumber/cia/93031_1491H_84_BIS/'],  # noqa
+    ['api:housenumber', {}, '/api/housenumber/'],
+    ['api:street', {"ref": 1, "key": "id"}, '/api/street/id/1/'],
+    ['api:street', {"ref": "930310644M", "key": "fantoir"}, '/api/street/fantoir/930310644M/'],  # noqa
+    ['api:street', {}, '/api/street/'],
+    ['api:municipality', {"ref": 1, "key": "id"}, '/api/municipality/id/1/'],
+    ['api:municipality', {"ref": "93031", "key": "insee"}, '/api/municipality/insee/93031/'],  # noqa
+    ['api:municipality', {"ref": "93031321", "key": "siren"}, '/api/municipality/siren/93031321/'],  # noqa
+    ['api:municipality', {}, '/api/municipality/'],
+])
+def test_api_url(name, kwargs, expected):
+    assert reverse(name, kwargs=kwargs) == expected
 
 
-def test_housenumber_url():
-    assert reverse('api:housenumber',
-                   kwargs={"ref": 1}) == '/api/housenumber/1/'
-    assert reverse('api:housenumber') == '/api/housenumber/'
+def test_invalid_identifier_returns_400(client, url):
+    resp = client.get(url('api:position', ref="value", key="invalid"))
+    assert resp.status_code == 400
 
 
-def test_street_url():
-    assert reverse('api:street', kwargs={"ref": 1}) == '/api/street/1/'
-    assert reverse('api:street') == '/api/street/'
-
-
-def test_get_position(client):
-    position = PositionFactory(source="XXX")
-    resp = client.get(reverse('api:position', kwargs={'ref': position.pk}))
-    content = json.loads(resp.content.decode())
-    assert content['source'] == "XXX"
-
-
-def test_get_housenumber(client):
+def test_get_housenumber(client, url):
     housenumber = HouseNumberFactory(number="22")
-    resp = client.get(reverse('api:housenumber', kwargs={'ref': housenumber.pk}))
+    resp = client.get(url('api:housenumber', ref=housenumber.pk, key="id"))
     content = json.loads(resp.content.decode())
     assert content['number'] == "22"
     assert content['id'] == housenumber.pk
@@ -43,23 +43,23 @@ def test_get_housenumber(client):
     assert content['street']['name'] == housenumber.street.name
 
 
-def test_get_housenumber_with_cia(client):
+def test_get_housenumber_with_cia(client, url):
     housenumber = HouseNumberFactory(number="22")
-    resp = client.get(reverse('api:housenumber', kwargs={'ref': housenumber.cia}))
+    resp = client.get(url('api:housenumber', ref=housenumber.cia, key="cia"))
     content = json.loads(resp.content.decode())
     assert content['number'] == "22"
 
 
-def test_get_street(client):
+def test_get_street(client, url):
     street = StreetFactory(name="Rue des Boulets")
-    resp = client.get(reverse('api:street', kwargs={'ref': street.pk}))
+    resp = client.get(url('api:street', ref=street.pk, key="id"))
     content = json.loads(resp.content.decode())
     assert content['name'] == "Rue des Boulets"
 
 
-def test_get_street_with_fantoir(client):
+def test_get_street_with_fantoir(client, url):
     street = StreetFactory(name="Rue des Boulets")
-    resp = client.get(reverse('api:street', kwargs={'ref': street.fantoir}))
+    resp = client.get(url('api:street', ref=street.fantoir, key="fantoir"))
     content = json.loads(resp.content.decode())
     assert content['name'] == "Rue des Boulets"
 
@@ -80,15 +80,15 @@ def test_create_position(loggedclient):
     assert content['housenumber']['id'] == housenumber.pk
 
 
-def test_replace_position(loggedclient):
+def test_replace_position(loggedclient, url):
     position = PositionFactory(source="XXX", center=Point(1, 2))
-    url = reverse('api:position', kwargs={'ref': position.pk})
+    uri = url('api:position', ref=position.pk, key="id")
     data = {
         "version": 2,
         "center": (3, 4),
         "housenumber": position.housenumber.pk
     }
-    resp = loggedclient.put(url, json.dumps(data))
+    resp = loggedclient.put(uri, json.dumps(data))
     assert resp.status_code == 200
     content = json.loads(resp.content.decode())
     assert content['id'] == position.pk
@@ -97,15 +97,15 @@ def test_replace_position(loggedclient):
     assert content['center']['lat'] == 4
 
 
-def test_replace_position_with_existing_version_fails(loggedclient):
+def test_replace_position_with_existing_version_fails(loggedclient, url):
     position = PositionFactory(source="XXX", center=Point(1, 2))
-    url = reverse('api:position', kwargs={'ref': position.pk})
+    uri = url('api:position', ref=position.pk, key="id")
     data = {
         "version": 1,
         "center": (3, 4),
         "housenumber": position.housenumber.pk
     }
-    resp = loggedclient.put(url, json.dumps(data))
+    resp = loggedclient.put(uri, json.dumps(data))
     assert resp.status_code == 409
     content = json.loads(resp.content.decode())
     assert content['id'] == position.pk
@@ -114,15 +114,16 @@ def test_replace_position_with_existing_version_fails(loggedclient):
     assert content['center']['lat'] == 2
 
 
-def test_replace_position_with_non_incremental_version_fails(loggedclient):
+def test_replace_position_with_non_incremental_version_fails(loggedclient,
+                                                             url):
     position = PositionFactory(source="XXX", center=Point(1, 2))
-    url = reverse('api:position', kwargs={'ref': position.pk})
+    uri = url('api:position', ref=position.pk, key="id")
     data = {
         "version": 18,
         "center": (3, 4),
         "housenumber": position.housenumber.pk
     }
-    resp = loggedclient.put(url, json.dumps(data))
+    resp = loggedclient.put(uri, json.dumps(data))
     assert resp.status_code == 409
     content = json.loads(resp.content.decode())
     assert content['id'] == position.pk
@@ -131,15 +132,15 @@ def test_replace_position_with_non_incremental_version_fails(loggedclient):
     assert content['center']['lat'] == 2
 
 
-def test_update_position(loggedclient):
+def test_update_position(loggedclient, url):
     position = PositionFactory(source="XXX", center=Point(1, 2))
-    url = reverse('api:position', kwargs={'ref': position.pk})
+    uri = url('api:position', ref=position.pk, key="id")
     data = {
         "version": 2,
         "center": "(3.4, 5.678)",
         "housenumber": position.housenumber.pk
     }
-    resp = loggedclient.post(url, data)
+    resp = loggedclient.post(uri, data)
     assert resp.status_code == 200
     content = json.loads(resp.content.decode())
     assert content['id'] == position.pk
@@ -147,15 +148,15 @@ def test_update_position(loggedclient):
     assert content['center']['lat'] == 5.678
 
 
-def test_update_position_with_existing_version_fails(loggedclient):
+def test_update_position_with_existing_version_fails(loggedclient, url):
     position = PositionFactory(source="XXX", center=Point(1, 2))
-    url = reverse('api:position', kwargs={'ref': position.pk})
+    uri = url('api:position', ref=position.pk, key="id")
     data = {
         "version": 1,
         "center": "(3.4, 5.678)",
         "housenumber": position.housenumber.pk
     }
-    resp = loggedclient.post(url, data)
+    resp = loggedclient.post(uri, data)
     assert resp.status_code == 409
     content = json.loads(resp.content.decode())
     assert content['id'] == position.pk
@@ -164,15 +165,15 @@ def test_update_position_with_existing_version_fails(loggedclient):
     assert content['center']['lat'] == 2
 
 
-def test_update_position_with_non_incremental_version_fails(loggedclient):
+def test_update_position_with_non_incremental_version_fails(loggedclient, url):
     position = PositionFactory(source="XXX", center=Point(1, 2))
-    url = reverse('api:position', kwargs={'ref': position.pk})
+    uri = url('api:position', ref=position.pk, key="id")
     data = {
         "version": 3,
         "center": "(3.4, 5.678)",
         "housenumber": position.housenumber.pk
     }
-    resp = loggedclient.post(url, data)
+    resp = loggedclient.post(uri, data)
     assert resp.status_code == 409
     content = json.loads(resp.content.decode())
     assert content['id'] == position.pk
@@ -213,16 +214,16 @@ def test_create_housenumber_does_not_use_version_field(loggedclient):
     assert content['version'] == 1
 
 
-def test_replace_housenumber(loggedclient):
+def test_replace_housenumber(loggedclient, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
-    url = reverse('api:housenumber', kwargs={'ref': housenumber.pk})
+    uri = url('api:housenumber', ref=housenumber.pk, key="id")
     data = {
         "version": 2,
         "number": housenumber.number,
         "ordinal": 'bis',
         "street": housenumber.street.pk,
     }
-    resp = loggedclient.put(url, json.dumps(data))
+    resp = loggedclient.put(uri, json.dumps(data))
     assert resp.status_code == 200
     content = json.loads(resp.content.decode())
     assert content['id']
@@ -232,15 +233,15 @@ def test_replace_housenumber(loggedclient):
     assert content['street']['id'] == housenumber.street.pk
 
 
-def test_replace_housenumber_with_missing_field_fails(loggedclient):
+def test_replace_housenumber_with_missing_field_fails(loggedclient, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
-    url = reverse('api:housenumber', kwargs={'ref': housenumber.pk})
+    uri = url('api:housenumber', ref=housenumber.pk, key="id")
     data = {
         "version": 2,
         "ordinal": 'bis',
         "street": housenumber.street.pk,
     }
-    resp = loggedclient.put(url, json.dumps(data))
+    resp = loggedclient.put(uri, json.dumps(data))
     assert resp.status_code == 422
     content = json.loads(resp.content.decode())
     assert 'errors' in content

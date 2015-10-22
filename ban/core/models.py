@@ -2,7 +2,6 @@ import re
 
 from unidecode import unidecode
 
-from django.db.models import Q
 from django.contrib.auth.models import AbstractUser
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
@@ -62,19 +61,10 @@ class NamedModel(TrackedModel):
 
 
 class Municipality(NamedModel, VersionMixin, PublicMixin):
-    public_fields = ['name', 'insee']
+    public_fields = ['name', 'insee', 'siren']
 
     insee = models.CharField(max_length=5)
     siren = models.CharField(max_length=9)
-
-    @classmethod
-    def from_ref(cls, ref):
-        try:
-            ref = int(ref)  # pk can only be an int.
-        except ValueError:
-            return cls.objects.get(insee=ref)
-        else:
-            return cls.objects.get(pk=ref)
 
 
 class BaseFantoirModel(NamedModel, VersionMixin, PublicMixin):
@@ -89,15 +79,6 @@ class BaseFantoirModel(NamedModel, VersionMixin, PublicMixin):
     @property
     def tmp_fantoir(self):
         return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
-
-    @classmethod
-    def from_ref(cls, ref):
-        try:
-            ref = int(ref)  # pk can only be an int.
-        except ValueError:
-            return cls.objects.get(fantoir=ref)
-        else:
-            return cls.objects.get(pk=ref)
 
     @property
     def get_municipality_public(self):
@@ -155,15 +136,6 @@ class HouseNumber(TrackedModel, VersionMixin, PublicMixin):
     @property
     def get_street_public(self):
         return self.street.public_data
-
-    @classmethod
-    def from_ref(cls, ref):
-        try:
-            ref = int(ref)  # pk can only be an int.
-        except ValueError:
-            return cls.objects.get(cia=ref)
-        else:
-            return cls.objects.get(pk=ref)
 
 
 class Position(TrackedModel, VersionMixin, PublicMixin):

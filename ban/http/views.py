@@ -2,9 +2,7 @@ import json
 import re
 
 from django.conf.urls import url
-from django.db.models.signals import class_prepared
-from django.dispatch import receiver
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.views.generic import View
 
 from ban.core import models, forms
@@ -40,21 +38,25 @@ class URLMixin(object, metaclass=WithURL):
 
 
 class BaseCRUD(URLMixin, View):
+    identifiers = []
 
     def dispatch(self, *args, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
+        if self.key and self.key not in self.identifiers + ['id']:
+            return HttpResponseBadRequest(
+                                    'Invalid identifier: {}'.format(self.ref))
         return super().dispatch(*args, **kwargs)
 
     @classmethod
     def url_path(cls):
-        return cls.base_url() + r'(?:(?P<ref>[\w_]+)/)?$'
+        return cls.base_url() + r'(?:(?P<key>[\w_]+)/(?P<ref>[\w_]+)/)?$'
 
     def to_json(self, status=200, **kwargs):
         return HttpResponse(json.dumps(kwargs), status=status)
 
     def get_object(self):
-        return self.model.objects.get(pk=self.ref)
+        return self.model.objects.get(**{self.key: self.ref})
 
     def get(self, *args, **kwargs):
         self.object = self.get_object()
@@ -94,23 +96,18 @@ class Position(BaseCRUD):
 
 
 class Housenumber(BaseCRUD):
+    identifiers = ['cia']
     model = models.HouseNumber
     form_class = forms.HouseNumber
-
-    def get_object(self):
-        return self.model.from_ref(self.ref)
 
 
 class Street(BaseCRUD):
     model = models.Street
     form_class = forms.Street
-
-    def get_object(self):
-        return self.model.from_ref(self.ref)
+    identifiers = ['fantoir']
 
 
-@receiver(class_prepared)
-def register_searchable_model(sender, **kwargs):
-    if issubclass(sender, URLMixin):
-        URLMixin.urls.append(url(sender.url_path(), sender.as_view(),
-                             name=sender.url_name()))
+class Municipality(BaseCRUD):
+    identifiers = ['siren', 'insee']
+    model = models.Municipality
+    form_class = forms.Municipality
