@@ -28,25 +28,3 @@ def url():
     def _(name, **kwargs):
         return reverse(name, kwargs=kwargs)
     return _
-
-
-# @pytest.fixture()
-# def loggedapp(app, user):
-#     """Return an app with an already logged in user."""
-#     form = app.get(reverse('login')).forms['login']
-#     form['username'] = user.serial
-#     form['password'] = 'password'
-#     form.submit().follow()
-#     setattr(app, 'user', user)  # for later use, if needed
-#     return app
-
-
-# @pytest.fixture()
-# def staffapp(app, staffuser):
-#     """Return an app with an already logged in staff user."""
-#     form = app.get(reverse('login')).forms['login']
-#     form['username'] = staffuser.serial
-#     form['password'] = 'password'
-#     form.submit().follow()
-#     setattr(app, 'user', staffuser)  # for later use, if needed
-#     return app

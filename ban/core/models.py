@@ -37,8 +37,28 @@ class TrackedModel(models.Model):
         super().save(*args, **kwargs)
 
 
-class PublicMixin(object):
+class PublicDataQuerySet(models.QuerySet):
+
+    def iterator(self):
+        for item in super().iterator():
+            yield item.public_data
+
+
+class PublicManager(models.Manager):
+    use_for_related_fields = True
+
+    @property
+    def public_data(self):
+        return self.get_queryset()._clone(klass=PublicDataQuerySet)
+
+
+class PublicModel(models.Model):
     public_fields = []
+
+    objects = PublicManager()
+
+    class Meta:
+        abstract = True
 
     @property
     def public_data(self):
@@ -60,14 +80,14 @@ class NamedModel(TrackedModel):
         ordering = ('name', )
 
 
-class Municipality(NamedModel, VersionMixin, PublicMixin):
+class Municipality(NamedModel, VersionMixin, PublicModel):
     public_fields = ['name', 'insee', 'siren']
 
     insee = models.CharField(max_length=5)
     siren = models.CharField(max_length=9)
 
 
-class BaseFantoirModel(NamedModel, VersionMixin, PublicMixin):
+class BaseFantoirModel(NamedModel, VersionMixin, PublicModel):
     public_fields = ['name', 'fantoir', 'municipality']
 
     fantoir = models.CharField(max_length=9, blank=True, null=True)
@@ -93,7 +113,7 @@ class Street(BaseFantoirModel):
     pass
 
 
-class HouseNumber(TrackedModel, VersionMixin, PublicMixin):
+class HouseNumber(TrackedModel, VersionMixin, PublicModel):
     public_fields = ['number', 'ordinal', 'street', 'cia']
 
     number = models.CharField(max_length=16)
@@ -141,7 +161,7 @@ class HouseNumber(TrackedModel, VersionMixin, PublicMixin):
         return self.street.public_data
 
 
-class Position(TrackedModel, VersionMixin, PublicMixin):
+class Position(TrackedModel, VersionMixin, PublicModel):
     public_fields = ['center', 'source', 'housenumber']
 
     center = HouseNumberField(geography=True, verbose_name=_("center"))

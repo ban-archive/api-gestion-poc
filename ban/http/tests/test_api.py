@@ -263,3 +263,46 @@ def test_create_street(loggedclient):
     assert content['id']
     assert content['name'] == 'Rue de la Plage'
     assert content['municipality']['id'] == municipality.pk
+
+
+def test_get_municipality(client, url):
+    municipality = MunicipalityFactory(name="Cabour")
+    uri = url('api:municipality', ref=municipality.pk, key="id")
+    resp = client.get(uri)
+    assert resp.status_code == 200
+    content = json.loads(resp.content.decode())
+    assert content['id']
+    assert content['name'] == 'Cabour'
+
+
+def test_get_municipality_streets_collection(client, url):
+    municipality = MunicipalityFactory(name="Cabour")
+    street = StreetFactory(municipality=municipality, name="Rue de la Plage")
+    uri = url('api:municipality', ref=municipality.pk, key="id",
+              path="streets")
+    resp = client.get(uri)
+    assert resp.status_code == 200
+    content = json.loads(resp.content.decode())
+    assert content['collection'][0] == street.public_data
+    assert content['total'] == 1
+
+
+def test_get_municipality_streets_collection_is_paginated(client, url):
+    municipality = MunicipalityFactory(name="Cabour")
+    StreetFactory.create_batch(30, municipality=municipality)
+    uri = url('api:municipality', ref=municipality.pk, key="id",
+              path="streets")
+    resp = client.get(uri)
+    page1 = json.loads(resp.content.decode())
+    assert len(page1['collection']) == 20
+    assert page1['total'] == 30
+    assert 'next' in page1
+    assert 'previous' not in page1
+    resp = client.get(page1['next'])
+    page2 = json.loads(resp.content.decode())
+    assert len(page2['collection']) == 10
+    assert page2['total'] == 30
+    assert 'next' not in page2
+    assert 'previous' in page2
+    resp = client.get(page2['previous'])
+    assert json.loads(resp.content.decode()) == page1

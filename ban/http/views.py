@@ -1,8 +1,10 @@
 import json
 import re
 
+from urllib.parse import urlencode
+
 from django.conf.urls import url
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 from django.views.generic import View
 
 from ban.core import models, forms
@@ -39,6 +41,8 @@ class URLMixin(object, metaclass=WithURL):
 
 class BaseCRUD(URLMixin, View):
     identifiers = []
+    DEFAULT_LIMIT = 20
+    MAX_LIMIT = 100
 
     def dispatch(self, *args, **kwargs):
         for k, v in kwargs.items():
@@ -46,11 +50,17 @@ class BaseCRUD(URLMixin, View):
         if self.key and self.key not in self.identifiers + ['id']:
             return HttpResponseBadRequest(
                                     'Invalid identifier: {}'.format(self.ref))
+        if self.request.method == 'GET' and self.path:
+            view = getattr(self, self.path, None)
+            if view and callable(view):
+                return view(*args, **kwargs)
+            else:
+                return HttpResponseNotFound()
         return super().dispatch(*args, **kwargs)
 
     @classmethod
     def url_path(cls):
-        return cls.base_url() + r'(?:(?P<key>[\w_]+)/(?P<ref>[\w_]+)/)?$'
+        return cls.base_url() + r'(?:(?P<key>[\w_]+)/(?P<ref>[\w_]+)/(?:(?P<path>[\w_]+)/)?)?$'  # noqa
 
     def to_json(self, status=200, **kwargs):
         return HttpResponse(json.dumps(kwargs), status=status)
@@ -89,6 +99,33 @@ class BaseCRUD(URLMixin, View):
         else:
             return self.to_json(status=422, errors=form.errors)
 
+    def get_limit(self):
+        return min(int(self.request.GET.get('limit', self.DEFAULT_LIMIT)),
+                   self.MAX_LIMIT)
+
+    def get_offset(self):
+        try:
+            return int(self.request.GET.get('offset'))
+        except (ValueError, TypeError):
+            return 0
+
+    def collection(self, queryset):
+        limit = self.get_limit()
+        offset = self.get_offset()
+        end = offset + limit
+        count = queryset.count()
+        kwargs = {
+            'collection': list(queryset[offset:end]),
+            'total': count,
+        }
+        url = '{}://{}{}'.format(self.request.scheme, self.request.get_host(),
+                                 self.request.path)
+        if count > end:
+            kwargs['next'] = '{}?{}'.format(url, urlencode({'offset': end}))
+        if offset >= limit:
+            kwargs['previous'] = '{}?{}'.format(url, urlencode({'offset': offset - limit}))  # noqa
+        return self.to_json(200, **kwargs)
+
 
 class Position(BaseCRUD):
     model = models.Position
@@ -100,14 +137,26 @@ class Housenumber(BaseCRUD):
     model = models.HouseNumber
     form_class = forms.HouseNumber
 
+    def positions(self, *args, **kwargs):
+        self.object = self.get_object()
+        return self.collection(self.object.position_set.public_data)
+
 
 class Street(BaseCRUD):
     model = models.Street
     form_class = forms.Street
     identifiers = ['fantoir']
 
+    def housenumbers(self, *args, **kwargs):
+        self.object = self.get_object()
+        return self.collection(self.object.housenumber_set.public_data)
+
 
 class Municipality(BaseCRUD):
     identifiers = ['siren', 'insee']
     model = models.Municipality
     form_class = forms.Municipality
+
+    def streets(self, *args, **kwargs):
+        self.object = self.get_object()
+        return self.collection(self.object.street_set.public_data)
