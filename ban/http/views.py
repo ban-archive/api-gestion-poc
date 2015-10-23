@@ -70,7 +70,7 @@ class BaseCRUD(URLMixin, View):
 
     def get(self, *args, **kwargs):
         self.object = self.get_object()
-        return self.to_json(**self.object.public_data)
+        return self.to_json(**self.object.as_json)
 
     def post(self, *args, **kwargs):
         if self.ref:
@@ -95,7 +95,7 @@ class BaseCRUD(URLMixin, View):
                 self.object = self.get_object()
             else:
                 status = 200 if self.ref else 201
-            return self.to_json(status=status, **self.object.public_data)
+            return self.to_json(status=status, **self.object.as_json)
         else:
             return self.to_json(status=422, errors=form.errors)
 
@@ -139,7 +139,7 @@ class Housenumber(BaseCRUD):
 
     def positions(self, *args, **kwargs):
         self.object = self.get_object()
-        return self.collection(self.object.position_set.public_data)
+        return self.collection(self.object.position_set.as_json)
 
 
 class Street(BaseCRUD):
@@ -149,7 +149,7 @@ class Street(BaseCRUD):
 
     def housenumbers(self, *args, **kwargs):
         self.object = self.get_object()
-        return self.collection(self.object.housenumber_set.public_data)
+        return self.collection(self.object.housenumber_set.as_json)
 
 
 class Municipality(BaseCRUD):
@@ -159,4 +159,4 @@ class Municipality(BaseCRUD):
 
     def streets(self, *args, **kwargs):
         self.object = self.get_object()
-        return self.collection(self.object.street_set.public_data)
+        return self.collection(self.object.street_set.as_json)
