@@ -103,6 +103,17 @@ def test_can_create_two_housenumbers_with_same_number_but_different_street():
     HouseNumberFactory(street=street2, ordinal="b", number="10")
 
 
+def test_housenumber_center():
+    housenumber = HouseNumberFactory()
+    position = PositionFactory(housenumber=housenumber)
+    assert housenumber.center == position.center_json
+
+
+def test_housenumber_center_without_position():
+    housenumber = HouseNumberFactory()
+    assert housenumber.center is None
+
+
 def test_position_is_versioned():
     housenumber = HouseNumberFactory()
     position = PositionFactory(housenumber=housenumber, center=Point(1, 2))

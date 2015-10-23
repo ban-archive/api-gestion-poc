@@ -125,7 +125,7 @@ class Street(BaseFantoirModel):
 
 
 class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
-    json_fields = ['number', 'ordinal', 'street', 'cia']
+    json_fields = ['number', 'ordinal', 'street', 'cia', 'center']
 
     number = models.CharField(max_length=16)
     ordinal = models.CharField(max_length=16, blank=True)
@@ -166,6 +166,11 @@ class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
             self.number.upper(),
             self.ordinal.upper()
         ])
+
+    @property
+    def center(self):
+        position = self.position_set.first()
+        return position.center_json if position else None
 
 
 class Position(TrackedModel, VersionMixin, ResourceModel):
