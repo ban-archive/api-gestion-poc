@@ -283,7 +283,7 @@ def test_get_municipality_streets_collection(client, url):
     resp = client.get(uri)
     assert resp.status_code == 200
     content = json.loads(resp.content.decode())
-    assert content['collection'][0] == street.as_json
+    assert content['collection'][0] == street.as_resource
     assert content['total'] == 1
 
 

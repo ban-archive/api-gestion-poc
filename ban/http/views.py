@@ -63,14 +63,16 @@ class BaseCRUD(URLMixin, View):
         return cls.base_url() + r'(?:(?P<key>[\w_]+)/(?P<ref>[\w_]+)/(?:(?P<path>[\w_]+)/)?)?$'  # noqa
 
     def to_json(self, status=200, **kwargs):
-        return HttpResponse(json.dumps(kwargs), status=status)
+        response = HttpResponse(json.dumps(kwargs), status=status)
+        response['Content-Type'] = 'application/json'
+        return response
 
     def get_object(self):
         return self.model.objects.get(**{self.key: self.ref})
 
     def get(self, *args, **kwargs):
         self.object = self.get_object()
-        return self.to_json(**self.object.as_json)
+        return self.to_json(**self.object.as_resource)
 
     def post(self, *args, **kwargs):
         if self.ref:
@@ -95,7 +97,7 @@ class BaseCRUD(URLMixin, View):
                 self.object = self.get_object()
             else:
                 status = 200 if self.ref else 201
-            return self.to_json(status=status, **self.object.as_json)
+            return self.to_json(status=status, **self.object.as_resource)
         else:
             return self.to_json(status=422, errors=form.errors)
 
@@ -139,7 +141,7 @@ class Housenumber(BaseCRUD):
 
     def positions(self, *args, **kwargs):
         self.object = self.get_object()
-        return self.collection(self.object.position_set.as_json)
+        return self.collection(self.object.position_set.as_resource)
 
 
 class Street(BaseCRUD):
@@ -149,7 +151,7 @@ class Street(BaseCRUD):
 
     def housenumbers(self, *args, **kwargs):
         self.object = self.get_object()
-        return self.collection(self.object.housenumber_set.as_json)
+        return self.collection(self.object.housenumber_set.as_resource)
 
 
 class Municipality(BaseCRUD):
@@ -159,4 +161,4 @@ class Municipality(BaseCRUD):
 
     def streets(self, *args, **kwargs):
         self.object = self.get_object()
-        return self.collection(self.object.street_set.as_json)
+        return self.collection(self.object.street_set.as_resource)

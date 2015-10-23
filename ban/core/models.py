@@ -37,33 +37,47 @@ class TrackedModel(models.Model):
         super().save(*args, **kwargs)
 
 
-class AsJsonQuerySet(models.QuerySet):
+class ResourceQuerySet(models.QuerySet):
 
     def iterator(self):
         for item in super().iterator():
-            yield item.as_json
+            yield item.as_resource
 
 
-class AsJsonManager(models.Manager):
+class ResourceManager(models.Manager):
     use_for_related_fields = True
 
     @property
-    def as_json(self):
-        return self.get_queryset()._clone(klass=AsJsonQuerySet)
+    def as_resource(self):
+        return self.get_queryset()._clone(klass=ResourceQuerySet)
 
 
-class AsJsonModel(models.Model):
+class ResourceModel(models.Model):
     json_fields = []
 
-    objects = AsJsonManager()
+    objects = ResourceManager()
 
     class Meta:
         abstract = True
 
+    def get_json_fields(self):
+        return self.json_fields + ['id', 'version']
+
     @property
-    def as_json(self):
-        return {f: getattr(self, '{}_json'.format(f), getattr(self, f))
-                for f in self.json_fields + ['id', 'version']}
+    def as_resource(self):
+        return {f: self.as_resource_field(f) for f in self.get_json_fields()}
+
+    @property
+    def as_relation(self):
+        return {f: self.as_relation_field(f) for f in self.get_json_fields()}
+
+    def as_resource_field(self, name):
+        value = getattr(self, '{}_json'.format(name), getattr(self, name))
+        return getattr(value, 'as_relation', value)
+
+    def as_relation_field(self, name):
+        value = getattr(self, name)
+        return getattr(value, 'pk', value)
 
 
 class NamedModel(TrackedModel):
@@ -80,14 +94,14 @@ class NamedModel(TrackedModel):
         ordering = ('name', )
 
 
-class Municipality(NamedModel, VersionMixin, AsJsonModel):
+class Municipality(NamedModel, VersionMixin, ResourceModel):
     json_fields = ['name', 'insee', 'siren']
 
     insee = models.CharField(max_length=5)
     siren = models.CharField(max_length=9)
 
 
-class BaseFantoirModel(NamedModel, VersionMixin, AsJsonModel):
+class BaseFantoirModel(NamedModel, VersionMixin, ResourceModel):
     json_fields = ['name', 'fantoir', 'municipality']
 
     fantoir = models.CharField(max_length=9, blank=True, null=True)
@@ -100,10 +114,6 @@ class BaseFantoirModel(NamedModel, VersionMixin, AsJsonModel):
     def tmp_fantoir(self):
         return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
 
-    @property
-    def municipality_json(self):
-        return self.municipality.as_json
-
 
 class Locality(BaseFantoirModel):
     pass
@@ -113,7 +123,7 @@ class Street(BaseFantoirModel):
     pass
 
 
-class HouseNumber(TrackedModel, VersionMixin, AsJsonModel):
+class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
     json_fields = ['number', 'ordinal', 'street', 'cia']
 
     number = models.CharField(max_length=16)
@@ -156,12 +166,8 @@ class HouseNumber(TrackedModel, VersionMixin, AsJsonModel):
             self.ordinal.upper()
         ])
 
-    @property
-    def street_json(self):
-        return self.street.as_json
 
-
-class Position(TrackedModel, VersionMixin, AsJsonModel):
+class Position(TrackedModel, VersionMixin, ResourceModel):
     json_fields = ['center', 'source', 'housenumber']
 
     center = HouseNumberField(geography=True, verbose_name=_("center"))
@@ -175,7 +181,3 @@ class Position(TrackedModel, VersionMixin, AsJsonModel):
     @property
     def center_json(self):
         return {'lat': self.center.coords[1], 'lon': self.center.coords[0]}
-
-    @property
-    def housenumber_json(self):
-        return self.housenumber.as_json

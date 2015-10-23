@@ -7,17 +7,17 @@ from ban.core import models
 pytestmark = pytest.mark.django_db
 
 
-def test_municipality_as_json():
+def test_municipality_as_resource():
     municipality = MunicipalityFactory()
-    assert list(models.Municipality.objects.as_json) == [municipality.as_json]
+    assert list(models.Municipality.objects.as_resource) == [municipality.as_resource]  # noqa
 
 
-def test_street_as_json():
+def test_street_as_resource():
     street = StreetFactory()
-    assert list(models.Street.objects.as_json) == [street.as_json]
+    assert list(models.Street.objects.as_resource) == [street.as_resource]
 
 
-def test_municipality_street_as_json():
+def test_municipality_street_as_resource():
     municipality = MunicipalityFactory()
     street = StreetFactory(municipality=municipality)
-    assert list(municipality.street_set.as_json) == [street.as_json]
+    assert list(municipality.street_set.as_resource) == [street.as_resource]
