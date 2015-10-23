@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from .factories import (HouseNumberFactory, MunicipalityFactory,
                         PositionFactory, StreetFactory)
 
+from ban.core import models
+
 pytestmark = pytest.mark.django_db
 
 
@@ -115,3 +117,9 @@ def test_position_is_versioned():
     assert version1.center.coords == (1, 2)
     assert version2.center.coords == (3, 4)
     assert version2.housenumber == housenumber
+
+
+def test_position_attributes():
+    position = PositionFactory(attributes={'foo': 'bar'})
+    assert position.attributes['foo'] == 'bar'
+    assert models.Position.objects.filter(attributes__foo='bar').exists()

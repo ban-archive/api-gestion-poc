@@ -4,6 +4,7 @@ from unidecode import unidecode
 
 from django.contrib.auth.models import AbstractUser
 from django.contrib.gis.db import models
+from django.contrib.postgres.fields import HStoreField
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext as _
 
@@ -173,6 +174,8 @@ class Position(TrackedModel, VersionMixin, ResourceModel):
     center = HouseNumberField(geography=True, verbose_name=_("center"))
     housenumber = models.ForeignKey(HouseNumber)
     source = models.CharField(max_length=64, blank=True)
+    kind = models.CharField(max_length=64, blank=True)
+    attributes = HStoreField(blank=True, null=True)
     comment = models.TextField(blank=True)
 
     class Meta:
