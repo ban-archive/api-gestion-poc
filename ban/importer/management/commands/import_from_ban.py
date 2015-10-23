@@ -24,22 +24,45 @@ class Command(BaseCommand):
         sys.exit(1)
 
     def skip(self, msg, metadata):
-            self.stderr.write(u'⚠ Skipping. {}.'.format(msg))
-            for key, value in metadata.items():
-                self.stdout.write(u'- {}: {}'.format(key, value))
-            self.stdout.write('-' * 20)
+            self.skipped.append((msg, metadata))
+
+    def render_results(self):
+        if self.skipped and self.verbose:
+            self.stdout.write('******* SKIPPED ********')
+            for msg, metadata in self.skipped:
+                self.stderr.write(u'⚠ Skipped. {}.'.format(msg))
+                for key, value in metadata.items():
+                    self.stdout.write(u'- {}: {}'.format(key, value))
+                self.stdout.write('-' * 20)
+        self.stdout.write('Processed: {}'.format(self.processed))
+        self.stdout.write('Imported streets: {}'.format(self.imported_streets))
+        self.stdout.write('Imported housenumbers: {}'.format(self.imported_housenumbers))  # noqa
+        self.stdout.write('Imported positions: {}'.format(self.imported_positions))  # noqa
+        self.stdout.write('Skipped items (run with --verbosity 1 to get details): {}'.format(len(self.skipped)))  # noqa
+        self.stdout.write('-' * 40)
 
     def handle(self, *args, **options):
+        self.verbose = options['verbosity'] > 1
+        self.imported_positions = 0
+        self.imported_housenumbers = 0
+        self.imported_streets = 0
+        self.processed = 0
+        self.skipped = []
         path = os.path.abspath(options['path'])
         self.update = options['update']
         if not os.path.exists(path):
             self.abort('Path does not exist: {}'.format(path))
         self.ROOT = os.path.dirname(path)
         with Path(path).open() as f:
+            self.stdout.write('Started!')
             for row in f:
                 if not row:
                     continue
                 self.process_row(json.loads(row))
+                self.processed += 1
+                if self.processed % 100 == 0:
+                    self.render_results()
+        self.render_results()
 
     def process_row(self, metadata):
         name = metadata.get('name')
@@ -63,7 +86,7 @@ class Command(BaseCommand):
 
         if form.is_valid():
             street = form.save()
-            self.stdout.write(u'✔ Created {}'.format(street))
+            self.imported_streets += 1
             housenumbers = metadata.get('housenumbers')
             if housenumbers:
                 self.add_housenumbers(street, housenumbers)
@@ -91,9 +114,10 @@ class Command(BaseCommand):
             housenumber = form.save()
             form = forms.Position(data=dict(center=center, version=1,
                                             housenumber=housenumber.pk))
+            self.imported_housenumbers += 1
             if form.is_valid():
                 form.save()
-            self.stdout.write(u'✔ Created {}'.format(housenumber))
+                self.imported_positions += 1
         else:
             for field, error in form.errors.items():
                 self.skip('{}: {}'.format(field, error.as_text()), metadata)

@@ -23,10 +23,19 @@ class Command(BaseCommand):
         sys.exit(1)
 
     def skip(self, msg, metadata):
-            self.stderr.write(u'⚠ Skipping. {}.'.format(msg))
-            for key, value in metadata.items():
-                self.stdout.write(u'- {}: {}'.format(key, value))
-            self.stdout.write('-' * 20)
+            self.skipped.append((msg, metadata))
+
+    def render_results(self):
+        if self.skipped and self.verbose:
+            self.stdout.write('******* SKIPPED ********')
+            for msg, metadata in self.skipped:
+                self.stderr.write(u'⚠ Skipped. {}.'.format(msg))
+                for key, value in metadata.items():
+                    self.stdout.write(u'- {}: {}'.format(key, value))
+                self.stdout.write('-' * 20)
+        self.stdout.write('Processed: {}'.format(self.processed))
+        self.stdout.write('Imported: {}'.format(self.imported))
+        self.stdout.write('Skipped (run with --verbosity 1 to get details): {}'.format(len(self.skipped)))  # noqa
 
     def load(self, path):
         with open(path, 'r', encoding='latin1') as f:
@@ -41,14 +50,23 @@ class Command(BaseCommand):
                                   dialect=dialect)
 
     def handle(self, *args, **options):
+        self.verbose = options['verbosity'] > 1
+        self.imported = 0
+        self.processed = 0
+        self.skipped = []
         path = os.path.abspath(options['path'])
         self.update = options['update']
         if not os.path.exists(path):
             self.abort('Path does not exist: {}'.format(path))
         self.ROOT = os.path.dirname(path)
         rows = self.load(path)
+        self.stdout.write('Started!')
         for row in rows:
             self.add(row)
+            self.processed += 1
+            if self.processed % 1000 == 0:
+                self.stdout.write('Processed: {}'.format(self.processed))
+        self.render_results()
 
     def add(self, metadata):
         insee = metadata.get('insee')
@@ -60,17 +78,12 @@ class Command(BaseCommand):
             return self.skip('Municipality exists. Use --update to reimport '
                              'data', metadata)
 
-        data = dict(
-            name=name,
-            insee=insee,
-            siren=siren,
-            version=1,
-        )
+        data = dict(name=name, insee=insee, siren=siren, version=1)
         form = forms.Municipality(data=data, instance=instance)
 
         if form.is_valid():
-            municipality = form.save()
-            self.stdout.write(u'✔ Created {}'.format(municipality))
+            form.save()
+            self.imported += 1
         else:
             for field, error in form.errors.items():
                 self.skip('{}: {}'.format(field, error.as_text()), metadata)
