@@ -24,6 +24,13 @@ class Street(ModelForm):
         model = models.Street
 
 
+class Locality(ModelForm):
+
+    class Meta:
+        fields = '__all__'
+        model = models.Locality
+
+
 class Municipality(ModelForm):
 
     class Meta:

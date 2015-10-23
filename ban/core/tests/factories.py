@@ -1,9 +1,9 @@
 import factory
-from factory.fuzzy import FuzzyText
-from django.contrib.gis.geos import Point
 from django.contrib.auth import get_user_model
+from django.contrib.gis.geos import Point
+from factory.fuzzy import FuzzyText
 
-from ban.core.models import HouseNumber, Municipality, Position, Street
+from ban.core import models
 
 
 class UserFactory(factory.django.DjangoModelFactory):
@@ -25,7 +25,16 @@ class MunicipalityFactory(BaseFactory):
     insee = "31365"
 
     class Meta:
-        model = Municipality
+        model = models.Municipality
+
+
+class LocalityFactory(BaseFactory):
+    name = "L'Empereur"
+    fantoir = "0080N"
+    municipality = factory.SubFactory(MunicipalityFactory)
+
+    class Meta:
+        model = models.Locality
 
 
 class StreetFactory(BaseFactory):
@@ -34,7 +43,7 @@ class StreetFactory(BaseFactory):
     municipality = factory.SubFactory(MunicipalityFactory)
 
     class Meta:
-        model = Street
+        model = models.Street
 
 
 class HouseNumberFactory(BaseFactory):
@@ -43,7 +52,7 @@ class HouseNumberFactory(BaseFactory):
     street = factory.SubFactory(StreetFactory)
 
     class Meta:
-        model = HouseNumber
+        model = models.HouseNumber
 
 
 class PositionFactory(BaseFactory):
@@ -51,4 +60,4 @@ class PositionFactory(BaseFactory):
     housenumber = factory.SubFactory(HouseNumberFactory)
 
     class Meta:
-        model = Position
+        model = models.Position

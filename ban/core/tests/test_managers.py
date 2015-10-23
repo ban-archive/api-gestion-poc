@@ -1,8 +1,8 @@
 import pytest
 
-from .factories import (MunicipalityFactory, StreetFactory)
-
 from ban.core import models
+
+from .factories import MunicipalityFactory, StreetFactory
 
 pytestmark = pytest.mark.django_db
 

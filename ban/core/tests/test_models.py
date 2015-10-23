@@ -2,10 +2,10 @@ import pytest
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 
+from ban.core import models
+
 from .factories import (HouseNumberFactory, MunicipalityFactory,
                         PositionFactory, StreetFactory)
-
-from ban.core import models
 
 pytestmark = pytest.mark.django_db
 
@@ -56,21 +56,28 @@ def test_compute_cia_should_consider_insee_fantoir_number_and_ordinal():
     municipality = MunicipalityFactory(insee='93031')
     street = StreetFactory(municipality=municipality, fantoir='1491H')
     hn = HouseNumberFactory(street=street, number="84", ordinal="bis")
-    assert hn.compute_cia() == '93031_1491H_84_BIS'
+    assert hn.compute_cia() == '93031_1491H__84_BIS'
 
 
 def test_compute_cia_should_let_ordinal_empty_if_not_set():
     municipality = MunicipalityFactory(insee='93031')
     street = StreetFactory(municipality=municipality, fantoir='1491H')
     hn = HouseNumberFactory(street=street, number="84", ordinal="")
-    assert hn.compute_cia() == '93031_1491H_84_'
+    assert hn.compute_cia() == '93031_1491H__84_'
+
+
+def test_compute_cia_should_use_locality_if_no_street():
+    municipality = MunicipalityFactory(insee='93031')
+    street = StreetFactory(municipality=municipality, fantoir='1491H')
+    hn = HouseNumberFactory(street=street, number="84", ordinal="")
+    assert hn.compute_cia() == '93031_1491H__84_'
 
 
 def test_housenumber_should_create_cia_on_save():
     municipality = MunicipalityFactory(insee='93031')
     street = StreetFactory(municipality=municipality, fantoir='1491H')
     hn = HouseNumberFactory(street=street, number="84", ordinal="bis")
-    assert hn.cia == '93031_1491H_84_BIS'
+    assert hn.cia == '93031_1491H__84_BIS'
 
 
 def test_housenumber_is_versioned():

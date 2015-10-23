@@ -1,7 +1,8 @@
 import pytest
 
-from .factories import (HouseNumberFactory, MunicipalityFactory,
-                        PositionFactory, StreetFactory, UserFactory)
+from .factories import (HouseNumberFactory, LocalityFactory,
+                        MunicipalityFactory, PositionFactory, StreetFactory,
+                        UserFactory)
 
 pytestmark = pytest.mark.django_db
 
@@ -14,6 +15,11 @@ def test_user_can_be_instanciated():
 def test_municipality_can_be_instanciated():
     municipality = MunicipalityFactory()
     assert municipality.name
+
+
+def test_locality_can_be_instanciated():
+    locality = LocalityFactory()
+    assert locality.name
 
 
 def test_street_can_be_instanciated():

@@ -115,6 +115,9 @@ class BaseFantoirModel(NamedModel, VersionMixin, ResourceModel):
     def tmp_fantoir(self):
         return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
 
+    def get_fantoir(self):
+        return self.fantoir or self.tmp_fantoir
+
 
 class Locality(BaseFantoirModel):
     pass
@@ -141,6 +144,10 @@ class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
     def __str__(self):
         return ' '.join([self.number, self.ordinal])
 
+    @property
+    def parent(self):
+        return self.street or self.locality
+
     def save(self, *args, **kwargs):
         if not getattr(self, '_clean_called', False):
             self.clean()
@@ -161,8 +168,9 @@ class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
 
     def compute_cia(self):
         return '_'.join([
-            str(self.street.municipality.insee),
-            self.street.fantoir or self.street.tmp_fantoir,
+            str(self.parent.municipality.insee),
+            self.street.get_fantoir() if self.street else '',
+            self.locality.get_fantoir() if self.locality else '',
             self.number.upper(),
             self.ordinal.upper()
         ])

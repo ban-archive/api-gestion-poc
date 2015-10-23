@@ -144,14 +144,20 @@ class Housenumber(BaseCRUD):
         return self.collection(self.object.position_set.as_resource)
 
 
-class Street(BaseCRUD):
-    model = models.Street
-    form_class = forms.Street
+class Locality(BaseCRUD):
+    model = models.Locality
+    form_class = forms.Locality
     identifiers = ['fantoir']
 
     def housenumbers(self, *args, **kwargs):
         self.object = self.get_object()
         return self.collection(self.object.housenumber_set.as_resource)
+
+
+class Street(Locality):
+    model = models.Street
+    form_class = forms.Street
+    identifiers = ['fantoir']
 
 
 class Municipality(BaseCRUD):
@@ -162,3 +168,7 @@ class Municipality(BaseCRUD):
     def streets(self, *args, **kwargs):
         self.object = self.get_object()
         return self.collection(self.object.street_set.as_resource)
+
+    def localities(self, *args, **kwargs):
+        self.object = self.get_object()
+        return self.collection(self.object.locality_set.as_resource)

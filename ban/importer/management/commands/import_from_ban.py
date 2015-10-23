@@ -36,6 +36,7 @@ class Command(BaseCommand):
                 self.stdout.write('-' * 20)
         self.stdout.write('Processed: {}'.format(self.processed))
         self.stdout.write('Imported streets: {}'.format(self.imported_streets))
+        self.stdout.write('Imported localities: {}'.format(self.imported_localities))  # noqa
         self.stdout.write('Imported housenumbers: {}'.format(self.imported_housenumbers))  # noqa
         self.stdout.write('Imported positions: {}'.format(self.imported_positions))  # noqa
         self.stdout.write('Skipped items (run with --verbosity 1 to get details): {}'.format(len(self.skipped)))  # noqa
@@ -46,6 +47,7 @@ class Command(BaseCommand):
         self.imported_positions = 0
         self.imported_housenumbers = 0
         self.imported_streets = 0
+        self.imported_localities = 0
         self.processed = 0
         self.skipped = []
         path = os.path.abspath(options['path'])
@@ -82,14 +84,19 @@ class Command(BaseCommand):
             municipality=municipality.pk,
             version=1,
         )
-        form = forms.Street(data=data, instance=instance)
+        kind = metadata['type']
+        klass = forms.Street if kind == 'street' else forms.Locality
+        form = klass(data=data, instance=instance)
 
         if form.is_valid():
-            street = form.save()
-            self.imported_streets += 1
+            item = form.save()
+            if kind == "street":
+                self.imported_streets += 1
+            else:
+                self.imported_localities += 1
             housenumbers = metadata.get('housenumbers')
             if housenumbers:
-                self.add_housenumbers(street, housenumbers)
+                self.add_housenumbers(item, housenumbers)
         else:
             for field, error in form.errors.items():
                 self.skip('{}: {}'.format(field, error.as_text()), metadata)
@@ -98,16 +105,19 @@ class Command(BaseCommand):
         for id, metadata in housenumbers.items():
             self.add_housenumber(street, id, metadata)
 
-    def add_housenumber(self, street, id, metadata):
+    def add_housenumber(self, parent, id, metadata):
         number, *ordinal = id.split(' ')
         ordinal = ordinal[0] if ordinal else ''
         center = [metadata['lon'], metadata['lat']]
         data = dict(
             number=number,
             ordinal=ordinal,
-            street=street.pk,
             version=1
         )
+        if isinstance(parent, models.Street):
+            data['street'] = parent.pk
+        else:
+            data['locality'] = parent.pk
         form = forms.HouseNumber(data=data)
 
         if form.is_valid():
