@@ -4,7 +4,7 @@ import re
 from urllib.parse import urlencode
 
 from django.conf.urls import url
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.http import HttpResponse
 from django.views.generic import View
 
 from ban.core import models, forms
@@ -48,15 +48,21 @@ class BaseCRUD(URLMixin, View):
         for k, v in kwargs.items():
             setattr(self, k, v)
         if self.key and self.key not in self.identifiers + ['id']:
-            return HttpResponseBadRequest(
-                                    'Invalid identifier: {}'.format(self.ref))
+            return self.error(400, 'Invalid identifier: {}'.format(self.ref))
         if self.request.method == 'GET' and self.route:
-            view = getattr(self, self.route, None)
+            name = 'route_{}'.format(self.route)
+            view = getattr(self, name, None)
             if view and callable(view):
                 return view(*args, **kwargs)
             else:
-                return HttpResponseNotFound()
+                return self.error()
         return super().dispatch(*args, **kwargs)
+
+    def not_found(self, msg='Not found'):
+        return self.error(404, msg)
+
+    def error(self, status=400, msg='Invalid request'):
+        return self.to_json(status, error=msg)
 
     @classmethod
     def url_path(cls):
@@ -128,12 +134,12 @@ class BaseCRUD(URLMixin, View):
             kwargs['previous'] = '{}?{}'.format(url, urlencode({'offset': offset - limit}))  # noqa
         return self.to_json(200, **kwargs)
 
-    def versions(self, *args, **kwargs):
+    def route_versions(self, *args, **kwargs):
         self.object = self.get_object()
         if self.route_id:
             version = self.object.versions.filter(sequential=self.route_id).first()
             if not version:
-                return HttpResponseNotFound()
+                return self.not_found()
             return self.to_json(200, **version.as_dict)
         else:
             return self.collection(self.object.versions.as_dict)
@@ -149,7 +155,7 @@ class Housenumber(BaseCRUD):
     model = models.HouseNumber
     form_class = forms.HouseNumber
 
-    def positions(self, *args, **kwargs):
+    def route_positions(self, *args, **kwargs):
         self.object = self.get_object()
         return self.collection(self.object.position_set.as_resource)
 
@@ -159,7 +165,7 @@ class Locality(BaseCRUD):
     form_class = forms.Locality
     identifiers = ['fantoir']
 
-    def housenumbers(self, *args, **kwargs):
+    def route_housenumbers(self, *args, **kwargs):
         self.object = self.get_object()
         return self.collection(self.object.housenumber_set.as_resource)
 
@@ -175,10 +181,10 @@ class Municipality(BaseCRUD):
     model = models.Municipality
     form_class = forms.Municipality
 
-    def streets(self, *args, **kwargs):
+    def route_streets(self, *args, **kwargs):
         self.object = self.get_object()
         return self.collection(self.object.street_set.as_resource)
 
-    def localities(self, *args, **kwargs):
+    def route_localities(self, *args, **kwargs):
         self.object = self.get_object()
         return self.collection(self.object.locality_set.as_resource)

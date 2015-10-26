@@ -380,3 +380,10 @@ def test_get_street_version(client, url):
     content = json.loads(resp.content.decode())
     assert content['name'] == 'Rue de la Guerre'
     assert content['version'] == 2
+
+
+def test_invalid_route_is_bas_request(client, url):
+    resp = client.get(url('api:street', ref=1, key="id", route="invalid"))
+    assert resp.status_code == 400
+    resp = client.get(url('api:street', ref=1, key="id", route="to_json"))
+    assert resp.status_code == 400
