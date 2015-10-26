@@ -23,27 +23,27 @@ class Command(BaseCommand):
         self.stderr.write(msg)
         sys.exit(1)
 
-    def skip(self, msg, metadata):
-            self.skipped.append((msg, metadata))
+    def skip(self, msg, metadata, level=1):
+            self.skipped.append((msg, metadata, level))
 
     def render_results(self):
-        if self.skipped and self.verbose:
-            self.stdout.write('******* SKIPPED ********')
-            for msg, metadata in self.skipped:
-                self.stderr.write(u'⚠ Skipped. {}.'.format(msg))
-                for key, value in metadata.items():
-                    self.stdout.write(u'- {}: {}'.format(key, value))
-                self.stdout.write('-' * 20)
+        if self.skipped:
+            for msg, metadata, level in self.skipped:
+                if self.verbosity >= level:
+                    self.stderr.write(u'⚠ Skipped. {}.'.format(msg))
+                    for key, value in metadata.items():
+                        self.stdout.write(u'- {}: {}'.format(key, value))
+                    self.stdout.write('-' * 20)
         self.stdout.write('Processed: {}'.format(self.processed))
         self.stdout.write('Imported streets: {}'.format(self.imported_streets))
         self.stdout.write('Imported localities: {}'.format(self.imported_localities))  # noqa
         self.stdout.write('Imported housenumbers: {}'.format(self.imported_housenumbers))  # noqa
         self.stdout.write('Imported positions: {}'.format(self.imported_positions))  # noqa
-        self.stdout.write('Skipped items (run with --verbosity 1 to get details): {}'.format(len(self.skipped)))  # noqa
-        self.stdout.write('-' * 40)
+        self.stdout.write('Skipped items (run with --verbosity to get more details): {}'.format(len(self.skipped)))  # noqa
+        self.stdout.write('#' * 40)
 
     def handle(self, *args, **options):
-        self.verbose = options['verbosity'] > 1
+        self.verbosity = int(options['verbosity'])
         self.imported_positions = 0
         self.imported_housenumbers = 0
         self.imported_streets = 0
@@ -70,12 +70,14 @@ class Command(BaseCommand):
         name = metadata.get('name')
         id = metadata.get('id')
         insee = metadata.get('citycode')
-        fantoir = ''.join(id.split('_')[:2])
+        fantoir = ''.join(id.split('_')[:2])[:9]
 
-        instance = models.Street.objects.filter(fantoir=fantoir).first()
+        kind = metadata['type']
+        klass = models.Street if kind == 'street' else models.Locality
+        instance = klass.objects.filter(fantoir=fantoir).first()
         if instance and not self.update:
-            return self.skip('Street exists. Use --update to reimport '
-                             'data', metadata)
+            return self.skip('Already exists. Use --update to reimport data',
+                             metadata, level=2)
 
         municipality = models.Municipality.objects.filter(insee=insee).first()
         data = dict(
@@ -84,7 +86,6 @@ class Command(BaseCommand):
             municipality=municipality.pk,
             version=1,
         )
-        kind = metadata['type']
         klass = forms.Street if kind == 'street' else forms.Locality
         form = klass(data=data, instance=instance)
 
