@@ -57,17 +57,35 @@ class VersionMixin(models.Model):
         self.version = self.version + 1
 
 
+class AsDictQuerySet(models.QuerySet):
+
+    def iterator(self):
+        for item in super().iterator():
+            yield item.as_dict
+
+
+class VersionQuerySet(models.QuerySet):
+    use_for_related_fields = True
+
+    @property
+    def as_dict(self):
+        return self._clone(klass=AsDictQuerySet)
+
+
 class Version(models.Model):
     model = models.CharField(max_length=64)
     model_id = models.IntegerField()
     sequential = models.SmallIntegerField()
     data = models.BinaryField()
 
+    objects = VersionQuerySet.as_manager()
+
+    @property
     def as_dict(self):
         return pickle.loads(self.data)
 
     def load(self):
-        return VERSIONED[self.model](**self.as_dict())
+        return VERSIONED[self.model](**self.as_dict)
 
 
 @receiver(post_save)

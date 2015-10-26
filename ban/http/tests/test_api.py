@@ -279,7 +279,7 @@ def test_get_municipality_streets_collection(client, url):
     municipality = MunicipalityFactory(name="Cabour")
     street = StreetFactory(municipality=municipality, name="Rue de la Plage")
     uri = url('api:municipality', ref=municipality.pk, key="id",
-              path="streets")
+              route="streets")
     resp = client.get(uri)
     assert resp.status_code == 200
     content = json.loads(resp.content.decode())
@@ -291,7 +291,7 @@ def test_get_municipality_streets_collection_is_paginated(client, url):
     municipality = MunicipalityFactory(name="Cabour")
     StreetFactory.create_batch(30, municipality=municipality)
     uri = url('api:municipality', ref=municipality.pk, key="id",
-              path="streets")
+              route="streets")
     resp = client.get(uri)
     page1 = json.loads(resp.content.decode())
     assert len(page1['collection']) == 20
@@ -306,3 +306,77 @@ def test_get_municipality_streets_collection_is_paginated(client, url):
     assert 'previous' in page2
     resp = client.get(page2['previous'])
     assert json.loads(resp.content.decode()) == page1
+
+
+def test_get_municipality_versions(client, url):
+    municipality = MunicipalityFactory(name="Cabour")
+    municipality.version = 2
+    municipality.name = "Cabour2"
+    municipality.save()
+    uri = url('api:municipality', ref=municipality.pk, key="id",
+              route="versions")
+    resp = client.get(uri)
+    assert resp.status_code == 200
+    content = json.loads(resp.content.decode())
+    assert len(content['collection']) == 2
+    assert content['total'] == 2
+    assert content['collection'][0]['name'] == 'Cabour'
+    assert content['collection'][1]['name'] == 'Cabour2'
+
+
+def test_get_municipality_version(client, url):
+    municipality = MunicipalityFactory(name="Cabour")
+    municipality.version = 2
+    municipality.name = "Cabour2"
+    municipality.save()
+    uri = url('api:municipality', ref=municipality.pk, key="id",
+              route="versions", route_id=1)
+    resp = client.get(uri)
+    assert resp.status_code == 200
+    content = json.loads(resp.content.decode())
+    assert content['name'] == 'Cabour'
+    assert content['version'] == 1
+    uri = url('api:municipality', ref=municipality.pk, key="id",
+              route="versions", route_id=2)
+    resp = client.get(uri)
+    assert resp.status_code == 200
+    content = json.loads(resp.content.decode())
+    assert content['name'] == 'Cabour2'
+    assert content['version'] == 2
+
+
+def test_get_street_versions(client, url):
+    street = StreetFactory(name="Rue de la Paix")
+    street.version = 2
+    street.name = "Rue de la Guerre"
+    street.save()
+    uri = url('api:street', ref=street.pk, key="id",
+              route="versions")
+    resp = client.get(uri)
+    assert resp.status_code == 200
+    content = json.loads(resp.content.decode())
+    assert len(content['collection']) == 2
+    assert content['total'] == 2
+    assert content['collection'][0]['name'] == 'Rue de la Paix'
+    assert content['collection'][1]['name'] == 'Rue de la Guerre'
+
+
+def test_get_street_version(client, url):
+    street = StreetFactory(name="Rue de la Paix")
+    street.version = 2
+    street.name = "Rue de la Guerre"
+    street.save()
+    uri = url('api:street', ref=street.pk, key="id",
+              route="versions", route_id=1)
+    resp = client.get(uri)
+    assert resp.status_code == 200
+    content = json.loads(resp.content.decode())
+    assert content['name'] == 'Rue de la Paix'
+    assert content['version'] == 1
+    uri = url('api:street', ref=street.pk, key="id",
+              route="versions", route_id=2)
+    resp = client.get(uri)
+    assert resp.status_code == 200
+    content = json.loads(resp.content.decode())
+    assert content['name'] == 'Rue de la Guerre'
+    assert content['version'] == 2

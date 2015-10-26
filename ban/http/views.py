@@ -50,8 +50,8 @@ class BaseCRUD(URLMixin, View):
         if self.key and self.key not in self.identifiers + ['id']:
             return HttpResponseBadRequest(
                                     'Invalid identifier: {}'.format(self.ref))
-        if self.request.method == 'GET' and self.path:
-            view = getattr(self, self.path, None)
+        if self.request.method == 'GET' and self.route:
+            view = getattr(self, self.route, None)
             if view and callable(view):
                 return view(*args, **kwargs)
             else:
@@ -60,7 +60,7 @@ class BaseCRUD(URLMixin, View):
 
     @classmethod
     def url_path(cls):
-        return cls.base_url() + r'(?:(?P<key>[\w_]+)/(?P<ref>[\w_]+)/(?:(?P<path>[\w_]+)/)?)?$'  # noqa
+        return cls.base_url() + r'(?:(?P<key>[\w_]+)/(?P<ref>[\w_]+)/(?:(?P<route>[\w_]+)/(?:(?P<route_id>[\d]+)/)?)?)?$'  # noqa
 
     def to_json(self, status=200, **kwargs):
         response = HttpResponse(json.dumps(kwargs), status=status)
@@ -127,6 +127,16 @@ class BaseCRUD(URLMixin, View):
         if offset >= limit:
             kwargs['previous'] = '{}?{}'.format(url, urlencode({'offset': offset - limit}))  # noqa
         return self.to_json(200, **kwargs)
+
+    def versions(self, *args, **kwargs):
+        self.object = self.get_object()
+        if self.route_id:
+            version = self.object.versions.filter(sequential=self.route_id).first()
+            if not version:
+                return HttpResponseNotFound()
+            return self.to_json(200, **version.as_dict)
+        else:
+            return self.collection(self.object.versions.as_dict)
 
 
 class Position(BaseCRUD):
