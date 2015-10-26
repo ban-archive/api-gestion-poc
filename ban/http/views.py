@@ -71,6 +71,8 @@ class BaseCRUD(URLMixin, View):
     def to_json(self, status=200, **kwargs):
         response = HttpResponse(json.dumps(kwargs), status=status)
         response['Content-Type'] = 'application/json'
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Headers"] = "X-Requested-With"
         return response
 
     def get_object(self):

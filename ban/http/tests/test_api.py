@@ -33,6 +33,13 @@ def test_invalid_identifier_returns_400(client, url):
     assert resp.status_code == 400
 
 
+def test_cors(client, url):
+    street = StreetFactory(name="Rue des Boulets")
+    resp = client.get(url('api:street', ref=street.pk, key="id"))
+    assert resp["Access-Control-Allow-Origin"] == "*"
+    assert resp["Access-Control-Allow-Headers"] == "X-Requested-With"
+
+
 def test_get_housenumber(client, url):
     housenumber = HouseNumberFactory(number="22")
     resp = client.get(url('api:housenumber', ref=housenumber.pk, key="id"))
