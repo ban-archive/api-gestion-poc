@@ -1,44 +1,54 @@
 import pickle
 
-from django.db import models
-from django.db.models.signals import (class_prepared, post_init, post_save,
-                                      pre_save)
-from django.dispatch import receiver
-from django.forms.models import model_to_dict
+import peewee
 
 from .exceptions import ForcedVersionError
+from ban.core.database import db
 
 
-class VersionMixin(models.Model):
+class Versioned(peewee.BaseModel):
 
-    version = models.SmallIntegerField(default=1)
+    registry = {}
+
+    def __new__(mcs, name, bases, attrs, **kwargs):
+        cls = super().__new__(mcs, name, bases, attrs, **kwargs)
+        Versioned.registry[name] = cls
+        return cls
+
+
+class VersionMixin(peewee.Model, metaclass=Versioned):
+
+    version = peewee.IntegerField(default=1)
 
     class Meta:
         abstract = True
-        unique_together = ('pk', 'version')
+        unique_together = ('id', 'version')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lock_version()
 
     def serialize(self):
-        data = model_to_dict(self)
-        # Store relations ids, not instances.
-        fields = self._meta.get_fields()
-        for field in fields:
-            if field.name in data and field.is_relation:
-                data[field.attname] = data[field.name]
-                del data[field.name]
+        data = {}
+        for field in self._meta.get_fields():
+            value = getattr(self, field.name)
+            if isinstance(value, peewee.Model):
+                value = value.id
+            data[field.name] = value
         return pickle.dumps(data)
 
     def store_version(self):
-        Version.objects.create(
+        Version.create(
             model=self.__class__.__name__,
-            model_id=self.pk,
+            model_id=self.id,
             sequential=self.version,
             data=self.serialize()
         )
 
     @property
     def versions(self):
-        return Version.objects.filter(model=self.__class__.__name__,
-                                      model_id=self.pk)
+        return Version.select().where(Version.model == self.__class__.__name__,
+                                      Version.model_id == self.id)
 
     @property
     def locked_version(self):
@@ -51,68 +61,67 @@ class VersionMixin(models.Model):
         self._locked_version = value
 
     def lock_version(self):
-        self._locked_version = self.version if self.pk else 0
+        if not self.id:
+            self.version = 1
+        self._locked_version = self.version if self.id else 0
 
     def increment_version(self):
         self.version = self.version + 1
 
+    def check_version(self):
+        if self.version != self.locked_version + 1:
+            raise ForcedVersionError('wrong version number: {}'.format(self.version))  # noqa
 
-class AsDictQuerySet(models.QuerySet):
-
-    def iterator(self):
-        for item in super().iterator():
-            yield item.as_dict
-
-
-class VersionQuerySet(models.QuerySet):
-    use_for_related_fields = True
-
-    @property
-    def as_dict(self):
-        return self._clone(klass=AsDictQuerySet)
+    def save(self, *args, **kwargs):
+        self.check_version()
+        super().save(*args, **kwargs)
+        self.store_version()
+        self.lock_version()
 
 
-class Version(models.Model):
-    model = models.CharField(max_length=64)
-    model_id = models.IntegerField()
-    sequential = models.SmallIntegerField()
-    data = models.BinaryField()
+class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
 
-    objects = VersionQuerySet.as_manager()
+    def process_row(self, row):
+        instance = super().process_row(row)
+        return instance.as_resource
+
+
+class SelectQuery(peewee.SelectQuery):
+
+    def _get_result_wrapper(self):
+        if getattr(self, '_as_resource', False):
+            return ResourceQueryResultWrapper
+        else:
+            return super()._get_result_wrapper()
+
+    @peewee.returns_clone
+    def as_resource(self):
+        self._as_resource = True
+
+    def __len__(self):
+        return self.count()
+
+
+class Version(peewee.Model):
+    model = peewee.CharField(max_length=64)
+    model_id = peewee.IntegerField()
+    sequential = peewee.IntegerField()
+    data = peewee.BlobField()
+
+    class Meta:
+        database = db
+
+    # TODO find a way not to override the peewee.Model select classmethod.
+    @classmethod
+    def select(cls, *selection):
+        query = SelectQuery(cls, *selection)
+        if cls._meta.order_by:
+            query = query.order_by(*cls._meta.order_by)
+        return query
 
     @property
     def as_dict(self):
         return pickle.loads(self.data)
 
     def load(self):
-        return VERSIONED[self.model](**self.as_dict)
-
-
-@receiver(post_save)
-def store_version(sender, instance, **kwargs):
-    if VersionMixin in sender.__mro__:
-        instance.store_version()
-        instance.lock_version()
-
-
-@receiver(post_init)
-def lock_version(sender, instance, **kwargs):
-    if VersionMixin in sender.__mro__:
-        instance.lock_version()
-
-
-@receiver(pre_save)
-def check_version(sender, instance, **kwargs):
-    if VersionMixin in sender.__mro__:
-        if not instance.pk:
-            instance.version = 1
-        if instance.version != instance.locked_version + 1:
-            raise ForcedVersionError(
-                'wrong version number: {}'.format(instance.version))
-
-
-@receiver(class_prepared)
-def register_versioned_model(sender, **kwargs):
-    if issubclass(sender, VersionMixin):
-        VERSIONED[sender.__name__] = sender
-VERSIONED = {}
+        return Versioned.registry[self.model](**self.as_dict)

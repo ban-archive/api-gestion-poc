@@ -1,33 +1,49 @@
+from datetime import datetime
 import re
 
 from unidecode import unidecode
 
-from django.contrib.auth.models import AbstractUser
-from django.contrib.gis.db import models
-from django.contrib.postgres.fields import HStoreField
-from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext as _
+# from django.contrib.auth.models import AbstractUser
+# from django.contrib.gis.db import models
+# from django.contrib.postgres.fields import HStoreField
+# from django.core.exceptions import ValidationError
+# from django.utils.translation import ugettext as _
+import peewee
 
 from ban.versioning.models import VersionMixin
 from ban.core import context
+from .database import db
 from .fields import HouseNumberField
 
 
-class User(AbstractUser):
-
-    company = models.CharField(_('Company'), max_length=100, blank=True)
+_ = lambda x: x
 
 
-class TrackedModel(models.Model):
+class Contact(peewee.Model):
+
+    username = peewee.CharField(verbose_name=_('Company'), max_length=100)
+    email = peewee.CharField(verbose_name=_('Company'), max_length=100)
+    company = peewee.CharField(verbose_name=_('Company'), max_length=100,
+                               null=True)
+
+    class Meta:
+        database = db
+
+    def set_password(self, password):
+        pass
+
+
+class TrackedModel(peewee.Model):
     # Allow null modified_by and created_by until proper auth management.
-    created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(User, related_name='%(class)s_created',
-                                   editable=False, null=True)
-    modified_at = models.DateTimeField(auto_now=True)
-    modified_by = models.ForeignKey(User, editable=False, null=True)
+    created_at = peewee.DateTimeField()
+    created_by = peewee.ForeignKeyField(Contact, null=True)
+    modified_at = peewee.DateTimeField()
+    modified_by = peewee.ForeignKeyField(Contact, null=True)
 
     class Meta:
         abstract = True
+        database = db
+        validate_backrefs = False
 
     def save(self, *args, **kwargs):
         user = context.get_user()
@@ -35,31 +51,46 @@ class TrackedModel(models.Model):
             if not getattr(self, 'created_by', None):
                 self.created_by = user
             self.modified_by = user
+        now = datetime.now()
+        if not self.created_at:
+            self.created_at = now
+        self.modified_at = now
         super().save(*args, **kwargs)
 
 
-class ResourceQuerySet(models.QuerySet):
+class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
 
-    def iterator(self):
-        for item in super().iterator():
-            yield item.as_resource
+    def process_row(self, row):
+        instance = super().process_row(row)
+        return instance.as_resource
 
 
-class ResourceManager(models.Manager):
-    use_for_related_fields = True
+class SelectQuery(peewee.SelectQuery):
 
-    @property
+    def _get_result_wrapper(self):
+        if getattr(self, '_as_resource', False):
+            return ResourceQueryResultWrapper
+        else:
+            return super()._get_result_wrapper()
+
+    @peewee.returns_clone
     def as_resource(self):
-        return self.get_queryset()._clone(klass=ResourceQuerySet)
+        self._as_resource = True
 
 
-class ResourceModel(models.Model):
+class ResourceModel(peewee.Model):
     json_fields = []
-
-    objects = ResourceManager()
 
     class Meta:
         abstract = True
+
+    # TODO find a way not to override the peewee.Model select classmethod.
+    @classmethod
+    def select(cls, *selection):
+        query = SelectQuery(cls, *selection)
+        if cls._meta.order_by:
+            query = query.order_by(*cls._meta.order_by)
+        return query
 
     def get_json_fields(self):
         return self.json_fields + ['id', 'version']
@@ -82,7 +113,7 @@ class ResourceModel(models.Model):
 
 
 class NamedModel(TrackedModel):
-    name = models.CharField(max_length=200, verbose_name=_("name"))
+    name = peewee.CharField(max_length=200, verbose_name=_("name"))
 
     def __unicode__(self):
         return self.name
@@ -98,15 +129,15 @@ class NamedModel(TrackedModel):
 class Municipality(NamedModel, VersionMixin, ResourceModel):
     json_fields = ['name', 'insee', 'siren']
 
-    insee = models.CharField(max_length=5)
-    siren = models.CharField(max_length=9)
+    insee = peewee.CharField(max_length=5)
+    siren = peewee.CharField(max_length=9)
 
 
 class BaseFantoirModel(NamedModel, VersionMixin, ResourceModel):
     json_fields = ['name', 'fantoir', 'municipality']
 
-    fantoir = models.CharField(max_length=9, blank=True, null=True)
-    municipality = models.ForeignKey(Municipality)
+    fantoir = peewee.CharField(max_length=9, null=True)
+    municipality = peewee.ForeignKeyField(Municipality)
 
     class Meta:
         abstract = True
@@ -130,11 +161,11 @@ class Street(BaseFantoirModel):
 class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
     json_fields = ['number', 'ordinal', 'street', 'cia', 'center']
 
-    number = models.CharField(max_length=16)
-    ordinal = models.CharField(max_length=16, blank=True)
-    street = models.ForeignKey(Street, blank=True, null=True)
-    locality = models.ForeignKey(Locality, blank=True, null=True)
-    cia = models.CharField(max_length=100, blank=True, editable=False)
+    number = peewee.CharField(max_length=16)
+    ordinal = peewee.CharField(max_length=16)
+    street = peewee.ForeignKeyField(Street, null=True)
+    locality = peewee.ForeignKeyField(Locality, null=True)
+    cia = peewee.CharField(max_length=100)
 
     class Meta:
         # Does not work, as SQL does not consider NULL has values. Is there
@@ -157,13 +188,12 @@ class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
 
     def clean(self):
         if not self.street and not self.locality:
-            raise ValidationError('A housenumber number needs to be linked to '
-                                  'either a street or a locality.')
-        if HouseNumber.objects.filter(number=self.number, ordinal=self.ordinal,
-                                      street=self.street,
-                                      locality=self.locality).exists():
-            raise ValidationError('Row with same number, ordinal, street and '
-                                  'locality already exists')
+            raise ValueError('A housenumber number needs to be linked to either a street or a locality.')  # noqa
+        if HouseNumber.select().where(HouseNumber.number == self.number,
+                                      HouseNumber.ordinal == self.ordinal,
+                                      HouseNumber.street == self.street,
+                                      HouseNumber.locality == self.locality).exists():
+            raise ValueError('Row with same number, ordinal, street and locality already exists')  # noqa
         self._clean_called = True
 
     def compute_cia(self):
@@ -184,16 +214,17 @@ class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
 class Position(TrackedModel, VersionMixin, ResourceModel):
     json_fields = ['center', 'source', 'housenumber']
 
-    center = HouseNumberField(geography=True, verbose_name=_("center"))
-    housenumber = models.ForeignKey(HouseNumber)
-    source = models.CharField(max_length=64, blank=True)
-    kind = models.CharField(max_length=64, blank=True)
-    attributes = HStoreField(blank=True, null=True)
-    comment = models.TextField(blank=True)
+    center = HouseNumberField(verbose_name=_("center"))
+    housenumber = peewee.ForeignKeyField(HouseNumber)
+    source = peewee.CharField(max_length=64, null=True)
+    kind = peewee.CharField(max_length=64, null=True)
+    # attributes = HStoreField(blank=True, null=True)
+    comment = peewee.TextField(null=True)
 
     class Meta:
         unique_together = ('housenumber', 'source')
 
     @property
     def center_json(self):
+        return {}
         return {'lat': self.center.coords[1], 'lon': self.center.coords[0]}

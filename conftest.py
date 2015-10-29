@@ -6,6 +6,20 @@ from ban.core import context
 from ban.core.tests.factories import UserFactory
 
 
+def pytest_configure(config):
+    from ban.core.database import test_db, db
+    from ban.core import models as cmodels
+    from ban.versioning import models as vmodels
+    models = [vmodels.Version, cmodels.Contact, cmodels.Municipality,
+              cmodels.Street, cmodels.Locality, cmodels.HouseNumber,
+              cmodels.Position]
+    for model in models:
+        model._meta.database = test_db
+    db.create_tables(models)
+    # import logging
+    # logging.basicConfig(level=logging.DEBUG)
+
+
 @pytest.fixture()
 def user():
     return UserFactory()

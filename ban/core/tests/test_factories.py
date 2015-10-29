@@ -9,7 +9,7 @@ pytestmark = pytest.mark.django_db
 
 def test_user_can_be_instanciated():
     user = UserFactory()
-    assert user.is_active
+    assert user.username
 
 
 def test_municipality_can_be_instanciated():

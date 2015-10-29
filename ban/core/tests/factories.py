@@ -1,28 +1,37 @@
 import factory
-from django.contrib.auth import get_user_model
-from django.contrib.gis.geos import Point
 from factory.fuzzy import FuzzyText
+from factory_peewee import PeeweeModelFactory
 
 from ban.core import models
 
 
-class UserFactory(factory.django.DjangoModelFactory):
+class BaseTestModel(PeeweeModelFactory):
+    class Meta:
+        database = models.db
+        abstract = True
+
+
+class UserFactory(BaseTestModel):
     username = FuzzyText(length=12)
     password = factory.PostGenerationMethodCall('set_password', 'password')
     email = factory.LazyAttribute(lambda obj: '%s@example.com' % obj.username)
 
     class Meta:
-        model = get_user_model()
+        model = models.Contact
 
 
-class BaseFactory(factory.django.DjangoModelFactory):
+class BaseFactory(BaseTestModel):
     created_by = factory.SubFactory(UserFactory)
     modified_by = factory.SubFactory(UserFactory)
+
+    class Meta:
+        abstract = True
 
 
 class MunicipalityFactory(BaseFactory):
     name = "Montbrun-Bocage"
     insee = "31365"
+    siren = "210100566"
 
     class Meta:
         model = models.Municipality
@@ -56,7 +65,7 @@ class HouseNumberFactory(BaseFactory):
 
 
 class PositionFactory(BaseFactory):
-    center = Point(-1.1111, 48.8888)
+    center = (-1.1111, 48.8888)
     housenumber = factory.SubFactory(HouseNumberFactory)
 
     class Meta:
