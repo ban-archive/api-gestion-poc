@@ -17,6 +17,9 @@ class Command(BaseCommand):
         parser.add_argument('--update', action='store_true', default=False,
                             help='Update instance when municipality with same '
                                  'INSEE already exists.')
+        parser.add_argument('--departement',
+                            help='Only important this departement number. '
+                                 'Useful for dev.')
 
     def abort(self, msg):
         self.stderr.write(msg)
@@ -50,6 +53,7 @@ class Command(BaseCommand):
                                   dialect=dialect)
 
     def handle(self, *args, **options):
+        self.departement = options['departement']
         self.verbose = options['verbosity'] > 1
         self.imported = 0
         self.processed = 0
@@ -62,6 +66,8 @@ class Command(BaseCommand):
         rows = self.load(path)
         self.stdout.write('Started!')
         for row in rows:
+            if self.departement and row['dep_epci'] != self.departement:
+                continue
             self.add(row)
             self.processed += 1
             if self.processed % 1000 == 0:
