@@ -3,12 +3,9 @@ import re
 
 from unidecode import unidecode
 
-# from django.contrib.auth.models import AbstractUser
-# from django.contrib.gis.db import models
-# from django.contrib.postgres.fields import HStoreField
-# from django.core.exceptions import ValidationError
 # from django.utils.translation import ugettext as _
 import peewee
+from playhouse.postgres_ext import HStoreField
 
 from ban.versioning.models import VersionMixin
 from ban.core import context
@@ -19,7 +16,65 @@ from .fields import HouseNumberField
 _ = lambda x: x
 
 
-class Contact(peewee.Model):
+
+class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
+
+    def process_row(self, row):
+        instance = super().process_row(row)
+        return instance.as_resource
+
+
+class SelectQuery(peewee.SelectQuery):
+
+    def _get_result_wrapper(self):
+        if getattr(self, '_as_resource', False):
+            return ResourceQueryResultWrapper
+        else:
+            return super()._get_result_wrapper()
+
+    @peewee.returns_clone
+    def as_resource(self):
+        self._as_resource = True
+
+    def __len__(self):
+        return self.count()
+
+
+class ResourceModel(peewee.Model):
+    json_fields = []
+
+    class Meta:
+        abstract = True
+
+    # TODO find a way not to override the peewee.Model select classmethod.
+    @classmethod
+    def select(cls, *selection):
+        query = SelectQuery(cls, *selection)
+        if cls._meta.order_by:
+            query = query.order_by(*cls._meta.order_by)
+        return query
+
+    def get_json_fields(self):
+        return self.json_fields + ['id', 'version']
+
+    @property
+    def as_resource(self):
+        return {f: self.as_resource_field(f) for f in self.get_json_fields()}
+
+    @property
+    def as_relation(self):
+        return {f: self.as_relation_field(f) for f in self.get_json_fields()}
+
+    def as_resource_field(self, name):
+        value = getattr(self, '{}_json'.format(name), getattr(self, name))
+        return getattr(value, 'as_relation', value)
+
+    def as_relation_field(self, name):
+        value = getattr(self, name)
+        return getattr(value, 'pk', value)
+
+
+class Contact(ResourceModel):
 
     username = peewee.CharField(verbose_name=_('Company'), max_length=100)
     email = peewee.CharField(verbose_name=_('Company'), max_length=100)
@@ -56,60 +111,6 @@ class TrackedModel(peewee.Model):
             self.created_at = now
         self.modified_at = now
         super().save(*args, **kwargs)
-
-
-class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
-
-    def process_row(self, row):
-        instance = super().process_row(row)
-        return instance.as_resource
-
-
-class SelectQuery(peewee.SelectQuery):
-
-    def _get_result_wrapper(self):
-        if getattr(self, '_as_resource', False):
-            return ResourceQueryResultWrapper
-        else:
-            return super()._get_result_wrapper()
-
-    @peewee.returns_clone
-    def as_resource(self):
-        self._as_resource = True
-
-
-class ResourceModel(peewee.Model):
-    json_fields = []
-
-    class Meta:
-        abstract = True
-
-    # TODO find a way not to override the peewee.Model select classmethod.
-    @classmethod
-    def select(cls, *selection):
-        query = SelectQuery(cls, *selection)
-        if cls._meta.order_by:
-            query = query.order_by(*cls._meta.order_by)
-        return query
-
-    def get_json_fields(self):
-        return self.json_fields + ['id', 'version']
-
-    @property
-    def as_resource(self):
-        return {f: self.as_resource_field(f) for f in self.get_json_fields()}
-
-    @property
-    def as_relation(self):
-        return {f: self.as_relation_field(f) for f in self.get_json_fields()}
-
-    def as_resource_field(self, name):
-        value = getattr(self, '{}_json'.format(name), getattr(self, name))
-        return getattr(value, 'as_relation', value)
-
-    def as_relation_field(self, name):
-        value = getattr(self, name)
-        return getattr(value, 'pk', value)
 
 
 class NamedModel(TrackedModel):
@@ -218,7 +219,7 @@ class Position(TrackedModel, VersionMixin, ResourceModel):
     housenumber = peewee.ForeignKeyField(HouseNumber)
     source = peewee.CharField(max_length=64, null=True)
     kind = peewee.CharField(max_length=64, null=True)
-    # attributes = HStoreField(blank=True, null=True)
+    attributes = HStoreField(null=True)
     comment = peewee.TextField(null=True)
 
     class Meta:
@@ -226,5 +227,4 @@ class Position(TrackedModel, VersionMixin, ResourceModel):
 
     @property
     def center_json(self):
-        return {}
-        return {'lat': self.center.coords[1], 'lon': self.center.coords[0]}
+        return {'lat': self.center[1], 'lon': self.center[0]}

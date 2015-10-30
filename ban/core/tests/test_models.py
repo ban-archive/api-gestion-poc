@@ -136,8 +136,7 @@ def test_position_is_versioned():
     assert version2.housenumber == housenumber
 
 
-@pytest.mark.xfail
 def test_position_attributes():
     position = PositionFactory(attributes={'foo': 'bar'})
     assert position.attributes['foo'] == 'bar'
-    assert models.Position.objects.filter(attributes__foo='bar').exists()
+    assert models.Position.select().where(models.Position.attributes.contains({'foo': 'bar'})).exists()  # noqa

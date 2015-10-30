@@ -14,15 +14,26 @@ models = [vmodels.Version, cmodels.Contact, cmodels.Municipality,
 
 
 def pytest_configure(config):
+    test_db.connect()
     for model in models:
         model._meta.database = test_db
-    db.create_tables(models)
-    # import logging
-    # logging.basicConfig(level=logging.DEBUG)
+    for model in models:
+        model.create_table(fail_silently=True)
+    verbose = config.getoption('verbose')
+    if verbose:
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
 
 
 def pytest_unconfigure(config):
     db.drop_tables(models)
+    test_db.close()
+
+
+def pytest_runtest_setup(item):
+    for model in models[::-1]:
+        model.delete().execute()
+        assert not len(model.select())
 
 
 @pytest.fixture()

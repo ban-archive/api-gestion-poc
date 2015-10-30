@@ -2,7 +2,7 @@ import re
 
 import peewee
 
-lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>\d{,3}(:?\.\d*)?), ?(?P<lat>\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
+lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
 point_template = 'POINT ({} {})'
 
 # https://github.com/MAPC/rental-listing-aggregator/blob/09d3d8d75ea3697431dd080f49c4fc1f28a83263/.ipynb_checkpoints/Untitled-checkpoint.ipynb
@@ -17,12 +17,14 @@ class HouseNumberField(peewee.Field):
     db_field = 'point'
 
     def db_value(self, value):
-        return 'POINT (1, 2)'
-        print("VALUE", value)
         return str(value)
 
     def python_value(self, value):
-        return 'POINT (3, 4)'
+        search = lonlat_pattern.search(value)
+        if search:
+            return (float(search.group('lon')), float(search.group('lat')))
+        else:
+            return tuple()
     #     # Allow to pass list or tuple as coordinates.
     #     if isinstance(value, (list, tuple)):
     #         value = point_template.format(value[0], value[1])
@@ -33,5 +35,5 @@ class HouseNumberField(peewee.Field):
     #                                           search.group('lat'))
     #     return value
 
-peewee.PostgresqlDatabase.register_fields({'uuid': 'uuid'})
-peewee.SqliteDatabase.register_fields({'uuid': 'uuid'})
+peewee.PostgresqlDatabase.register_fields({'point': 'point'})
+peewee.SqliteDatabase.register_fields({'point': 'point'})
