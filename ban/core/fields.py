@@ -15,6 +15,7 @@ point_template = 'POINT ({} {})'
 
 class HouseNumberField(peewee.Field):
     db_field = 'point'
+    schema_type = 'point'
 
     def db_value(self, value):
         return str(value)

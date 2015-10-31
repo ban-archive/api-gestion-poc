@@ -6,8 +6,9 @@ from unidecode import unidecode
 # from django.utils.translation import ugettext as _
 import peewee
 from playhouse.postgres_ext import HStoreField
+from cerberus import Validator, ValidationError
 
-from ban.versioning.models import VersionMixin
+from ban.versioning.models import VersionMixin, Versioned
 from ban.core import context
 from .database import db
 from .fields import HouseNumberField
@@ -15,6 +16,29 @@ from .fields import HouseNumberField
 
 _ = lambda x: x
 
+
+class ResourceValidator(Validator):
+
+    def __init__(self, model, *args, **kwargs):
+        self.model = model
+        super().__init__(model._meta.resource_schema, *args, **kwargs)
+
+    def _validate_type_point(self, field, value):
+        if not isinstance(value, (str, list, tuple)):
+            self._error(field, 'Invalid Point: {}'.format(value))
+
+    def create(self):
+        if self.errors:
+            raise ValidationError('Invalid document')
+        return self.model.create(**self.document)
+
+
+class ResourceMeta(Versioned):
+
+    def __new__(mcs, name, bases, attrs, **kwargs):
+        cls = super().__new__(mcs, name, bases, attrs, **kwargs)
+        cls._meta.resource_schema = cls.build_resource_schema()
+        return cls
 
 
 class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
@@ -39,12 +63,46 @@ class SelectQuery(peewee.SelectQuery):
     def __len__(self):
         return self.count()
 
+peewee.CharField.schema_type = 'string'
+peewee.IntegerField.schema_type = 'integer'
+HStoreField.schema_type = 'dict'
 
-class ResourceModel(peewee.Model):
-    json_fields = []
+
+class ResourceModel(peewee.Model, metaclass=ResourceMeta):
+    resource_fields = []
 
     class Meta:
         abstract = True
+
+    @classmethod
+    def build_resource_schema(cls):
+        schema = {}
+        for field in cls._meta.get_fields():
+            if field.name not in cls.get_resource_fields():
+                continue
+            if field.primary_key:
+                continue
+            type_ = getattr(field.__class__, 'schema_type', None)
+            if not type_:
+                continue
+            row = {
+                'type': type_,
+                'required': not field.null,
+                'coerce': field.coerce,
+            }
+            max_length = getattr(field, 'max_length', None)
+            if max_length:
+                row['maxlength'] = max_length
+            if not field.null:
+                row['empty'] = False
+            schema[field.name] = row
+        return schema
+
+    @classmethod
+    def validator(cls, **data):
+        validator = ResourceValidator(cls)
+        validator(data)
+        return validator
 
     # TODO find a way not to override the peewee.Model select classmethod.
     @classmethod
@@ -54,16 +112,17 @@ class ResourceModel(peewee.Model):
             query = query.order_by(*cls._meta.order_by)
         return query
 
-    def get_json_fields(self):
-        return self.json_fields + ['id', 'version']
+    @classmethod
+    def get_resource_fields(self):
+        return self.resource_fields + ['id', 'version']
 
     @property
     def as_resource(self):
-        return {f: self.as_resource_field(f) for f in self.get_json_fields()}
+        return {f: self.as_resource_field(f) for f in self.get_resource_fields()}
 
     @property
     def as_relation(self):
-        return {f: self.as_relation_field(f) for f in self.get_json_fields()}
+        return {f: self.as_relation_field(f) for f in self.get_resource_fields()}
 
     def as_resource_field(self, name):
         value = getattr(self, '{}_json'.format(name), getattr(self, name))
@@ -128,14 +187,14 @@ class NamedModel(TrackedModel):
 
 
 class Municipality(NamedModel, VersionMixin, ResourceModel):
-    json_fields = ['name', 'insee', 'siren']
+    resource_fields = ['name', 'insee', 'siren']
 
     insee = peewee.CharField(max_length=5)
     siren = peewee.CharField(max_length=9)
 
 
 class BaseFantoirModel(NamedModel, VersionMixin, ResourceModel):
-    json_fields = ['name', 'fantoir', 'municipality']
+    resource_fields = ['name', 'fantoir', 'municipality']
 
     fantoir = peewee.CharField(max_length=9, null=True)
     municipality = peewee.ForeignKeyField(Municipality)
@@ -160,7 +219,7 @@ class Street(BaseFantoirModel):
 
 
 class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
-    json_fields = ['number', 'ordinal', 'street', 'cia', 'center']
+    resource_fields = ['number', 'ordinal', 'street', 'cia', 'center']
 
     number = peewee.CharField(max_length=16)
     ordinal = peewee.CharField(max_length=16)
@@ -213,7 +272,8 @@ class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
 
 
 class Position(TrackedModel, VersionMixin, ResourceModel):
-    json_fields = ['center', 'source', 'housenumber']
+    resource_fields = ['center', 'source', 'housenumber', 'attributes',
+                       'kind', 'comment']
 
     center = HouseNumberField(verbose_name=_("center"))
     housenumber = peewee.ForeignKeyField(HouseNumber)
