@@ -4,8 +4,6 @@ from .factories import (HouseNumberFactory, LocalityFactory,
                         MunicipalityFactory, PositionFactory, StreetFactory,
                         UserFactory)
 
-pytestmark = pytest.mark.django_db
-
 
 def test_user_can_be_instanciated():
     user = UserFactory()

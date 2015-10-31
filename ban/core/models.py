@@ -11,13 +11,15 @@ from cerberus import Validator, ValidationError
 from ban.versioning.models import VersionMixin, Versioned
 from ban.core import context
 from .database import db
-from .fields import HouseNumberField
+from . import fields
 
 
 _ = lambda x: x
 
 
 class ResourceValidator(Validator):
+
+    ValidationError = ValidationError
 
     def __init__(self, model, *args, **kwargs):
         self.model = model
@@ -27,10 +29,16 @@ class ResourceValidator(Validator):
         if not isinstance(value, (str, list, tuple)):
             self._error(field, 'Invalid Point: {}'.format(value))
 
-    def create(self):
+    def save(self, instance=None):
         if self.errors:
             raise ValidationError('Invalid document')
-        return self.model.create(**self.document)
+        if instance:
+            for key, value in self.document.items():
+                setattr(instance, key, value)
+            instance.save()
+        else:
+            instance = self.model.create(**self.document)
+        return instance
 
 
 class ResourceMeta(Versioned):
@@ -73,6 +81,7 @@ class ResourceModel(peewee.Model, metaclass=ResourceMeta):
 
     class Meta:
         abstract = True
+        resource_schema = {}
 
     @classmethod
     def build_resource_schema(cls):
@@ -95,12 +104,13 @@ class ResourceModel(peewee.Model, metaclass=ResourceMeta):
                 row['maxlength'] = max_length
             if not field.null:
                 row['empty'] = False
+            row.update(cls._meta.resource_schema.get(field.name, {}))
             schema[field.name] = row
         return schema
 
     @classmethod
-    def validator(cls, **data):
-        validator = ResourceValidator(cls)
+    def validator(cls, instance=None, **data):
+        validator = ResourceValidator(cls, instance)
         validator(data)
         return validator
 
@@ -130,7 +140,7 @@ class ResourceModel(peewee.Model, metaclass=ResourceMeta):
 
     def as_relation_field(self, name):
         value = getattr(self, name)
-        return getattr(value, 'pk', value)
+        return getattr(value, 'id', value)
 
 
 class Contact(ResourceModel):
@@ -150,9 +160,9 @@ class Contact(ResourceModel):
 class TrackedModel(peewee.Model):
     # Allow null modified_by and created_by until proper auth management.
     created_at = peewee.DateTimeField()
-    created_by = peewee.ForeignKeyField(Contact, null=True)
+    created_by = fields.ForeignKeyField(Contact, null=True)
     modified_at = peewee.DateTimeField()
-    modified_by = peewee.ForeignKeyField(Contact, null=True)
+    modified_by = fields.ForeignKeyField(Contact, null=True)
 
     class Meta:
         abstract = True
@@ -197,7 +207,7 @@ class BaseFantoirModel(NamedModel, VersionMixin, ResourceModel):
     resource_fields = ['name', 'fantoir', 'municipality']
 
     fantoir = peewee.CharField(max_length=9, null=True)
-    municipality = peewee.ForeignKeyField(Municipality)
+    municipality = fields.ForeignKeyField(Municipality)
 
     class Meta:
         abstract = True
@@ -219,18 +229,19 @@ class Street(BaseFantoirModel):
 
 
 class HouseNumber(TrackedModel, VersionMixin, ResourceModel):
-    resource_fields = ['number', 'ordinal', 'street', 'cia', 'center']
+    resource_fields = ['number', 'ordinal', 'street', 'cia']
 
-    number = peewee.CharField(max_length=16)
-    ordinal = peewee.CharField(max_length=16)
-    street = peewee.ForeignKeyField(Street, null=True)
-    locality = peewee.ForeignKeyField(Locality, null=True)
+    number = fields.CharField(max_length=16)
+    ordinal = fields.CharField(max_length=16, null=True)
+    street = fields.ForeignKeyField(Street, null=True)
+    locality = fields.ForeignKeyField(Locality, null=True)
     cia = peewee.CharField(max_length=100)
 
     class Meta:
         # Does not work, as SQL does not consider NULL has values. Is there
         # any way to enforce that at the DB level anyway?
         unique_together = ('number', 'ordinal', 'street', 'locality')
+        resource_schema = {'cia': {'required': False}}
 
     def __str__(self):
         return ' '.join([self.number, self.ordinal])
@@ -275,8 +286,8 @@ class Position(TrackedModel, VersionMixin, ResourceModel):
     resource_fields = ['center', 'source', 'housenumber', 'attributes',
                        'kind', 'comment']
 
-    center = HouseNumberField(verbose_name=_("center"))
-    housenumber = peewee.ForeignKeyField(HouseNumber)
+    center = fields.HouseNumberField(verbose_name=_("center"))
+    housenumber = fields.ForeignKeyField(HouseNumber)
     source = peewee.CharField(max_length=64, null=True)
     kind = peewee.CharField(max_length=64, null=True)
     attributes = HStoreField(null=True)

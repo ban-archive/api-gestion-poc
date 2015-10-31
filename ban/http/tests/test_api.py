@@ -1,15 +1,25 @@
 import json
+from functools import wraps
+
 
 import pytest
-from django.contrib.gis.geos import Point
-from django.core.urlresolvers import reverse
 
 from ban.core.tests.factories import (HouseNumberFactory, PositionFactory,
                                       StreetFactory, MunicipalityFactory)
+from ban.http import views
 
 pytestmark = pytest.mark.django_db
 
 
+def log_in(func):
+    @wraps(func)
+    def inner(*args, **kwargs):
+        # Subtly plug in authenticated user.
+        return func(*args, **kwargs)
+    return inner
+
+
+@pytest.mark.xfail
 @pytest.mark.parametrize('name,kwargs,expected', [
     ['api:position', {"ref": 1, "key": "id"}, '/api/position/id/1/'],
     ['api:position', {}, '/api/position/'],
@@ -28,369 +38,358 @@ def test_api_url(name, kwargs, expected):
     assert reverse(name, kwargs=kwargs) == expected
 
 
-def test_invalid_identifier_returns_400(client, url):
-    resp = client.get(url('api:position', ref="value", key="invalid"))
-    assert resp.status_code == 400
+def test_invalid_identifier_returns_400(get):
+    resp = get('/position/invalid:22')
+    assert resp.status == 400
 
 
-def test_cors(client, url):
+def test_cors(get):
     street = StreetFactory(name="Rue des Boulets")
-    resp = client.get(url('api:street', ref=street.pk, key="id"))
-    assert resp["Access-Control-Allow-Origin"] == "*"
-    assert resp["Access-Control-Allow-Headers"] == "X-Requested-With"
+    resp = get('/street/id:' + str(street.id))
+    assert resp.headers["Access-Control-Allow-Origin"] == "*"
+    assert resp.headers["Access-Control-Allow-Headers"] == "X-Requested-With"
 
 
-def test_get_housenumber(client, url):
+def test_get_housenumber(get, url):
     housenumber = HouseNumberFactory(number="22")
-    resp = client.get(url('api:housenumber', ref=housenumber.pk, key="id"))
-    content = json.loads(resp.content.decode())
-    assert content['number'] == "22"
-    assert content['id'] == housenumber.pk
-    assert content['cia'] == housenumber.cia
-    assert content['street']['name'] == housenumber.street.name
+    resp = get(url(views.Housenumber, id=housenumber.id, identifier="id"))
+    assert resp.json['number'] == "22"
+    assert resp.json['id'] == housenumber.id
+    assert resp.json['cia'] == housenumber.cia
+    assert resp.json['street']['name'] == housenumber.street.name
 
 
-def test_get_housenumber_with_cia(client, url):
+def test_get_housenumber_with_unknown_id_is_404(get, url):
+    resp = get(url(views.Housenumber, id=22, identifier="id"))
+    assert resp.status == 404
+
+
+def test_get_housenumber_with_cia(get, url):
     housenumber = HouseNumberFactory(number="22")
-    resp = client.get(url('api:housenumber', ref=housenumber.cia, key="cia"))
-    content = json.loads(resp.content.decode())
-    assert content['number'] == "22"
+    resp = get(url(views.Housenumber, id=housenumber.cia, identifier="cia"))
+    assert resp.json['number'] == "22"
 
 
-def test_get_street(client, url):
+def test_get_street(get, url):
     street = StreetFactory(name="Rue des Boulets")
-    resp = client.get(url('api:street', ref=street.pk, key="id"))
-    content = json.loads(resp.content.decode())
-    assert content['name'] == "Rue des Boulets"
+    resp = get(url(views.Street, id=street.id, identifier="id"))
+    assert resp.json['name'] == "Rue des Boulets"
 
 
-def test_get_street_with_fantoir(client, url):
+def test_get_street_with_fantoir(get, url):
     street = StreetFactory(name="Rue des Boulets")
-    resp = client.get(url('api:street', ref=street.fantoir, key="fantoir"))
-    content = json.loads(resp.content.decode())
-    assert content['name'] == "Rue des Boulets"
+    resp = get(url(views.Street, id=street.fantoir, identifier="fantoir"))
+    assert resp.json['name'] == "Rue des Boulets"
 
 
-def test_create_position(loggedclient):
+@log_in
+def test_create_position(post):
     housenumber = HouseNumberFactory(number="22")
-    url = reverse('api:position')
+    url = '/position'
     data = {
         "version": 1,
         "center": "(3, 4)",
-        "housenumber": housenumber.pk,
+        "housenumber": housenumber.id,
     }
-    resp = loggedclient.post(url, data)
-    assert resp.status_code == 201
-    content = json.loads(resp.content.decode())
-    assert content['id']
-    assert content['center']['lon'] == 3
-    assert content['center']['lat'] == 4
-    assert content['housenumber']['id'] == housenumber.pk
+    resp = post(url, data)
+    assert resp.status == 201
+    assert resp.json['id']
+    assert resp.json['center']['lon'] == 3
+    assert resp.json['center']['lat'] == 4
+    assert resp.json['housenumber']['id'] == housenumber.id
 
 
-def test_replace_position(loggedclient, url):
-    position = PositionFactory(source="XXX", center=Point(1, 2))
-    uri = url('api:position', ref=position.pk, key="id")
+@log_in
+def test_replace_position(put, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    uri = url(views.Position, id=position.id, identifier="id")
     data = {
         "version": 2,
         "center": (3, 4),
-        "housenumber": position.housenumber.pk
+        "housenumber": position.housenumber.id
     }
-    resp = loggedclient.put(uri, json.dumps(data))
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert content['id'] == position.pk
-    assert content['version'] == 2
-    assert content['center']['lon'] == 3
-    assert content['center']['lat'] == 4
+    resp = put(uri, body=json.dumps(data))
+    assert resp.status == 200
+    assert resp.json['id'] == position.id
+    assert resp.json['version'] == 2
+    assert resp.json['center']['lon'] == 3
+    assert resp.json['center']['lat'] == 4
 
 
-def test_replace_position_with_existing_version_fails(loggedclient, url):
-    position = PositionFactory(source="XXX", center=Point(1, 2))
-    uri = url('api:position', ref=position.pk, key="id")
+@log_in
+def test_replace_position_with_existing_version_fails(put, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    uri = url(views.Position, id=position.id, identifier="id")
     data = {
         "version": 1,
         "center": (3, 4),
-        "housenumber": position.housenumber.pk
+        "housenumber": position.housenumber.id
     }
-    resp = loggedclient.put(uri, json.dumps(data))
-    assert resp.status_code == 409
-    content = json.loads(resp.content.decode())
-    assert content['id'] == position.pk
-    assert content['version'] == 1
-    assert content['center']['lon'] == 1
-    assert content['center']['lat'] == 2
+    resp = put(uri, body=json.dumps(data))
+    assert resp.status == 409
+    assert resp.json['id'] == position.id
+    assert resp.json['version'] == 1
+    assert resp.json['center']['lon'] == 1
+    assert resp.json['center']['lat'] == 2
 
 
-def test_replace_position_with_non_incremental_version_fails(loggedclient,
-                                                             url):
-    position = PositionFactory(source="XXX", center=Point(1, 2))
-    uri = url('api:position', ref=position.pk, key="id")
+@log_in
+def test_replace_position_with_non_incremental_version_fails(put, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    uri = url(views.Position, id=position.id, identifier="id")
     data = {
         "version": 18,
         "center": (3, 4),
-        "housenumber": position.housenumber.pk
+        "housenumber": position.housenumber.id
     }
-    resp = loggedclient.put(uri, json.dumps(data))
-    assert resp.status_code == 409
-    content = json.loads(resp.content.decode())
-    assert content['id'] == position.pk
-    assert content['version'] == 1
-    assert content['center']['lon'] == 1
-    assert content['center']['lat'] == 2
+    resp = put(uri, body=json.dumps(data))
+    assert resp.status == 409
+    assert resp.json['id'] == position.id
+    assert resp.json['version'] == 1
+    assert resp.json['center']['lon'] == 1
+    assert resp.json['center']['lat'] == 2
 
 
-def test_update_position(loggedclient, url):
-    position = PositionFactory(source="XXX", center=Point(1, 2))
-    uri = url('api:position', ref=position.pk, key="id")
+@log_in
+def test_update_position(post, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    uri = url(views.Position, id=position.id, identifier="id")
     data = {
         "version": 2,
         "center": "(3.4, 5.678)",
-        "housenumber": position.housenumber.pk
+        "housenumber": position.housenumber.id
     }
-    resp = loggedclient.post(uri, data)
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert content['id'] == position.pk
-    assert content['center']['lon'] == 3.4
-    assert content['center']['lat'] == 5.678
+    resp = post(uri, data=data)
+    assert resp.status == 200
+    assert resp.json['id'] == position.id
+    assert resp.json['center']['lon'] == 3.4
+    assert resp.json['center']['lat'] == 5.678
 
 
-def test_update_position_with_existing_version_fails(loggedclient, url):
-    position = PositionFactory(source="XXX", center=Point(1, 2))
-    uri = url('api:position', ref=position.pk, key="id")
+@log_in
+def test_update_position_with_existing_version_fails(post, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    uri = url(views.Position, id=position.id, identifier="id")
     data = {
         "version": 1,
         "center": "(3.4, 5.678)",
-        "housenumber": position.housenumber.pk
+        "housenumber": position.housenumber.id
     }
-    resp = loggedclient.post(uri, data)
-    assert resp.status_code == 409
-    content = json.loads(resp.content.decode())
-    assert content['id'] == position.pk
-    assert content['version'] == 1
-    assert content['center']['lon'] == 1
-    assert content['center']['lat'] == 2
+    resp = post(uri, data=data)
+    assert resp.status == 409
+    assert resp.json['id'] == position.id
+    assert resp.json['version'] == 1
+    assert resp.json['center']['lon'] == 1
+    assert resp.json['center']['lat'] == 2
 
 
-def test_update_position_with_non_incremental_version_fails(loggedclient, url):
-    position = PositionFactory(source="XXX", center=Point(1, 2))
-    uri = url('api:position', ref=position.pk, key="id")
+@log_in
+def test_update_position_with_non_incremental_version_fails(post, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    uri = url(views.Position, id=position.id, identifier="id")
     data = {
         "version": 3,
         "center": "(3.4, 5.678)",
-        "housenumber": position.housenumber.pk
+        "housenumber": position.housenumber.id
     }
-    resp = loggedclient.post(uri, data)
-    assert resp.status_code == 409
-    content = json.loads(resp.content.decode())
-    assert content['id'] == position.pk
-    assert content['version'] == 1
-    assert content['center']['lon'] == 1
-    assert content['center']['lat'] == 2
+    resp = post(uri, data)
+    assert resp.status == 409
+    assert resp.json['id'] == position.id
+    assert resp.json['version'] == 1
+    assert resp.json['center']['lon'] == 1
+    assert resp.json['center']['lat'] == 2
 
 
-def test_create_housenumber(loggedclient):
+@log_in
+def test_create_housenumber(post):
     street = StreetFactory(name="Rue de Bonbons")
-    url = reverse('api:housenumber')
     data = {
         "version": 1,
         "number": 20,
-        "street": street.pk,
+        "street": street.id,
     }
-    resp = loggedclient.post(url, data)
-    assert resp.status_code == 201
-    content = json.loads(resp.content.decode())
-    assert content['id']
-    assert content['number'] == '20'
-    assert content['ordinal'] == ''
-    assert content['street']['id'] == street.pk
+    resp = post('/housenumber', data)
+    assert resp.status == 201
+    assert resp.json['id']
+    assert resp.json['number'] == '20'
+    assert resp.json['ordinal'] == ''
+    assert resp.json['street']['id'] == street.id
 
 
-def test_create_housenumber_does_not_use_version_field(loggedclient):
+@log_in
+def test_create_housenumber_does_not_use_version_field(post):
     street = StreetFactory(name="Rue de Bonbons")
-    url = reverse('api:housenumber')
     data = {
         "version": 3,
         "number": 20,
-        "street": street.pk,
+        "street": street.id,
     }
-    resp = loggedclient.post(url, data)
-    assert resp.status_code == 201
-    content = json.loads(resp.content.decode())
-    assert content['id']
-    assert content['version'] == 1
+    resp = post('/housenumber', data=data)
+    assert resp.status == 201
+    assert resp.json['id']
+    assert resp.json['version'] == 1
 
 
-def test_replace_housenumber(loggedclient, url):
+@log_in
+def test_replace_housenumber(put, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
-    uri = url('api:housenumber', ref=housenumber.pk, key="id")
+    uri = url(views.Housenumber, id=housenumber.id, identifier="id")
     data = {
         "version": 2,
         "number": housenumber.number,
         "ordinal": 'bis',
-        "street": housenumber.street.pk,
+        "street": housenumber.street.id,
     }
-    resp = loggedclient.put(uri, json.dumps(data))
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert content['id']
-    assert content['version'] == 2
-    assert content['number'] == '22'
-    assert content['ordinal'] == 'bis'
-    assert content['street']['id'] == housenumber.street.pk
+    resp = put(uri, body=json.dumps(data))
+    assert resp.status == 200
+    assert resp.json['id']
+    assert resp.json['version'] == 2
+    assert resp.json['number'] == '22'
+    assert resp.json['ordinal'] == 'bis'
+    assert resp.json['street']['id'] == housenumber.street.id
 
 
-def test_replace_housenumber_with_missing_field_fails(loggedclient, url):
+@log_in
+def test_replace_housenumber_with_missing_field_fails(put, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
-    uri = url('api:housenumber', ref=housenumber.pk, key="id")
+    uri = url(views.Housenumber, id=housenumber.id, identifier="id")
     data = {
         "version": 2,
         "ordinal": 'bis',
-        "street": housenumber.street.pk,
+        "street": housenumber.street.id,
     }
-    resp = loggedclient.put(uri, json.dumps(data))
-    assert resp.status_code == 422
-    content = json.loads(resp.content.decode())
-    assert 'errors' in content
+    resp = put(uri, body=json.dumps(data))
+    assert resp.status == 422
+    assert 'errors' in resp.json
 
 
-def test_create_street(loggedclient):
+@log_in
+def test_create_street(post):
     municipality = MunicipalityFactory(name="Cabour")
-    url = reverse('api:street')
     data = {
         "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
-        "municipality": municipality.pk,
+        "municipality": municipality.id,
     }
-    resp = loggedclient.post(url, data)
-    assert resp.status_code == 201
-    content = json.loads(resp.content.decode())
-    assert content['id']
-    assert content['name'] == 'Rue de la Plage'
-    assert content['municipality']['id'] == municipality.pk
+    resp = post('/street', data)
+    assert resp.status == 201
+    assert resp.json['id']
+    assert resp.json['name'] == 'Rue de la Plage'
+    assert resp.json['municipality']['id'] == municipality.id
 
 
-def test_get_municipality(client, url):
+def test_get_municipality(get, url):
     municipality = MunicipalityFactory(name="Cabour")
-    uri = url('api:municipality', ref=municipality.pk, key="id")
-    resp = client.get(uri)
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert content['id']
-    assert content['name'] == 'Cabour'
+    uri = url(views.Municipality, id=municipality.id, identifier="id")
+    resp = get(uri)
+    assert resp.status == 200
+    assert resp.json['id']
+    assert resp.json['name'] == 'Cabour'
 
 
-def test_get_municipality_streets_collection(client, url):
+def test_get_municipality_streets_collection(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     street = StreetFactory(municipality=municipality, name="Rue de la Plage")
-    uri = url('api:municipality', ref=municipality.pk, key="id",
+    uri = url(views.Municipality, id=municipality.id, identifier="id",
               route="streets")
-    resp = client.get(uri)
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert content['collection'][0] == street.as_resource
-    assert content['total'] == 1
+    resp = get(uri, query_string='pouet=ah')
+    assert resp.status == 200
+    assert resp.json['collection'][0] == street.as_resource
+    assert resp.json['total'] == 1
 
 
-def test_get_municipality_streets_collection_is_paginated(client, url):
+def test_get_municipality_streets_collection_is_paginated(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     StreetFactory.create_batch(30, municipality=municipality)
-    uri = url('api:municipality', ref=municipality.pk, key="id",
+    uri = url(views.Municipality, id=municipality.id, identifier="id",
               route="streets")
-    resp = client.get(uri)
-    page1 = json.loads(resp.content.decode())
+    resp = get(uri)
+    page1 = json.loads(resp.body)
     assert len(page1['collection']) == 20
     assert page1['total'] == 30
     assert 'next' in page1
     assert 'previous' not in page1
-    resp = client.get(page1['next'])
-    page2 = json.loads(resp.content.decode())
+    resp = get(page1['next'])
+    page2 = json.loads(resp.body)
     assert len(page2['collection']) == 10
     assert page2['total'] == 30
     assert 'next' not in page2
     assert 'previous' in page2
-    resp = client.get(page2['previous'])
-    assert json.loads(resp.content.decode()) == page1
+    resp = get(page2['previous'])
+    assert json.loads(resp.body) == page1
 
 
-def test_get_municipality_versions(client, url):
+def test_get_municipality_versions(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     municipality.version = 2
     municipality.name = "Cabour2"
     municipality.save()
-    uri = url('api:municipality', ref=municipality.pk, key="id",
+    uri = url(views.Municipality, id=municipality.id, identifier="id",
               route="versions")
-    resp = client.get(uri)
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert len(content['collection']) == 2
-    assert content['total'] == 2
-    assert content['collection'][0]['name'] == 'Cabour'
-    assert content['collection'][1]['name'] == 'Cabour2'
+    resp = get(uri)
+    assert resp.status == 200
+    assert len(resp.json['collection']) == 2
+    assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['name'] == 'Cabour'
+    assert resp.json['collection'][1]['name'] == 'Cabour2'
 
 
-def test_get_municipality_version(client, url):
+def test_get_municipality_version(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     municipality.version = 2
     municipality.name = "Cabour2"
     municipality.save()
-    uri = url('api:municipality', ref=municipality.pk, key="id",
+    uri = url(views.Municipality, id=municipality.id, identifier="id",
               route="versions", route_id=1)
-    resp = client.get(uri)
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert content['name'] == 'Cabour'
-    assert content['version'] == 1
-    uri = url('api:municipality', ref=municipality.pk, key="id",
+    resp = get(uri)
+    assert resp.status == 200
+    assert resp.json['name'] == 'Cabour'
+    assert resp.json['version'] == 1
+    uri = url(views.Municipality, id=municipality.id, identifier="id",
               route="versions", route_id=2)
-    resp = client.get(uri)
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert content['name'] == 'Cabour2'
-    assert content['version'] == 2
+    resp = get(uri)
+    assert resp.status == 200
+    assert resp.json['name'] == 'Cabour2'
+    assert resp.json['version'] == 2
 
 
-def test_get_street_versions(client, url):
+def test_get_street_versions(get, url):
     street = StreetFactory(name="Rue de la Paix")
     street.version = 2
     street.name = "Rue de la Guerre"
     street.save()
-    uri = url('api:street', ref=street.pk, key="id",
+    uri = url(views.Street, id=street.id, identifier="id",
               route="versions")
-    resp = client.get(uri)
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert len(content['collection']) == 2
-    assert content['total'] == 2
-    assert content['collection'][0]['name'] == 'Rue de la Paix'
-    assert content['collection'][1]['name'] == 'Rue de la Guerre'
+    resp = get(uri)
+    assert resp.status == 200
+    assert len(resp.json['collection']) == 2
+    assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['name'] == 'Rue de la Paix'
+    assert resp.json['collection'][1]['name'] == 'Rue de la Guerre'
 
 
-def test_get_street_version(client, url):
+def test_get_street_version(get, url):
     street = StreetFactory(name="Rue de la Paix")
     street.version = 2
     street.name = "Rue de la Guerre"
     street.save()
-    uri = url('api:street', ref=street.pk, key="id",
+    uri = url(views.Street, id=street.id, identifier="id",
               route="versions", route_id=1)
-    resp = client.get(uri)
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert content['name'] == 'Rue de la Paix'
-    assert content['version'] == 1
-    uri = url('api:street', ref=street.pk, key="id",
+    resp = get(uri)
+    assert resp.status == 200
+    assert resp.json['name'] == 'Rue de la Paix'
+    assert resp.json['version'] == 1
+    uri = url(views.Street, id=street.id, identifier="id",
               route="versions", route_id=2)
-    resp = client.get(uri)
-    assert resp.status_code == 200
-    content = json.loads(resp.content.decode())
-    assert content['name'] == 'Rue de la Guerre'
-    assert content['version'] == 2
+    resp = get(uri)
+    assert resp.status == 200
+    assert resp.json['name'] == 'Rue de la Guerre'
+    assert resp.json['version'] == 2
 
 
-def test_invalid_route_is_bas_request(client, url):
-    resp = client.get(url('api:street', ref=1, key="id", route="invalid"))
-    assert resp.status_code == 400
-    resp = client.get(url('api:street', ref=1, key="id", route="to_json"))
-    assert resp.status_code == 400
+def test_invalid_route_is_not_found(get, url):
+    resp = get(url(views.Street, id=1, identifier="id", route="invalid"))
+    assert resp.status == 404
+    resp = get(url(views.Street, id=1, identifier="id", route="save_object"))
+    assert resp.status == 404

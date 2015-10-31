@@ -24,6 +24,12 @@ class VersionMixin(peewee.Model, metaclass=Versioned):
         abstract = True
         unique_together = ('id', 'version')
 
+    @classmethod
+    def get(cls, *query, **kwargs):
+        instance = super().get(*query, **kwargs)
+        instance.lock_version()
+        return instance
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.lock_version()
@@ -49,6 +55,9 @@ class VersionMixin(peewee.Model, metaclass=Versioned):
     def versions(self):
         return Version.select().where(Version.model == self.__class__.__name__,
                                       Version.model_id == self.id)
+
+    def load_version(self, id):
+        return self.versions.filter(Version.sequential == id).first()
 
     @property
     def locked_version(self):
@@ -120,8 +129,8 @@ class Version(peewee.Model):
         return query
 
     @property
-    def as_dict(self):
+    def as_resource(self):
         return pickle.loads(self.data)
 
     def load(self):
-        return Versioned.registry[self.model](**self.as_dict)
+        return Versioned.registry[self.model](**self.as_resource)

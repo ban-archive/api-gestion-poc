@@ -140,3 +140,23 @@ def test_position_attributes():
     position = PositionFactory(attributes={'foo': 'bar'})
     assert position.attributes['foo'] == 'bar'
     assert models.Position.select().where(models.Position.attributes.contains({'foo': 'bar'})).exists()  # noqa
+
+
+def test_get_instantiate_object_properly():
+    original = PositionFactory()
+    loaded = models.Position.get(models.Position.id == original.id)
+    assert loaded.id == original.id
+    assert loaded.version == original.version
+    assert loaded.center == original.center
+    assert loaded.housenumber == original.housenumber
+
+
+@pytest.mark.parametrize('given,expected', [
+    ((1, 2), (1, 2)),
+    ((1.123456789, 2.987654321), (1.123456789, 2.987654321)),
+    ([1, 2], (1, 2)),
+    ("(1, 2)", (1, 2)),
+])
+def test_position_center_coerce(given, expected):
+    position = PositionFactory(center=given)
+    assert models.Position.get(models.Position.id == position.id).center == expected  # noqa

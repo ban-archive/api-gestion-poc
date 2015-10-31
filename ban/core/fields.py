@@ -18,23 +18,47 @@ class HouseNumberField(peewee.Field):
     schema_type = 'point'
 
     def db_value(self, value):
-        return str(value)
+        return str(self.coerce(value))
 
     def python_value(self, value):
-        search = lonlat_pattern.search(value)
-        if search:
-            return (float(search.group('lon')), float(search.group('lat')))
-        else:
-            return tuple()
-    #     # Allow to pass list or tuple as coordinates.
-    #     if isinstance(value, (list, tuple)):
-    #         value = point_template.format(value[0], value[1])
-    #     elif value is not None:
-    #         search = lonlat_pattern.search(value)
-    #         if search:
-    #             value = point_template.format(search.group('lon'),
-    #                                           search.group('lat'))
-    #     return value
+        return self.coerce(value)
+
+    def coerce(self, value):
+        if not value:
+            value = tuple()
+        elif isinstance(value, str):
+            search = lonlat_pattern.search(value)
+            if search:
+                value = (float(search.group('lon')),
+                         float(search.group('lat')))
+        elif isinstance(value, list):
+            value = tuple(value)
+        return value
+
+
+class ForeignKeyField(peewee.ForeignKeyField):
+
+    def coerce(self, value):
+        if isinstance(value, peewee.Model):
+            value = value.id
+        return super().coerce(value)
+
+
+class CharField(peewee.CharField):
+
+    def __init__(self, *args, **kwargs):
+        if 'default' not in kwargs:
+            kwargs['default'] = ''
+        super().__init__(*args, **kwargs)
+
+    def coerce(self, value):
+        if value is None:
+            value = ''
+        return super().coerce(value)
+
+    def python_value(self, value):
+        value = self.coerce(value)
+        return super().python_value(value)
 
 peewee.PostgresqlDatabase.register_fields({'point': 'point'})
 peewee.SqliteDatabase.register_fields({'point': 'point'})
