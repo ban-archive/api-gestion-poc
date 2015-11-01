@@ -1,5 +1,3 @@
-import pytest
-
 from .factories import (HouseNumberFactory, LocalityFactory,
                         MunicipalityFactory, PositionFactory, StreetFactory,
                         UserFactory)

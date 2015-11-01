@@ -5,8 +5,6 @@ from ban.core import models
 from .factories import (HouseNumberFactory, MunicipalityFactory,
                         PositionFactory, StreetFactory)
 
-pytestmark = pytest.mark.django_db
-
 
 def test_municipality_is_created_with_version_1():
     municipality = MunicipalityFactory()

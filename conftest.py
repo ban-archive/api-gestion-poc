@@ -7,22 +7,22 @@ from falcon.testing.srmock import StartResponseMock
 from falcon.testing.helpers import create_environ
 
 from ban.core import context
-from ban.core.tests.factories import UserFactory
+from ban.tests.factories import UserFactory
 
-from ban.core.database import test_db, db
+from ban import db
 from ban.core import models as cmodels
-from ban.versioning import models as vmodels
-from ban.http.views import app
+from ban.core.versioning import Version
+from ban.http import app
 
-models = [vmodels.Version, cmodels.Contact, cmodels.Municipality,
+models = [Version, cmodels.Contact, cmodels.Municipality,
           cmodels.Street, cmodels.Locality, cmodels.HouseNumber,
           cmodels.Position]
 
 
 def pytest_configure(config):
-    test_db.connect()
+    db.test.connect()
     for model in models:
-        model._meta.database = test_db
+        model._meta.database = db.test
     for model in models:
         model.create_table(fail_silently=True)
     verbose = config.getoption('verbose')
@@ -32,8 +32,8 @@ def pytest_configure(config):
 
 
 def pytest_unconfigure(config):
-    db.drop_tables(models)
-    test_db.close()
+    db.test.drop_tables(models)
+    db.test.close()
 
 
 def pytest_runtest_setup(item):

@@ -1,6 +1,7 @@
 import re
 
 import peewee
+from playhouse.postgres_ext import HStoreField
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
 point_template = 'POINT ({} {})'
@@ -13,7 +14,7 @@ point_template = 'POINT ({} {})'
 # http://stackoverflow.com/questions/29888040/how-to-join-on-spatial-functions-in-peewee
 
 
-class HouseNumberField(peewee.Field):
+class PointField(peewee.Field):
     db_field = 'point'
     schema_type = 'point'
 
@@ -38,6 +39,8 @@ class HouseNumberField(peewee.Field):
 
 class ForeignKeyField(peewee.ForeignKeyField):
 
+    schema_type = 'integer'
+
     def coerce(self, value):
         if isinstance(value, peewee.Model):
             value = value.id
@@ -45,6 +48,7 @@ class ForeignKeyField(peewee.ForeignKeyField):
 
 
 class CharField(peewee.CharField):
+    schema_type = 'string'
 
     def __init__(self, *args, **kwargs):
         if 'default' not in kwargs:
@@ -62,3 +66,11 @@ class CharField(peewee.CharField):
 
 peewee.PostgresqlDatabase.register_fields({'point': 'point'})
 peewee.SqliteDatabase.register_fields({'point': 'point'})
+
+
+class IntegerField(peewee.IntegerField):
+    schema_type = 'integer'
+
+
+class HStoreField(HStoreField):
+    schema_type = 'dict'

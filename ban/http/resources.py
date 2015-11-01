@@ -1,16 +1,12 @@
-from  datetime import datetime
-import json
 import re
 from functools import wraps
 
 from urllib.parse import urlencode
 
 import falcon
-from falcon.response import Response as BaseResponse
-from falcon.request import Request as BaseRequest
 
+from . import app
 from ban.core import models
-from ban.versioning.exceptions import ForcedVersionError
 
 
 def attach_kwargs(method):
@@ -21,53 +17,6 @@ def attach_kwargs(method):
         view.request = req
         return method(view, req, resp, **kwargs)
     return inner
-
-
-class ResourceEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, datetime):
-            return o.isoformat()
-        try:
-            return super().default(o)
-        except TypeError:
-            return str(o)
-
-
-class Response(BaseResponse):
-
-    def json(self, **kwargs):
-        self.body = json.dumps(kwargs, cls=ResourceEncoder)
-
-
-class Request(BaseRequest):
-
-    @property
-    def json(self, **kwargs):
-        if self.content_length in (None, 0):
-            return
-        if not hasattr(self, '_json'):
-            self._json = json.loads(self.stream.read().decode())
-        return self._json
-
-
-class CorsMiddleware:
-
-    def process_response(self, req, resp, resource):
-        resp.set_header('X-Powered-By', 'Your Beloved State')
-        resp.set_header('Access-Control-Allow-Origin', '*')
-        resp.set_header('Access-Control-Allow-Headers', 'X-Requested-With')
-
-
-class ValidationMiddleware:
-
-    def process_resource(self, req, resp, resource):
-        # import ipdb; ipdb.set_trace()
-        pass
-
-
-app = falcon.API(middleware=[CorsMiddleware(), ValidationMiddleware()],
-                 response_type=Response,
-                 request_type=Request)
 
 
 class WithURL(type):
@@ -167,7 +116,7 @@ class BaseCRUD(URLMixin):
         if not validator.errors:
             try:
                 self.object = validator.save(instance=instance)
-            except ForcedVersionError:
+            except self.object.ForcedVersionError:
                 status = 409
                 # Return original object.
                 self.object = self.get_object()

@@ -4,9 +4,9 @@ from functools import wraps
 
 import pytest
 
-from ban.core.tests.factories import (HouseNumberFactory, PositionFactory,
+from .factories import (HouseNumberFactory, PositionFactory,
                                       StreetFactory, MunicipalityFactory)
-from ban.http import views
+from ban.http import resources as http
 
 pytestmark = pytest.mark.django_db
 
@@ -52,7 +52,7 @@ def test_cors(get):
 
 def test_get_housenumber(get, url):
     housenumber = HouseNumberFactory(number="22")
-    resp = get(url(views.Housenumber, id=housenumber.id, identifier="id"))
+    resp = get(url(http.Housenumber, id=housenumber.id, identifier="id"))
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
@@ -60,25 +60,25 @@ def test_get_housenumber(get, url):
 
 
 def test_get_housenumber_with_unknown_id_is_404(get, url):
-    resp = get(url(views.Housenumber, id=22, identifier="id"))
+    resp = get(url(http.Housenumber, id=22, identifier="id"))
     assert resp.status == 404
 
 
 def test_get_housenumber_with_cia(get, url):
     housenumber = HouseNumberFactory(number="22")
-    resp = get(url(views.Housenumber, id=housenumber.cia, identifier="cia"))
+    resp = get(url(http.Housenumber, id=housenumber.cia, identifier="cia"))
     assert resp.json['number'] == "22"
 
 
 def test_get_street(get, url):
     street = StreetFactory(name="Rue des Boulets")
-    resp = get(url(views.Street, id=street.id, identifier="id"))
+    resp = get(url(http.Street, id=street.id, identifier="id"))
     assert resp.json['name'] == "Rue des Boulets"
 
 
 def test_get_street_with_fantoir(get, url):
     street = StreetFactory(name="Rue des Boulets")
-    resp = get(url(views.Street, id=street.fantoir, identifier="fantoir"))
+    resp = get(url(http.Street, id=street.fantoir, identifier="fantoir"))
     assert resp.json['name'] == "Rue des Boulets"
 
 
@@ -102,7 +102,7 @@ def test_create_position(post):
 @log_in
 def test_replace_position(put, url):
     position = PositionFactory(source="XXX", center=(1, 2))
-    uri = url(views.Position, id=position.id, identifier="id")
+    uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 2,
         "center": (3, 4),
@@ -119,7 +119,7 @@ def test_replace_position(put, url):
 @log_in
 def test_replace_position_with_existing_version_fails(put, url):
     position = PositionFactory(source="XXX", center=(1, 2))
-    uri = url(views.Position, id=position.id, identifier="id")
+    uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 1,
         "center": (3, 4),
@@ -136,7 +136,7 @@ def test_replace_position_with_existing_version_fails(put, url):
 @log_in
 def test_replace_position_with_non_incremental_version_fails(put, url):
     position = PositionFactory(source="XXX", center=(1, 2))
-    uri = url(views.Position, id=position.id, identifier="id")
+    uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 18,
         "center": (3, 4),
@@ -153,7 +153,7 @@ def test_replace_position_with_non_incremental_version_fails(put, url):
 @log_in
 def test_update_position(post, url):
     position = PositionFactory(source="XXX", center=(1, 2))
-    uri = url(views.Position, id=position.id, identifier="id")
+    uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 2,
         "center": "(3.4, 5.678)",
@@ -169,7 +169,7 @@ def test_update_position(post, url):
 @log_in
 def test_update_position_with_existing_version_fails(post, url):
     position = PositionFactory(source="XXX", center=(1, 2))
-    uri = url(views.Position, id=position.id, identifier="id")
+    uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 1,
         "center": "(3.4, 5.678)",
@@ -186,7 +186,7 @@ def test_update_position_with_existing_version_fails(post, url):
 @log_in
 def test_update_position_with_non_incremental_version_fails(post, url):
     position = PositionFactory(source="XXX", center=(1, 2))
-    uri = url(views.Position, id=position.id, identifier="id")
+    uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 3,
         "center": "(3.4, 5.678)",
@@ -233,7 +233,7 @@ def test_create_housenumber_does_not_use_version_field(post):
 @log_in
 def test_replace_housenumber(put, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
-    uri = url(views.Housenumber, id=housenumber.id, identifier="id")
+    uri = url(http.Housenumber, id=housenumber.id, identifier="id")
     data = {
         "version": 2,
         "number": housenumber.number,
@@ -252,7 +252,7 @@ def test_replace_housenumber(put, url):
 @log_in
 def test_replace_housenumber_with_missing_field_fails(put, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
-    uri = url(views.Housenumber, id=housenumber.id, identifier="id")
+    uri = url(http.Housenumber, id=housenumber.id, identifier="id")
     data = {
         "version": 2,
         "ordinal": 'bis',
@@ -281,7 +281,7 @@ def test_create_street(post):
 
 def test_get_municipality(get, url):
     municipality = MunicipalityFactory(name="Cabour")
-    uri = url(views.Municipality, id=municipality.id, identifier="id")
+    uri = url(http.Municipality, id=municipality.id, identifier="id")
     resp = get(uri)
     assert resp.status == 200
     assert resp.json['id']
@@ -291,7 +291,7 @@ def test_get_municipality(get, url):
 def test_get_municipality_streets_collection(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     street = StreetFactory(municipality=municipality, name="Rue de la Plage")
-    uri = url(views.Municipality, id=municipality.id, identifier="id",
+    uri = url(http.Municipality, id=municipality.id, identifier="id",
               route="streets")
     resp = get(uri, query_string='pouet=ah')
     assert resp.status == 200
@@ -302,7 +302,7 @@ def test_get_municipality_streets_collection(get, url):
 def test_get_municipality_streets_collection_is_paginated(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     StreetFactory.create_batch(30, municipality=municipality)
-    uri = url(views.Municipality, id=municipality.id, identifier="id",
+    uri = url(http.Municipality, id=municipality.id, identifier="id",
               route="streets")
     resp = get(uri)
     page1 = json.loads(resp.body)
@@ -325,7 +325,7 @@ def test_get_municipality_versions(get, url):
     municipality.version = 2
     municipality.name = "Cabour2"
     municipality.save()
-    uri = url(views.Municipality, id=municipality.id, identifier="id",
+    uri = url(http.Municipality, id=municipality.id, identifier="id",
               route="versions")
     resp = get(uri)
     assert resp.status == 200
@@ -340,13 +340,13 @@ def test_get_municipality_version(get, url):
     municipality.version = 2
     municipality.name = "Cabour2"
     municipality.save()
-    uri = url(views.Municipality, id=municipality.id, identifier="id",
+    uri = url(http.Municipality, id=municipality.id, identifier="id",
               route="versions", route_id=1)
     resp = get(uri)
     assert resp.status == 200
     assert resp.json['name'] == 'Cabour'
     assert resp.json['version'] == 1
-    uri = url(views.Municipality, id=municipality.id, identifier="id",
+    uri = url(http.Municipality, id=municipality.id, identifier="id",
               route="versions", route_id=2)
     resp = get(uri)
     assert resp.status == 200
@@ -359,7 +359,7 @@ def test_get_street_versions(get, url):
     street.version = 2
     street.name = "Rue de la Guerre"
     street.save()
-    uri = url(views.Street, id=street.id, identifier="id",
+    uri = url(http.Street, id=street.id, identifier="id",
               route="versions")
     resp = get(uri)
     assert resp.status == 200
@@ -374,13 +374,13 @@ def test_get_street_version(get, url):
     street.version = 2
     street.name = "Rue de la Guerre"
     street.save()
-    uri = url(views.Street, id=street.id, identifier="id",
+    uri = url(http.Street, id=street.id, identifier="id",
               route="versions", route_id=1)
     resp = get(uri)
     assert resp.status == 200
     assert resp.json['name'] == 'Rue de la Paix'
     assert resp.json['version'] == 1
-    uri = url(views.Street, id=street.id, identifier="id",
+    uri = url(http.Street, id=street.id, identifier="id",
               route="versions", route_id=2)
     resp = get(uri)
     assert resp.status == 200
@@ -389,7 +389,7 @@ def test_get_street_version(get, url):
 
 
 def test_invalid_route_is_not_found(get, url):
-    resp = get(url(views.Street, id=1, identifier="id", route="invalid"))
+    resp = get(url(http.Street, id=1, identifier="id", route="invalid"))
     assert resp.status == 404
-    resp = get(url(views.Street, id=1, identifier="id", route="save_object"))
+    resp = get(url(http.Street, id=1, identifier="id", route="save_object"))
     assert resp.status == 404

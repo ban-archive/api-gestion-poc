@@ -1,10 +1,6 @@
-import pytest
-
 from ban.core import models
 
 from .factories import MunicipalityFactory, StreetFactory
-
-pytestmark = pytest.mark.django_db
 
 
 def test_municipality_as_resource():

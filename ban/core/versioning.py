@@ -2,23 +2,28 @@ import pickle
 
 import peewee
 
-from .exceptions import ForcedVersionError
-from ban.core.database import db
+from ban import db
 
 
-class Versioned(peewee.BaseModel):
+class ForcedVersionError(Exception):
+    pass
+
+
+class BaseVersioned(peewee.BaseModel):
 
     registry = {}
 
     def __new__(mcs, name, bases, attrs, **kwargs):
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
-        Versioned.registry[name] = cls
+        BaseVersioned.registry[name] = cls
         return cls
 
 
-class VersionMixin(peewee.Model, metaclass=Versioned):
+class Versioned(peewee.Model, metaclass=BaseVersioned):
 
-    version = peewee.IntegerField(default=1)
+    ForcedVersionError = ForcedVersionError
+
+    version = db.IntegerField(default=1)
 
     class Meta:
         abstract = True
@@ -118,7 +123,7 @@ class Version(peewee.Model):
     data = peewee.BlobField()
 
     class Meta:
-        database = db
+        database = db.default
 
     # TODO find a way not to override the peewee.Model select classmethod.
     @classmethod
@@ -133,4 +138,4 @@ class Version(peewee.Model):
         return pickle.loads(self.data)
 
     def load(self):
-        return Versioned.registry[self.model](**self.as_resource)
+        return BaseVersioned.registry[self.model](**self.as_resource)
