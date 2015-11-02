@@ -1,12 +1,12 @@
 import json
 from functools import wraps
 
-
 import pytest
 
-from .factories import (HouseNumberFactory, PositionFactory,
-                                      StreetFactory, MunicipalityFactory)
 from ban.http import resources as http
+
+from .factories import (HouseNumberFactory, MunicipalityFactory,
+                        PositionFactory, StreetFactory)
 
 pytestmark = pytest.mark.django_db
 

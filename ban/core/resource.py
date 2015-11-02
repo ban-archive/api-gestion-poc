@@ -1,7 +1,7 @@
 import peewee
+from cerberus import ValidationError, Validator
 
-from cerberus import Validator, ValidationError
-from .versioning import Versioned, BaseVersioned
+from .versioning import BaseVersioned, Versioned
 
 
 class ResourceValidator(Validator):

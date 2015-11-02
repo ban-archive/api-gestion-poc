@@ -1,15 +1,14 @@
-from datetime import datetime
 import re
-
-from unidecode import unidecode
+from datetime import datetime
 
 # from django.utils.translation import ugettext as _
 import peewee
+from unidecode import unidecode
+
+from ban import db
 
 from . import context
 from .resource import ResourceModel
-from ban import db
-
 
 __all__ = ['Contact', 'Municipality', 'Street', 'HouseNumber', 'Locality',
            'Position']

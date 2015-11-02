@@ -1,12 +1,12 @@
 import re
 from functools import wraps
-
 from urllib.parse import urlencode
 
 import falcon
 
-from . import app
 from ban.core import models
+
+from . import app
 
 
 def attach_kwargs(method):
