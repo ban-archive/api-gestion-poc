@@ -28,14 +28,6 @@ class ResourceValidator(Validator):
         return instance
 
 
-class ResourceMeta(BaseVersioned):
-
-    def __new__(mcs, name, bases, attrs, **kwargs):
-        cls = super().__new__(mcs, name, bases, attrs, **kwargs)
-        cls._meta.resource_schema = cls.build_resource_schema()
-        return cls
-
-
 class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
 
     def process_row(self, row):
@@ -57,6 +49,14 @@ class SelectQuery(peewee.SelectQuery):
 
     def __len__(self):
         return self.count()
+
+
+class ResourceMeta(BaseVersioned):
+
+    def __new__(mcs, name, bases, attrs, **kwargs):
+        cls = super().__new__(mcs, name, bases, attrs, **kwargs)
+        cls._meta.resource_schema = cls.build_resource_schema()
+        return cls
 
 
 class ResourceModel(Versioned, metaclass=ResourceMeta):

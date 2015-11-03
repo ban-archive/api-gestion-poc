@@ -10,21 +10,15 @@ from ban.core import context
 from ban.tests.factories import UserFactory
 
 from ban import db
-from ban.core import models as cmodels
-from ban.core.versioning import Version
+from ban.commands.db import models, syncdb
 from ban.http import app
-
-models = [Version, cmodels.Contact, cmodels.Municipality,
-          cmodels.Street, cmodels.Locality, cmodels.HouseNumber,
-          cmodels.Position]
 
 
 def pytest_configure(config):
     db.test.connect()
     for model in models:
         model._meta.database = db.test
-    for model in models:
-        model.create_table(fail_silently=True)
+    syncdb(fail_silently=True)
     verbose = config.getoption('verbose')
     if verbose:
         import logging
