@@ -51,11 +51,11 @@ def bar(iterable, *args, **kwargs):
     return ProgressBar(*args, **kwargs)(iterable)
 
 
-def batch(func, iterable, chunksize=1000):
+def batch(func, iterable, chunksize=1000, max_value=None):
     pool = Pool()
     count = 0
     chunk = []
-    for item in bar(iterable):
+    for item in bar(iterable, max_value=max_value):
         if not item:
             continue
         chunk.append(item)
