@@ -1,12 +1,10 @@
-import falcon
-
-from .request import Request
-from .response import Response
-from .middlewares import CorsMiddleware, ValidationMiddleware
+from wsgiref import simple_server
 
 
-application = app = falcon.API(
-    middleware=[CorsMiddleware(), ValidationMiddleware()],
-    response_type=Response,
-    request_type=Request
-)
+from ban.http.wsgi import application
+from ban.http.resources import *  # noqa
+
+
+if __name__ == '__main__':
+    httpd = simple_server.make_server('127.0.0.1', 5959, application)
+    httpd.serve_forever()

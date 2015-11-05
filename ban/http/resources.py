@@ -6,7 +6,10 @@ import falcon
 
 from ban.core import models
 
-from . import app
+from .wsgi import app
+
+
+__all__ = ['Municipality', 'Street', 'Locality', 'Housenumber', 'Position']
 
 
 def attach_kwargs(method):
