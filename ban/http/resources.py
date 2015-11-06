@@ -1,5 +1,4 @@
 import re
-from functools import wraps
 from urllib.parse import urlencode
 
 import falcon
@@ -10,16 +9,6 @@ from .wsgi import app
 
 
 __all__ = ['Municipality', 'Street', 'Locality', 'Housenumber', 'Position']
-
-
-def attach_kwargs(method):
-    @wraps(method)
-    def inner(view, req, resp, **kwargs):
-        for k, v in kwargs.items():
-            setattr(view, k, v)
-        view.request = req
-        return method(view, req, resp, **kwargs)
-    return inner
 
 
 class WithURL(type):
@@ -54,13 +43,6 @@ class BaseCRUD(URLMixin):
     DEFAULT_LIMIT = 20
     MAX_LIMIT = 100
 
-    def dispatch(self, *args, **kwargs):
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-        if self.key and self.key not in self.identifiers + ['id']:
-            return self.error(400, 'Invalid identifier: {}'.format(self.ref))
-        return super().dispatch(*args, **kwargs)
-
     def not_found(self, msg='Not found'):
         return self.error(404, msg)
 
@@ -78,80 +60,76 @@ class BaseCRUD(URLMixin):
         ]
         # return cls.base_url() + r'(?:(?P<key>[\w_]+)/(?P<ref>[\w_]+)/(?:(?P<route>[\w_]+)/(?:(?P<route_id>[\d]+)/)?)?)?$'  # noqa
 
-    def get_object(self):
+    def get_object(self, identifier, id, **kwargs):
         try:
-            return self.model.get(getattr(self.model, self.identifier) == self.id)
+            return self.model.get(getattr(self.model, identifier) == id)
         except self.model.DoesNotExist:
             raise falcon.HTTPNotFound()
 
-    @attach_kwargs
     def on_get(self, req, resp, **kwargs):
         identifier = kwargs.get('identifier')
         if identifier and identifier not in self.identifiers + ['id']:
-            raise falcon.HTTPBadRequest('Invalid identifier: {}'.format(identifier), 'Invalid identifier: {}'.format(identifier))
-        self.object = self.get_object()
-        if getattr(self, 'route', None):
-            name = 'on_get_{}'.format(self.route)
+            msg = 'Invalid identifier: {}'.format(identifier)
+            raise falcon.HTTPBadRequest(msg, msg)
+        instance = self.get_object(**kwargs)
+        if 'route' in kwargs:
+            name = 'on_get_{}'.format(kwargs['route'])
             view = getattr(self, name, None)
             if view and callable(view):
                 return view(req, resp, **kwargs)
             else:
                 raise falcon.HTTPBadRequest('Invalid route', 'Invalid route')
-        resp.json(**self.object.as_resource)
+        resp.json(**instance.as_resource)
 
-    @attach_kwargs
     def on_post(self, req, resp, *args, **kwargs):
-        if getattr(self, 'id', None):
-            self.object = self.get_object()
-            instance = self.object
+        if 'id' in kwargs:
+            instance = self.get_object(**kwargs)
         else:
             instance = None
-        self.save_object(req.params, req, resp, instance)
+        self.save_object(req.params, req, resp, instance, **kwargs)
 
-    @attach_kwargs
     def on_put(self, req, resp, *args, **kwargs):
-        self.object = self.get_object()
+        instance = self.get_object(**kwargs)
         data = req.json
-        self.save_object(data, req, resp, self.object)
+        self.save_object(data, req, resp, instance, **kwargs)
 
-    def save_object(self, data, req, resp, instance=None):
+    def save_object(self, data, req, resp, instance=None, **kwargs):
         validator = self.model.validator(**data)
         if not validator.errors:
             try:
-                self.object = validator.save(instance=instance)
-            except self.object.ForcedVersionError:
+                instance = validator.save(instance=instance)
+            except instance.ForcedVersionError:
                 status = 409
                 # Return original object.
-                self.object = self.get_object()
+                instance = self.get_object(**kwargs)
             else:
-                status = 200 if getattr(self, 'id', None) else 201
+                status = 200 if 'id' in kwargs else 201
             resp.status = str(status)
-            resp.json(**self.object.as_resource)
+            resp.json(**instance.as_resource)
         else:
             resp.status = str(422)
             resp.json(errors=validator.errors)
 
-    def get_limit(self):
-        return min(int(self.request.params.get('limit', self.DEFAULT_LIMIT)),
+    def get_limit(self, req):
+        return min(int(req.params.get('limit', self.DEFAULT_LIMIT)),
                    self.MAX_LIMIT)
 
-    def get_offset(self):
+    def get_offset(self, req):
         try:
-            return int(self.request.params.get('offset'))
+            return int(req.params.get('offset'))
         except (ValueError, TypeError):
             return 0
 
     def collection(self, req, resp, queryset):
-        limit = self.get_limit()
-        offset = self.get_offset()
+        limit = self.get_limit(req)
+        offset = self.get_offset(req)
         end = offset + limit
         count = queryset.count()
         kwargs = {
             'collection': list(queryset[offset:end]),
             'total': count,
         }
-        url = '{}://{}{}'.format(self.request.protocol, self.request.host,
-                                 self.request.path)
+        url = '{}://{}{}'.format(req.protocol, req.host, req.path)
         if count > end:
             kwargs['next'] = '{}?{}'.format(url, urlencode({'offset': end}))
         if offset >= limit:
@@ -159,14 +137,15 @@ class BaseCRUD(URLMixin):
         resp.json(**kwargs)
 
     def on_get_versions(self, req, resp, *args, **kwargs):
-        self.object = self.get_object()
-        if getattr(self, 'route_id', None):
-            version = self.object.load_version(self.route_id)
+        instance = self.get_object(**kwargs)
+        route_id = kwargs.get('route_id')
+        if route_id:
+            version = instance.load_version(route_id)
             if not version:
                 raise falcon.HTTPNotFound()
             resp.json(**version.as_resource)
         else:
-            self.collection(req, resp, self.object.versions.as_resource())
+            self.collection(req, resp, instance.versions.as_resource())
 
 
 class Position(BaseCRUD):
@@ -178,8 +157,8 @@ class Housenumber(BaseCRUD):
     model = models.HouseNumber
 
     def on_get_positions(self, *args, **kwargs):
-        self.object = self.get_object()
-        return self.collection(self.object.position_set.as_resource)
+        instance = self.get_object(**kwargs)
+        return self.collection(instance.position_set.as_resource)
 
 
 class Locality(BaseCRUD):
@@ -187,8 +166,8 @@ class Locality(BaseCRUD):
     identifiers = ['fantoir']
 
     def on_get_housenumbers(self, *args, **kwargs):
-        self.object = self.get_object()
-        return self.collection(self.object.housenumber_set.as_resource)
+        instance = self.get_object(**kwargs)
+        return self.collection(instance.housenumber_set.as_resource)
 
 
 class Street(Locality):
@@ -201,9 +180,9 @@ class Municipality(BaseCRUD):
     model = models.Municipality
 
     def on_get_streets(self, req, resp, *args, **kwargs):
-        self.object = self.get_object()
-        self.collection(req, resp, self.object.street_set.as_resource())
+        instance = self.get_object(**kwargs)
+        self.collection(req, resp, instance.street_set.as_resource())
 
     def on_get_localities(self, req, resp, *args, **kwargs):
-        self.object = self.get_object()
-        self.collection(req, resp, self.object.locality_set.as_resource())
+        instance = self.get_object(**kwargs)
+        self.collection(req, resp, instance.locality_set.as_resource())
