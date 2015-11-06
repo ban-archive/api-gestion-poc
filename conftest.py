@@ -11,7 +11,7 @@ from ban.tests.factories import UserFactory
 
 from ban import db
 from ban.commands.db import models, syncdb
-from ban.http import app
+from ban.http import application as app
 
 
 def pytest_configure(config):
