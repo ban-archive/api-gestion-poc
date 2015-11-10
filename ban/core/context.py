@@ -3,12 +3,20 @@ import threading
 _thread_locals = threading.local()
 
 
+def set(key, value):
+    setattr(_thread_locals, key, value)
+
+
+def get(key):
+    getattr(_thread_locals, key, None)
+
+
 def set_user(user):
-    _thread_locals.user = user
+    set('user', user)
 
 
 def get_user():
-    return getattr(_thread_locals, 'user', None)
+    return get('user')
 
 
 class ContextMiddleware(object):
