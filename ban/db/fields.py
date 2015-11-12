@@ -1,7 +1,12 @@
 import re
 
 import peewee
-from playhouse.postgres_ext import HStoreField
+from playhouse import postgres_ext
+
+__all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
+           'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
+           'BooleanField']
+
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
 point_template = 'POINT ({} {})'
@@ -72,5 +77,21 @@ class IntegerField(peewee.IntegerField):
     schema_type = 'integer'
 
 
-class HStoreField(HStoreField):
+class HStoreField(postgres_ext.HStoreField):
     schema_type = 'dict'
+
+
+class UUIDField(peewee.UUIDField):
+    pass
+
+
+class ArrayField(postgres_ext.ArrayField):
+    schema_type = 'list'
+
+
+class DateTimeField(peewee.DateTimeField):
+    pass
+
+
+class BooleanField(peewee.BooleanField):
+    schema_type = 'bool'

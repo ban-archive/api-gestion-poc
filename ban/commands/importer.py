@@ -1,7 +1,7 @@
 from ban.commands import command, report
 from ban.core import models
 
-from .helpers import batch, load_csv
+from .helpers import batch, load_csv, session
 
 __namespace__ = 'import'
 
@@ -13,9 +13,10 @@ def municipalities(path, update=False, departement=None):
     rows = load_csv(path, encoding='latin1')
     if departement:
         rows = [r for r in rows if r['dep_epci'] == str(departement)]
-    batch(add_municipality, list(rows), chunksize=100)
+    batch(add_municipality, rows, max_value=len(list(rows)))
 
 
+@session
 def add_municipality(data, update=False):
     insee = data.get('insee')
     name = data.get('nom_com')

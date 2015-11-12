@@ -1,11 +1,14 @@
+from concurrent.futures import ThreadPoolExecutor
 import csv
 import pkgutil
 import sys
 from importlib import import_module
-from multiprocessing import Pool
 from pathlib import Path
 
 from progressbar import ProgressBar
+
+from ban.auth.models import Session, User
+from ban.core import context
 
 
 def load_commands():
@@ -52,18 +55,62 @@ def bar(iterable, *args, **kwargs):
 
 
 def batch(func, iterable, chunksize=1000, max_value=None):
-    pool = Pool()
-    count = 0
-    chunk = []
-    for item in bar(iterable, max_value=max_value):
-        if not item:
-            continue
-        chunk.append(item)
-        count += 1
-        if count % chunksize == 0:
-            pool.map(func, chunk)
-            chunk = []
-    if chunk:
-        pool.map(func, chunk)
-    pool.close()
-    pool.join()
+    pbar = ProgressBar(max_value=max_value).start()
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        for i, res in enumerate(executor.map(func, iterable)):
+            pbar.update(i)
+        pbar.finish()
+
+
+def prompt(text, default=None, confirmation=False, coerce=None):
+    """Prompts a user for input.  This is a convenience function that can
+    be used to prompt a user for input later.
+
+    :param text: the text to show for the prompt.
+    :param default: the default value to use if no input happens.  If this
+                    is not given it will prompt until it's aborted.
+    :param confirmation_prompt: asks for confirmation for the value.
+    :param type: the type to use to check the value against.
+    """
+    result = None
+
+    while 1:
+        while 1:
+            try:
+                result = input('{}: '.format(text))
+            except (KeyboardInterrupt, EOFError):
+                abort('Bye.')
+            if result:
+                break
+            elif default is not None:
+                return default
+        if coerce:
+            try:
+                result = coerce(result)
+            except ValueError:
+                sys.stderr.write('Wrong value for type {}'.format(type))
+                continue
+        if not confirmation:
+            return result
+        while 1:
+            try:
+                confirm = input('{} (again): '.format(text))
+            except (KeyboardInterrupt, EOFError):
+                abort('Bye.')
+            if confirm:
+                break
+        if result == confirm:
+            return result
+        sys.stderr.write('Error: the two entered values do not match')
+
+
+def session(func):
+    def decorated(*args, **kwargs):
+        # TODO make configurable from command line
+        user = User.select(User.is_admin == True).first()
+        if not user:
+            abort('No admin user')
+        session = Session.create(user=user)
+        context.set('session', session)
+        return func(*args, **kwargs)
+    return decorated

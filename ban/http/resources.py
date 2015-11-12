@@ -3,9 +3,11 @@ from urllib.parse import urlencode
 
 import falcon
 
+# from ban.auth.decorators import protected
 from ban.core import models
 
 from .wsgi import app
+from .auth import auth
 
 
 __all__ = ['Municipality', 'Street', 'Locality', 'Housenumber', 'Position']
@@ -81,6 +83,7 @@ class BaseCRUD(URLMixin):
                 raise falcon.HTTPBadRequest('Invalid route', 'Invalid route')
         resp.json(**instance.as_resource)
 
+    @auth.protect
     def on_post(self, req, resp, *args, **kwargs):
         if 'id' in kwargs:
             instance = self.get_object(**kwargs)
@@ -88,6 +91,7 @@ class BaseCRUD(URLMixin):
             instance = None
         self.save_object(req.params, req, resp, instance, **kwargs)
 
+    @auth.protect
     def on_put(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
         data = req.json
@@ -99,11 +103,12 @@ class BaseCRUD(URLMixin):
             try:
                 instance = validator.save(instance=instance)
             except instance.ForcedVersionError:
-                status = 409
+                status = falcon.HTTP_CONFLICT
                 # Return original object.
                 instance = self.get_object(**kwargs)
             else:
-                status = 200 if 'id' in kwargs else 201
+                status = falcon.HTTP_OK if 'id' in kwargs \
+                                                       else falcon.HTTP_CREATED
             resp.status = str(status)
             resp.json(**instance.as_resource)
         else:

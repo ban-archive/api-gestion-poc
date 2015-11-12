@@ -7,7 +7,7 @@ from .factories import (HouseNumberFactory, LocalityFactory,
                         UserFactory)
 
 
-def test_can_create_municipality():
+def test_can_create_municipality(session):
     validator = models.Municipality.validator(name="Eu", insee="12345",
                                               siren="12345678", version=1)
     assert not validator.errors
@@ -17,14 +17,14 @@ def test_can_create_municipality():
     assert municipality.siren == "12345678"
 
 
-def test_can_create_municipality_with_missing_fields():
+def test_can_create_municipality_with_missing_fields(session):
     validator = models.Municipality.validator(name="Eu")
     assert validator.errors
     with pytest.raises(validator.ValidationError):
         validator.save()
 
 
-def test_can_update_municipality():
+def test_can_update_municipality(session):
     municipality = MunicipalityFactory(insee="12345")
     validator = models.Municipality.validator(name=municipality.name,
                                               siren=municipality.siren,
@@ -36,7 +36,7 @@ def test_can_update_municipality():
     assert municipality.version == 2
 
 
-def test_can_create_position():
+def test_can_create_position(session):
     housenumber = HouseNumberFactory()
     validator = models.Position.validator(housenumber=housenumber,
                                           center=(1, 2), version=1)
@@ -46,7 +46,7 @@ def test_can_create_position():
     assert position.housenumber == housenumber
 
 
-def test_can_update_position():
+def test_can_update_position(session):
     position = PositionFactory(center=(1, 2))
     validator = models.Position.validator(housenumber=position.housenumber,
                                           center=(3, 4), version=2)

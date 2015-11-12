@@ -1,17 +1,11 @@
-import json
-
 import pytest
-from urllib import parse
 
-from falcon.testing.srmock import StartResponseMock
-from falcon.testing.helpers import create_environ
-
-from ban.core import context
-from ban.tests.factories import UserFactory
+from ban.tests.factories import UserFactory, TokenFactory, SessionFactory
 
 from ban import db
 from ban.commands.db import models, syncdb
-from ban.http import application as app
+from ban.core import context
+from ban.http import application
 
 
 def pytest_configure(config):
@@ -31,9 +25,10 @@ def pytest_unconfigure(config):
 
 
 def pytest_runtest_setup(item):
+    # Delete in reverse way not to break FK constraints.
     for model in models[::-1]:
         model.delete().execute()
-        assert not len(model.select())
+        assert not model.select().count()
 
 
 @pytest.fixture()
@@ -42,61 +37,25 @@ def user():
 
 
 @pytest.fixture()
-def staffuser():
-    return UserFactory(is_staff=True)
-
-
-def fake_request(path, **kwargs):
-    parsed = parse.urlparse(path)
-    path = parsed.path
-    if parsed.query:
-        kwargs['query_string'] = parsed.query
-    resp = StartResponseMock()
-    body = app(create_environ(path, **kwargs), resp)
-    resp.headers = resp.headers_dict
-    resp.status = int(resp.status.split(' ')[0])
-    resp.body = body[0].decode() if body else ''
-    if 'application/json' in resp.headers.get('Content-Type', ''):
-        resp.json = json.loads(resp.body)
-    return resp
-fake_request._ = 'client'
+def session():
+    session = SessionFactory()
+    context.set('session', session)
+    return session
 
 
 @pytest.fixture()
-def get():
-
-    def _(path, **kwargs):
-        return fake_request(path, method='GET', **kwargs)
-
-    return _
+def token():
+    return TokenFactory()
 
 
-@pytest.fixture()
-def post():
-
-    def _(path, data, **kwargs):
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        body = parse.urlencode(data)
-        return fake_request(path, method='POST', body=body, headers=headers,
-                            **kwargs)
-
-    return _
+@pytest.fixture
+def app():
+    return application
 
 
-@pytest.fixture()
-def put():
-
-    def _(path, **kwargs):
-        return fake_request(path, method='PUT', **kwargs)
-
-    return _
-
-
-@pytest.fixture()
-def loggedclient(client, user):
-    context.set_user(user)
-    client.login(username=user.username, password='password')
-    return client
+@pytest.fixture
+def get(client):
+    return client.get
 
 
 @pytest.fixture()

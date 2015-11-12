@@ -1,20 +1,28 @@
 import json
 from functools import wraps
 
+import falcon
 import pytest
 
 from ban.http import resources as http
 
-from .factories import (HouseNumberFactory, MunicipalityFactory,
-                        PositionFactory, StreetFactory)
+from ..factories import (HouseNumberFactory, MunicipalityFactory,
+                         PositionFactory, StreetFactory, TokenFactory)
 
 pytestmark = pytest.mark.django_db
 
 
 def log_in(func):
+
+    def attach(kwargs):
+        token = TokenFactory()
+        kwargs['headers']['Authorization'] = 'Bearer {}'.format(token.access_token)  # noqa
+
     @wraps(func)
     def inner(*args, **kwargs):
         # Subtly plug in authenticated user.
+        if 'client' in kwargs:
+            kwargs['client'].before(attach)
         return func(*args, **kwargs)
     return inner
 
@@ -40,7 +48,7 @@ def test_api_url(name, kwargs, expected):
 
 def test_invalid_identifier_returns_400(get):
     resp = get('/position/invalid:22')
-    assert resp.status == 400
+    assert resp.status == falcon.HTTP_400
 
 
 def test_cors(get):
@@ -61,7 +69,7 @@ def test_get_housenumber(get, url):
 
 def test_get_housenumber_with_unknown_id_is_404(get, url):
     resp = get(url(http.Housenumber, id=22, identifier="id"))
-    assert resp.status == 404
+    assert resp.status == falcon.HTTP_404
 
 
 def test_get_housenumber_with_cia(get, url):
@@ -83,7 +91,7 @@ def test_get_street_with_fantoir(get, url):
 
 
 @log_in
-def test_create_position(post):
+def test_create_position(client):
     housenumber = HouseNumberFactory(number="22")
     url = '/position'
     data = {
@@ -91,8 +99,8 @@ def test_create_position(post):
         "center": "(3, 4)",
         "housenumber": housenumber.id,
     }
-    resp = post(url, data)
-    assert resp.status == 201
+    resp = client.post(url, data)
+    assert resp.status == falcon.HTTP_201
     assert resp.json['id']
     assert resp.json['center']['lon'] == 3
     assert resp.json['center']['lat'] == 4
@@ -100,7 +108,7 @@ def test_create_position(post):
 
 
 @log_in
-def test_replace_position(put, url):
+def test_replace_position(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
@@ -108,8 +116,8 @@ def test_replace_position(put, url):
         "center": (3, 4),
         "housenumber": position.housenumber.id
     }
-    resp = put(uri, body=json.dumps(data))
-    assert resp.status == 200
+    resp = client.put(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_200
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 2
     assert resp.json['center']['lon'] == 3
@@ -117,7 +125,7 @@ def test_replace_position(put, url):
 
 
 @log_in
-def test_replace_position_with_existing_version_fails(put, url):
+def test_replace_position_with_existing_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
@@ -125,8 +133,8 @@ def test_replace_position_with_existing_version_fails(put, url):
         "center": (3, 4),
         "housenumber": position.housenumber.id
     }
-    resp = put(uri, body=json.dumps(data))
-    assert resp.status == 409
+    resp = client.put(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_409
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 1
     assert resp.json['center']['lon'] == 1
@@ -134,7 +142,7 @@ def test_replace_position_with_existing_version_fails(put, url):
 
 
 @log_in
-def test_replace_position_with_non_incremental_version_fails(put, url):
+def test_replace_position_with_non_incremental_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
@@ -142,8 +150,8 @@ def test_replace_position_with_non_incremental_version_fails(put, url):
         "center": (3, 4),
         "housenumber": position.housenumber.id
     }
-    resp = put(uri, body=json.dumps(data))
-    assert resp.status == 409
+    resp = client.put(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_409
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 1
     assert resp.json['center']['lon'] == 1
@@ -151,7 +159,7 @@ def test_replace_position_with_non_incremental_version_fails(put, url):
 
 
 @log_in
-def test_update_position(post, url):
+def test_update_position(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
@@ -159,15 +167,15 @@ def test_update_position(post, url):
         "center": "(3.4, 5.678)",
         "housenumber": position.housenumber.id
     }
-    resp = post(uri, data=data)
-    assert resp.status == 200
+    resp = client.post(uri, data=data)
+    assert resp.status == falcon.HTTP_200
     assert resp.json['id'] == position.id
     assert resp.json['center']['lon'] == 3.4
     assert resp.json['center']['lat'] == 5.678
 
 
 @log_in
-def test_update_position_with_existing_version_fails(post, url):
+def test_update_position_with_existing_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
@@ -175,8 +183,8 @@ def test_update_position_with_existing_version_fails(post, url):
         "center": "(3.4, 5.678)",
         "housenumber": position.housenumber.id
     }
-    resp = post(uri, data=data)
-    assert resp.status == 409
+    resp = client.post(uri, data=data)
+    assert resp.status == falcon.HTTP_409
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 1
     assert resp.json['center']['lon'] == 1
@@ -184,7 +192,7 @@ def test_update_position_with_existing_version_fails(post, url):
 
 
 @log_in
-def test_update_position_with_non_incremental_version_fails(post, url):
+def test_update_position_with_non_incremental_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
@@ -192,8 +200,8 @@ def test_update_position_with_non_incremental_version_fails(post, url):
         "center": "(3.4, 5.678)",
         "housenumber": position.housenumber.id
     }
-    resp = post(uri, data)
-    assert resp.status == 409
+    resp = client.post(uri, data)
+    assert resp.status == falcon.HTTP_409
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 1
     assert resp.json['center']['lon'] == 1
@@ -201,15 +209,15 @@ def test_update_position_with_non_incremental_version_fails(post, url):
 
 
 @log_in
-def test_create_housenumber(post):
+def test_create_housenumber(client):
     street = StreetFactory(name="Rue de Bonbons")
     data = {
         "version": 1,
         "number": 20,
         "street": street.id,
     }
-    resp = post('/housenumber', data)
-    assert resp.status == 201
+    resp = client.post('/housenumber', data)
+    assert resp.status == falcon.HTTP_201
     assert resp.json['id']
     assert resp.json['number'] == '20'
     assert resp.json['ordinal'] == ''
@@ -217,21 +225,21 @@ def test_create_housenumber(post):
 
 
 @log_in
-def test_create_housenumber_does_not_use_version_field(post):
+def test_create_housenumber_does_not_use_version_field(client):
     street = StreetFactory(name="Rue de Bonbons")
     data = {
         "version": 3,
         "number": 20,
         "street": street.id,
     }
-    resp = post('/housenumber', data=data)
-    assert resp.status == 201
+    resp = client.post('/housenumber', data=data)
+    assert resp.status == falcon.HTTP_201
     assert resp.json['id']
     assert resp.json['version'] == 1
 
 
 @log_in
-def test_replace_housenumber(put, url):
+def test_replace_housenumber(client, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     uri = url(http.Housenumber, id=housenumber.id, identifier="id")
     data = {
@@ -240,8 +248,8 @@ def test_replace_housenumber(put, url):
         "ordinal": 'bis',
         "street": housenumber.street.id,
     }
-    resp = put(uri, body=json.dumps(data))
-    assert resp.status == 200
+    resp = client.put(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_200
     assert resp.json['id']
     assert resp.json['version'] == 2
     assert resp.json['number'] == '22'
@@ -250,7 +258,7 @@ def test_replace_housenumber(put, url):
 
 
 @log_in
-def test_replace_housenumber_with_missing_field_fails(put, url):
+def test_replace_housenumber_with_missing_field_fails(client, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     uri = url(http.Housenumber, id=housenumber.id, identifier="id")
     data = {
@@ -258,13 +266,13 @@ def test_replace_housenumber_with_missing_field_fails(put, url):
         "ordinal": 'bis',
         "street": housenumber.street.id,
     }
-    resp = put(uri, body=json.dumps(data))
-    assert resp.status == 422
+    resp = client.put(uri, body=json.dumps(data))
+    assert resp.status == '422'
     assert 'errors' in resp.json
 
 
 @log_in
-def test_create_street(post):
+def test_create_street(client):
     municipality = MunicipalityFactory(name="Cabour")
     data = {
         "version": 1,
@@ -272,8 +280,8 @@ def test_create_street(post):
         "fantoir": "0234H",
         "municipality": municipality.id,
     }
-    resp = post('/street', data)
-    assert resp.status == 201
+    resp = client.post('/street', data)
+    assert resp.status == falcon.HTTP_201
     assert resp.json['id']
     assert resp.json['name'] == 'Rue de la Plage'
     assert resp.json['municipality']['id'] == municipality.id
@@ -283,7 +291,7 @@ def test_get_municipality(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     uri = url(http.Municipality, id=municipality.id, identifier="id")
     resp = get(uri)
-    assert resp.status == 200
+    assert resp.status == falcon.HTTP_200
     assert resp.json['id']
     assert resp.json['name'] == 'Cabour'
 
@@ -294,7 +302,7 @@ def test_get_municipality_streets_collection(get, url):
     uri = url(http.Municipality, id=municipality.id, identifier="id",
               route="streets")
     resp = get(uri, query_string='pouet=ah')
-    assert resp.status == 200
+    assert resp.status == falcon.HTTP_200
     assert resp.json['collection'][0] == street.as_resource
     assert resp.json['total'] == 1
 
@@ -328,7 +336,7 @@ def test_get_municipality_versions(get, url):
     uri = url(http.Municipality, id=municipality.id, identifier="id",
               route="versions")
     resp = get(uri)
-    assert resp.status == 200
+    assert resp.status == falcon.HTTP_200
     assert len(resp.json['collection']) == 2
     assert resp.json['total'] == 2
     assert resp.json['collection'][0]['name'] == 'Cabour'
@@ -343,13 +351,13 @@ def test_get_municipality_version(get, url):
     uri = url(http.Municipality, id=municipality.id, identifier="id",
               route="versions", route_id=1)
     resp = get(uri)
-    assert resp.status == 200
+    assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == 'Cabour'
     assert resp.json['version'] == 1
     uri = url(http.Municipality, id=municipality.id, identifier="id",
               route="versions", route_id=2)
     resp = get(uri)
-    assert resp.status == 200
+    assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == 'Cabour2'
     assert resp.json['version'] == 2
 
@@ -362,7 +370,7 @@ def test_get_street_versions(get, url):
     uri = url(http.Street, id=street.id, identifier="id",
               route="versions")
     resp = get(uri)
-    assert resp.status == 200
+    assert resp.status == falcon.HTTP_200
     assert len(resp.json['collection']) == 2
     assert resp.json['total'] == 2
     assert resp.json['collection'][0]['name'] == 'Rue de la Paix'
@@ -377,19 +385,19 @@ def test_get_street_version(get, url):
     uri = url(http.Street, id=street.id, identifier="id",
               route="versions", route_id=1)
     resp = get(uri)
-    assert resp.status == 200
+    assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == 'Rue de la Paix'
     assert resp.json['version'] == 1
     uri = url(http.Street, id=street.id, identifier="id",
               route="versions", route_id=2)
     resp = get(uri)
-    assert resp.status == 200
+    assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == 'Rue de la Guerre'
     assert resp.json['version'] == 2
 
 
 def test_invalid_route_is_not_found(get, url):
     resp = get(url(http.Street, id=1, identifier="id", route="invalid"))
-    assert resp.status == 404
+    assert resp.status == falcon.HTTP_404
     resp = get(url(http.Street, id=1, identifier="id", route="save_object"))
-    assert resp.status == 404
+    assert resp.status == falcon.HTTP_404
