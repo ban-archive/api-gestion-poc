@@ -1,0 +1,2 @@
+pytest==2.8.2
+git+https://github.com/yohanboniface/pytest-falcon

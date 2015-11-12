@@ -4,7 +4,7 @@ from ban.commands import command, report
 from ban.core.models import (HouseNumber, Locality, Municipality, Position,
                              Street)
 
-from .helpers import batch, iter_file
+from .helpers import batch, iter_file, session
 
 __namespace__ = 'import'
 
@@ -18,6 +18,7 @@ def oldban(path):
     batch(process_row, rows, chunksize=100, max_value=max_value)
 
 
+@session
 def process_row(metadata):
     name = metadata.get('name')
     id = metadata.get('id')

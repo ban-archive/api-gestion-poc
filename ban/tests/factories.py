@@ -1,8 +1,11 @@
+from datetime import datetime, timedelta
+
 import factory
 from factory.fuzzy import FuzzyText
 from factory_peewee import PeeweeModelFactory
 
 from ban.core import models
+from ban.auth import models as auth_models
 
 
 class BaseTestModel(PeeweeModelFactory):
@@ -17,12 +20,46 @@ class UserFactory(BaseTestModel):
     email = factory.LazyAttribute(lambda obj: '%s@example.com' % obj.username)
 
     class Meta:
-        model = models.Contact
+        model = auth_models.User
+
+
+class ClientFactory(BaseTestModel):
+    name = FuzzyText(length=54)
+    user = factory.SubFactory(UserFactory)
+    client_secret = FuzzyText(length=54)
+    redirect_uris = ['http://localhost/authorize']
+    grant_type = auth_models.Client.GRANT_CLIENT_CREDENTIALS
+
+    class Meta:
+        model = auth_models.Client
+
+
+class SessionFactory(BaseTestModel):
+    user = factory.SubFactory(UserFactory)
+    client = factory.SubFactory(ClientFactory)
+    ip = '127.0.0.1'
+    email = 'yeehoo@yay.com'
+
+    class Meta:
+        model = auth_models.Session
+
+
+class TokenFactory(BaseTestModel):
+    session = factory.SubFactory(SessionFactory)
+    token_type = 'password'
+    access_token = FuzzyText(length=50)
+    refresh_token = FuzzyText(length=50)
+    scope = 'contrib'
+    expires = factory.LazyAttribute(
+                            lambda x: datetime.now() + timedelta(minutes=50))
+
+    class Meta:
+        model = auth_models.Token
 
 
 class BaseFactory(BaseTestModel):
-    created_by = factory.SubFactory(UserFactory)
-    modified_by = factory.SubFactory(UserFactory)
+    created_by = factory.SubFactory(SessionFactory)
+    modified_by = factory.SubFactory(SessionFactory)
 
     class Meta:
         abstract = True

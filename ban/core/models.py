@@ -6,49 +6,39 @@ import peewee
 from unidecode import unidecode
 
 from ban import db
+from ban.auth.models import Session
 
 from . import context
 from .resource import ResourceModel
 
-__all__ = ['Contact', 'Municipality', 'Street', 'HouseNumber', 'Locality',
+__all__ = ['Municipality', 'Street', 'HouseNumber', 'Locality',
            'Position']
 
 
 _ = lambda x: x
 
 
-class Contact(ResourceModel):
-
-    username = db.CharField(verbose_name=_('Company'), max_length=100)
-    email = db.CharField(verbose_name=_('Company'), max_length=100)
-    company = db.CharField(verbose_name=_('Company'), max_length=100,
-                           null=True)
-
-    class Meta:
-        database = db.default
-
-    def set_password(self, password):
-        pass
-
-
 class TrackedModel(ResourceModel):
     # Allow null modified_by and created_by until proper auth management.
-    created_at = peewee.DateTimeField()
-    created_by = db.ForeignKeyField(Contact, null=True)
-    modified_at = peewee.DateTimeField()
-    modified_by = db.ForeignKeyField(Contact, null=True)
+    created_at = db.DateTimeField()
+    created_by = db.ForeignKeyField(Session)
+    modified_at = db.DateTimeField()
+    modified_by = db.ForeignKeyField(Session)
 
     class Meta:
         abstract = True
-        database = db.default
         validate_backrefs = False
 
     def save(self, *args, **kwargs):
-        user = context.get_user()
-        if user and user.is_authenticated():
-            if not getattr(self, 'created_by', None):
-                self.created_by = user
-            self.modified_by = user
+        session = context.get('session')
+        if session:
+            try:
+                getattr(self, 'created_by', None)
+            except Session.DoesNotExist:
+                # Field is not nullable, we can't access it when it's not yet
+                # defined.
+                self.created_by = session
+            self.modified_by = session
         now = datetime.now()
         if not self.created_at:
             self.created_at = now

@@ -106,6 +106,16 @@ class ResourceModel(Versioned, metaclass=ResourceMeta):
         return query
 
     @classmethod
+    def where(cls, *args, **kwargs):
+        """Shortcut for select().where()"""
+        return cls.select().where(*args, **kwargs)
+
+    @classmethod
+    def first(cls, *args, **kwargs):
+        """Shortcut for select().where().first()"""
+        return cls.where(*args, **kwargs).first()
+
+    @classmethod
     def get_resource_fields(self):
         return self.resource_fields + ['id', 'version']
 

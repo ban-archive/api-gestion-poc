@@ -73,9 +73,13 @@ class Command:
         self.parser = subparsers.add_parser(self.name, help=self.short_help)
         self.parser.set_defaults(func=self.invoke)
         for name, default in self.spec:
-            kwargs = {'help': self.parse_parameter_help(name)}
+            self.add_argument(name, default)
+
+    def add_argument(self, name, default, **kwargs):
+            kwargs['help'] = self.parse_parameter_help(name)
             if default != NO_DEFAULT:
-                name = '--{}'.format(name)
+                kwargs['dest'] = name
+                name = '--{}'.format(name.replace('_', '-'))
                 kwargs['default'] = default
                 type_ = type(default)
                 if type_ == bool:
@@ -83,8 +87,14 @@ class Command:
                     kwargs['action'] = action
                 elif type_ in (int, str):
                     kwargs['type'] = type_
+                elif callable(default):
+                    kwargs['type'] = type_
+                    kwargs['default'] = ''
             args = [name]
             self.parser.add_argument(*args, **kwargs)
+
+    def set_defaults(self, **kwargs):
+        self.parser.set_defaults(**kwargs)
 
     def report(self, name, item):
         if name not in self._reports:

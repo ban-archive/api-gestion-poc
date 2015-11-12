@@ -19,7 +19,7 @@ class BaseVersioned(peewee.BaseModel):
         return cls
 
 
-class Versioned(peewee.Model, metaclass=BaseVersioned):
+class Versioned(db.Model, metaclass=BaseVersioned):
 
     ForcedVersionError = ForcedVersionError
 
@@ -116,14 +116,11 @@ class SelectQuery(peewee.SelectQuery):
         return self.count()
 
 
-class Version(peewee.Model):
+class Version(db.Model):
     model = peewee.CharField(max_length=64)
     model_id = peewee.IntegerField()
     sequential = peewee.IntegerField()
     data = peewee.BlobField()
-
-    class Meta:
-        database = db.default
 
     # TODO find a way not to override the peewee.Model select classmethod.
     @classmethod

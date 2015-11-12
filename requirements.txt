@@ -4,3 +4,4 @@ Unidecode==0.4.18
 peewee==2.6.4
 progressbar2==3.3.0
 psycopg2==2.6.1
+git+https://github.com/yohanboniface/falcon-oauth
