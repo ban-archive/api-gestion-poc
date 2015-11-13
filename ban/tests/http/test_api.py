@@ -67,6 +67,15 @@ def test_get_housenumber(get, url):
     assert resp.json['street']['name'] == housenumber.street.name
 
 
+def test_get_housenumber_without_explicit_identifier(get, url):
+    housenumber = HouseNumberFactory(number="22")
+    resp = get(url(http.Housenumber, id=housenumber.id))
+    assert resp.json['number'] == "22"
+    assert resp.json['id'] == housenumber.id
+    assert resp.json['cia'] == housenumber.cia
+    assert resp.json['street']['name'] == housenumber.street.name
+
+
 def test_get_housenumber_with_unknown_id_is_404(get, url):
     resp = get(url(http.Housenumber, id=22, identifier="id"))
     assert resp.status == falcon.HTTP_404
@@ -81,6 +90,12 @@ def test_get_housenumber_with_cia(get, url):
 def test_get_street(get, url):
     street = StreetFactory(name="Rue des Boulets")
     resp = get(url(http.Street, id=street.id, identifier="id"))
+    assert resp.json['name'] == "Rue des Boulets"
+
+
+def test_get_street_without_explicit_identifier(get, url):
+    street = StreetFactory(name="Rue des Boulets")
+    resp = get(url(http.Street, id=street.id))
     assert resp.json['name'] == "Rue des Boulets"
 
 
@@ -290,6 +305,15 @@ def test_create_street(client):
 def test_get_municipality(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     uri = url(http.Municipality, id=municipality.id, identifier="id")
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['id']
+    assert resp.json['name'] == 'Cabour'
+
+
+def test_get_municipality_without_explicit_identifier(get, url):
+    municipality = MunicipalityFactory(name="Cabour")
+    uri = url(http.Municipality, id=municipality.id)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['id']

@@ -7,9 +7,9 @@ from . import middlewares
 
 application = app = falcon.API(
     middleware=[
-        middlewares.CorsMiddleware(), middlewares.ValidationMiddleware(),
+        middlewares.CorsMiddleware(),
         middlewares.SessionMiddleware(),
     ],
     response_type=Response,
-    request_type=Request
+    request_type=Request,
 )

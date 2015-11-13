@@ -13,6 +13,36 @@ from .auth import auth
 __all__ = ['Municipality', 'Street', 'Locality', 'Housenumber', 'Position']
 
 
+def extract_identifier(method):
+    # Move to middleware when https://github.com/falconry/falcon/pull/651 get
+    # merged.
+    def wrapper(resource, req, resp, **params):
+        if 'id' in params:
+            *identifier, id = params['id'].split(':')
+            identifier = identifier[0] if identifier else 'id'
+            if identifier not in resource.identifiers + ['id']:
+                msg = 'Invalid identifier: {}'.format(identifier)
+                raise falcon.HTTPBadRequest(msg, msg)
+            params['identifier'] = identifier
+            params['id'] = id
+        method(resource, req, resp, **params)
+    return wrapper
+
+
+def dispatch_route(method):
+    def wrapper(resource, req, resp, **params):
+        # TODO: custom router instead, so routes are compiled on load.
+        if 'route' in params:
+            name = 'on_{}_{}'.format(req.method.lower(), params['route'])
+            view = getattr(resource, name, None)
+            if view and callable(view):
+                return view(req, resp, **params)
+            else:
+                raise falcon.HTTPNotFound()
+        method(resource, req, resp, **params)
+    return wrapper
+
+
 class WithURL(type):
 
     urls = []
@@ -53,12 +83,15 @@ class BaseCRUD(URLMixin):
 
     @classmethod
     def routes(cls):
+        # Falcon does not allow to have those two routes in the same time:
+        # '/path/{id}'
+        # '/path/{identifier}:{id}'
         return [
             cls.base_url(),
             # cls.base_url() + '/{id}',
-            cls.base_url() + '/{identifier}:{id}',
-            cls.base_url() + '/{identifier}:{id}/{route}',
-            cls.base_url() + '/{identifier}:{id}/{route}/{route_id}',
+            cls.base_url() + '/{id}',
+            cls.base_url() + '/{id}/{route}',
+            cls.base_url() + '/{id}/{route}/{route_id}',
         ]
         # return cls.base_url() + r'(?:(?P<key>[\w_]+)/(?P<ref>[\w_]+)/(?:(?P<route>[\w_]+)/(?:(?P<route_id>[\d]+)/)?)?)?$'  # noqa
 
@@ -68,21 +101,13 @@ class BaseCRUD(URLMixin):
         except self.model.DoesNotExist:
             raise falcon.HTTPNotFound()
 
-    def on_get(self, req, resp, **kwargs):
-        identifier = kwargs.get('identifier')
-        if identifier and identifier not in self.identifiers + ['id']:
-            msg = 'Invalid identifier: {}'.format(identifier)
-            raise falcon.HTTPBadRequest(msg, msg)
-        instance = self.get_object(**kwargs)
-        if 'route' in kwargs:
-            name = 'on_get_{}'.format(kwargs['route'])
-            view = getattr(self, name, None)
-            if view and callable(view):
-                return view(req, resp, **kwargs)
-            else:
-                raise falcon.HTTPBadRequest('Invalid route', 'Invalid route')
+    @extract_identifier
+    @dispatch_route
+    def on_get(self, req, resp, **params):
+        instance = self.get_object(**params)
         resp.json(**instance.as_resource)
 
+    @extract_identifier
     @auth.protect
     def on_post(self, req, resp, *args, **kwargs):
         if 'id' in kwargs:
@@ -91,6 +116,7 @@ class BaseCRUD(URLMixin):
             instance = None
         self.save_object(req.params, req, resp, instance, **kwargs)
 
+    @extract_identifier
     @auth.protect
     def on_put(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)

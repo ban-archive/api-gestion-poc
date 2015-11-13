@@ -62,6 +62,8 @@ def get(client):
 def url():
     def _(klass, **kwargs):
         url = None
+        if 'identifier' in kwargs:
+            kwargs['id'] = '{identifier}:{id}'.format(**kwargs)
         for route in klass.routes()[::-1]:
             try:
                 url = route.format(**kwargs)
@@ -69,6 +71,5 @@ def url():
                 continue
             else:
                 break
-        print(url)
         return url
     return _
