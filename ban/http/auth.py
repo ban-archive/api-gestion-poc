@@ -28,8 +28,7 @@ def usergetter(username, password, client, req):
 @auth.tokengetter
 def tokengetter(access_token=None, refresh_token=None):
     if access_token:
-        token = models.Token.select().where(
-                            models.Token.access_token == access_token).first()
+        token = models.Token.first(models.Token.access_token == access_token)
         if token:
             context.set('session', token.session)
             return token

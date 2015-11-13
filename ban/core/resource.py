@@ -35,20 +35,11 @@ class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
         return instance.as_resource
 
 
-class SelectQuery(peewee.SelectQuery):
-
-    def _get_result_wrapper(self):
-        if getattr(self, '_as_resource', False):
-            return ResourceQueryResultWrapper
-        else:
-            return super()._get_result_wrapper()
+class SelectQuery(db.SelectQuery):
 
     @peewee.returns_clone
     def as_resource(self):
-        self._as_resource = True
-
-    def __len__(self):
-        return self.count()
+        self._result_wrapper = ResourceQueryResultWrapper
 
 
 class BaseResource(peewee.BaseModel):
@@ -65,6 +56,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     class Meta:
         abstract = True
         resource_schema = {}
+        manager = SelectQuery
 
     @classmethod
     def build_resource_schema(cls):
@@ -96,27 +88,6 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         validator = ResourceValidator(cls, instance)
         validator(data)
         return validator
-
-    # TODO find a way not to override the peewee.Model select classmethod.
-    @classmethod
-    def select(cls, *selection):
-        query = SelectQuery(cls, *selection)
-        if cls._meta.order_by:
-            query = query.order_by(*cls._meta.order_by)
-        return query
-
-    @classmethod
-    def where(cls, *expressions):
-        """Shortcut for select().where()"""
-        return cls.select().where(*expressions)
-
-    @classmethod
-    def first(cls, *expressions):
-        """Shortcut for select().where().first()"""
-        qs = cls.select()
-        if expressions:
-            qs = qs.where(*expressions)
-        return qs.first()
 
     @classmethod
     def get_resource_fields(cls):
