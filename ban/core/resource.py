@@ -1,7 +1,7 @@
 import peewee
 from cerberus import ValidationError, Validator
 
-from .versioning import BaseVersioned, Versioned
+from ban import db
 
 
 class ResourceValidator(Validator):
@@ -51,7 +51,7 @@ class SelectQuery(peewee.SelectQuery):
         return self.count()
 
 
-class ResourceMeta(BaseVersioned):
+class BaseResource(peewee.BaseModel):
 
     def __new__(mcs, name, bases, attrs, **kwargs):
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
@@ -59,7 +59,7 @@ class ResourceMeta(BaseVersioned):
         return cls
 
 
-class ResourceModel(Versioned, metaclass=ResourceMeta):
+class ResourceModel(db.Model, metaclass=BaseResource):
     resource_fields = []
 
     class Meta:

@@ -9,7 +9,8 @@ from ban import db
 from ban.auth.models import Session
 
 from . import context
-from .resource import ResourceModel
+from .versioning import Versioned, BaseVersioned
+from .resource import ResourceModel, BaseResource
 
 __all__ = ['Municipality', 'Street', 'HouseNumber', 'Locality',
            'Position']
@@ -18,7 +19,11 @@ __all__ = ['Municipality', 'Street', 'HouseNumber', 'Locality',
 _ = lambda x: x
 
 
-class TrackedModel(ResourceModel):
+class BaseModel(BaseResource, BaseVersioned):
+    pass
+
+
+class TrackedModel(ResourceModel, Versioned, metaclass=BaseModel):
     # Allow null modified_by and created_by until proper auth management.
     created_at = db.DateTimeField()
     created_by = db.ForeignKeyField(Session)
