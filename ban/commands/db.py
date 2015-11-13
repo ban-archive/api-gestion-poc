@@ -24,7 +24,7 @@ def syncdb(fail_silently=False):
 
 
 @command
-def create_user(username=None, email=None, is_admin=True):
+def createuser(username=None, email=None, is_admin=True):
     """Create a user.
 
     username   username of the new user.
@@ -35,8 +35,7 @@ def create_user(username=None, email=None, is_admin=True):
     if not email:
         email = prompt('Email')
     password = prompt('Password', confirmation=True)
-    validator = amodels.User.validator(username=username, email=email,
-                                       version=1)
+    validator = amodels.User.validator(username=username, email=email)
     if not validator.errors:
         user = validator.save()
         user.set_password(password)
