@@ -106,18 +106,21 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         return query
 
     @classmethod
-    def where(cls, *args, **kwargs):
+    def where(cls, *expressions):
         """Shortcut for select().where()"""
-        return cls.select().where(*args, **kwargs)
+        return cls.select().where(*expressions)
 
     @classmethod
-    def first(cls, *args, **kwargs):
+    def first(cls, *expressions):
         """Shortcut for select().where().first()"""
-        return cls.where(*args, **kwargs).first()
+        qs = cls.select()
+        if expressions:
+            qs = qs.where(*expressions)
+        return qs.first()
 
     @classmethod
-    def get_resource_fields(self):
-        return self.resource_fields + ['id', 'version']
+    def get_resource_fields(cls):
+        return cls.resource_fields + ['id']
 
     @property
     def as_resource(self):

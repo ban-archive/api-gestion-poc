@@ -50,6 +50,10 @@ class TrackedModel(ResourceModel, Versioned, metaclass=BaseModel):
         self.modified_at = now
         super().save(*args, **kwargs)
 
+    @classmethod
+    def get_resource_fields(cls):
+        return cls.resource_fields + ['id', 'version']
+
 
 class NamedModel(TrackedModel):
     name = db.CharField(max_length=200, verbose_name=_("name"))

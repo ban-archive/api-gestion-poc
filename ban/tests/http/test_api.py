@@ -5,6 +5,8 @@ import falcon
 import pytest
 
 from ban.http import resources as http
+from ban.core import models as cmodels
+from ban.auth import models as amodels
 
 from ..factories import (HouseNumberFactory, MunicipalityFactory,
                          PositionFactory, StreetFactory, TokenFactory)
@@ -12,14 +14,15 @@ from ..factories import (HouseNumberFactory, MunicipalityFactory,
 pytestmark = pytest.mark.django_db
 
 
-def log_in(func):
-
-    def attach(kwargs):
-        token = TokenFactory()
-        kwargs['headers']['Authorization'] = 'Bearer {}'.format(token.access_token)  # noqa
+def authorize(func):
 
     @wraps(func)
     def inner(*args, **kwargs):
+        token = TokenFactory()
+
+        def attach(kwargs):
+            kwargs['headers']['Authorization'] = 'Bearer {}'.format(token.access_token)  # noqa
+
         # Subtly plug in authenticated user.
         if 'client' in kwargs:
             kwargs['client'].before(attach)
@@ -105,9 +108,10 @@ def test_get_street_with_fantoir(get, url):
     assert resp.json['name'] == "Rue des Boulets"
 
 
-@log_in
+@authorize
 def test_create_position(client):
     housenumber = HouseNumberFactory(number="22")
+    assert not cmodels.Position.select().count()
     url = '/position'
     data = {
         "version": 1,
@@ -116,15 +120,17 @@ def test_create_position(client):
     }
     resp = client.post(url, data)
     assert resp.status == falcon.HTTP_201
-    assert resp.json['id']
+    position = cmodels.Position.first()
+    assert resp.json['id'] == position.id
     assert resp.json['center']['lon'] == 3
     assert resp.json['center']['lat'] == 4
     assert resp.json['housenumber']['id'] == housenumber.id
 
 
-@log_in
+@authorize
 def test_replace_position(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 2,
@@ -137,11 +143,13 @@ def test_replace_position(client, url):
     assert resp.json['version'] == 2
     assert resp.json['center']['lon'] == 3
     assert resp.json['center']['lat'] == 4
+    assert cmodels.Position.select().count() == 1
 
 
-@log_in
+@authorize
 def test_replace_position_with_existing_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 1,
@@ -154,11 +162,13 @@ def test_replace_position_with_existing_version_fails(client, url):
     assert resp.json['version'] == 1
     assert resp.json['center']['lon'] == 1
     assert resp.json['center']['lat'] == 2
+    assert cmodels.Position.select().count() == 1
 
 
-@log_in
+@authorize
 def test_replace_position_with_non_incremental_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 18,
@@ -171,11 +181,13 @@ def test_replace_position_with_non_incremental_version_fails(client, url):
     assert resp.json['version'] == 1
     assert resp.json['center']['lon'] == 1
     assert resp.json['center']['lat'] == 2
+    assert cmodels.Position.select().count() == 1
 
 
-@log_in
+@authorize
 def test_update_position(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 2,
@@ -187,11 +199,13 @@ def test_update_position(client, url):
     assert resp.json['id'] == position.id
     assert resp.json['center']['lon'] == 3.4
     assert resp.json['center']['lat'] == 5.678
+    assert cmodels.Position.select().count() == 1
 
 
-@log_in
+@authorize
 def test_update_position_with_existing_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 1,
@@ -204,11 +218,13 @@ def test_update_position_with_existing_version_fails(client, url):
     assert resp.json['version'] == 1
     assert resp.json['center']['lon'] == 1
     assert resp.json['center']['lat'] == 2
+    assert cmodels.Position.select().count() == 1
 
 
-@log_in
+@authorize
 def test_update_position_with_non_incremental_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
     uri = url(http.Position, id=position.id, identifier="id")
     data = {
         "version": 3,
@@ -221,11 +237,13 @@ def test_update_position_with_non_incremental_version_fails(client, url):
     assert resp.json['version'] == 1
     assert resp.json['center']['lon'] == 1
     assert resp.json['center']['lat'] == 2
+    assert cmodels.Position.select().count() == 1
 
 
-@log_in
+@authorize
 def test_create_housenumber(client):
     street = StreetFactory(name="Rue de Bonbons")
+    assert not cmodels.HouseNumber.select().count()
     data = {
         "version": 1,
         "number": 20,
@@ -237,10 +255,11 @@ def test_create_housenumber(client):
     assert resp.json['number'] == '20'
     assert resp.json['ordinal'] == ''
     assert resp.json['street']['id'] == street.id
+    assert cmodels.HouseNumber.select().count() == 1
 
 
-@log_in
-def test_create_housenumber_does_not_use_version_field(client):
+@authorize
+def test_create_housenumber_does_not_honour_version_field(client):
     street = StreetFactory(name="Rue de Bonbons")
     data = {
         "version": 3,
@@ -253,9 +272,10 @@ def test_create_housenumber_does_not_use_version_field(client):
     assert resp.json['version'] == 1
 
 
-@log_in
+@authorize
 def test_replace_housenumber(client, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
+    assert cmodels.HouseNumber.select().count() == 1
     uri = url(http.Housenumber, id=housenumber.id, identifier="id")
     data = {
         "version": 2,
@@ -270,11 +290,13 @@ def test_replace_housenumber(client, url):
     assert resp.json['number'] == '22'
     assert resp.json['ordinal'] == 'bis'
     assert resp.json['street']['id'] == housenumber.street.id
+    assert cmodels.HouseNumber.select().count() == 1
 
 
-@log_in
+@authorize
 def test_replace_housenumber_with_missing_field_fails(client, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
+    assert cmodels.HouseNumber.select().count() == 1
     uri = url(http.Housenumber, id=housenumber.id, identifier="id")
     data = {
         "version": 2,
@@ -284,11 +306,13 @@ def test_replace_housenumber_with_missing_field_fails(client, url):
     resp = client.put(uri, body=json.dumps(data))
     assert resp.status == '422'
     assert 'errors' in resp.json
+    assert cmodels.HouseNumber.select().count() == 1
 
 
-@log_in
+@authorize
 def test_create_street(client):
     municipality = MunicipalityFactory(name="Cabour")
+    assert not cmodels.Street.select().count()
     data = {
         "version": 1,
         "name": "Rue de la Plage",
@@ -300,6 +324,7 @@ def test_create_street(client):
     assert resp.json['id']
     assert resp.json['name'] == 'Rue de la Plage'
     assert resp.json['municipality']['id'] == municipality.id
+    assert cmodels.Street.select().count() == 1
 
 
 def test_get_municipality(get, url):
@@ -425,3 +450,47 @@ def test_invalid_route_is_not_found(get, url):
     assert resp.status == falcon.HTTP_404
     resp = get(url(http.Street, id=1, identifier="id", route="save_object"))
     assert resp.status == falcon.HTTP_404
+
+
+@authorize
+def test_create_user(client):
+    # Client user + session user == 2
+    assert amodels.User.select().count() == 2
+    resp = client.post('/user', {
+        'username': 'newuser',
+        'email': 'test@test.com',
+    })
+    assert resp.status == falcon.HTTP_201
+    assert amodels.User.select().count() == 3
+
+
+@authorize
+def test_cannot_create_user_without_username(client):
+    assert amodels.User.select().count() == 2
+    resp = client.post('/user', {
+        'username': '',
+        'email': 'test@test.com',
+    })
+    assert resp.status_code == 422
+    assert amodels.User.select().count() == 2
+
+
+@authorize
+def test_cannot_create_user_without_email(client):
+    assert amodels.User.select().count() == 2
+    resp = client.post('/user', {
+        'username': 'newuser',
+        'email': '',
+    })
+    assert resp.status_code == 422
+    assert amodels.User.select().count() == 2
+
+
+def test_cannot_create_user_if_not_authenticated(client):
+    assert not amodels.User.select().count()
+    resp = client.post('/user', {
+        'username': 'newuser',
+        'email': 'test@test.com',
+    })
+    assert resp.status == falcon.HTTP_401
+    assert not amodels.User.select().count()

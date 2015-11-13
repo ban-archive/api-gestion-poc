@@ -5,6 +5,7 @@ import falcon
 
 # from ban.auth.decorators import protected
 from ban.core import models
+from ban.auth import models as amodels
 
 from .wsgi import app
 from .auth import auth
@@ -167,6 +168,9 @@ class BaseCRUD(URLMixin):
             kwargs['previous'] = '{}?{}'.format(url, urlencode({'offset': offset - limit}))  # noqa
         resp.json(**kwargs)
 
+
+class VersionnedResource(BaseCRUD):
+
     def on_get_versions(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
         route_id = kwargs.get('route_id')
@@ -179,11 +183,11 @@ class BaseCRUD(URLMixin):
             self.collection(req, resp, instance.versions.as_resource())
 
 
-class Position(BaseCRUD):
+class Position(VersionnedResource):
     model = models.Position
 
 
-class Housenumber(BaseCRUD):
+class Housenumber(VersionnedResource):
     identifiers = ['cia']
     model = models.HouseNumber
 
@@ -192,7 +196,7 @@ class Housenumber(BaseCRUD):
         return self.collection(instance.position_set.as_resource)
 
 
-class Locality(BaseCRUD):
+class Locality(VersionnedResource):
     model = models.Locality
     identifiers = ['fantoir']
 
@@ -206,7 +210,7 @@ class Street(Locality):
     identifiers = ['fantoir']
 
 
-class Municipality(BaseCRUD):
+class Municipality(VersionnedResource):
     identifiers = ['siren', 'insee']
     model = models.Municipality
 
@@ -217,3 +221,8 @@ class Municipality(BaseCRUD):
     def on_get_localities(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
         self.collection(req, resp, instance.locality_set.as_resource())
+
+
+class User(BaseCRUD):
+    identifiers = ['email']
+    model = amodels.User
