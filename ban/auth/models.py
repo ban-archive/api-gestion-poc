@@ -20,7 +20,7 @@ class User(ResourceModel):
     company = db.CharField(verbose_name=_('company'), max_length=100,
                            null=True)
     password = db.CharField(verbose_name=_('password'), max_length=255)
-    is_admin = db.BooleanField(default=False)
+    is_staff = db.BooleanField(default=False)
 
     class Meta:
         database = db.default

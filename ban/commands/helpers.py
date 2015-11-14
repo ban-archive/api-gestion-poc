@@ -107,7 +107,7 @@ def prompt(text, default=None, confirmation=False, coerce=None):
 def session(func):
     def decorated(*args, **kwargs):
         # TODO make configurable from command line
-        user = User.select(User.is_admin == True).first()
+        user = User.select(User.is_staff == True).first()
         if not user:
             abort('No admin user')
         session = Session.create(user=user)

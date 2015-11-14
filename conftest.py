@@ -37,6 +37,11 @@ def user():
 
 
 @pytest.fixture()
+def staff():
+    return UserFactory(is_staff=True)
+
+
+@pytest.fixture()
 def session():
     session = SessionFactory()
     context.set('session', session)

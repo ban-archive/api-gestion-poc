@@ -24,11 +24,10 @@ def syncdb(fail_silently=False):
 
 
 @command
-def createuser(username=None, email=None, is_admin=True):
+def createuser(username=None, email=None, is_staff=True):
     """Create a user.
 
-    username   username of the new user.
-    email      email of the new user.
+    is_staff    set user staff
     """
     if not username:
         username = prompt('Username')
@@ -39,8 +38,8 @@ def createuser(username=None, email=None, is_admin=True):
     if not validator.errors:
         user = validator.save()
         user.set_password(password)
-        if is_admin:
-            user.is_admin = True
+        if is_staff:
+            user.is_staff = True
             user.save()
     else:
         for field, error in validator.errors.items():

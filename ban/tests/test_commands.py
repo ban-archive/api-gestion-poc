@@ -6,7 +6,7 @@ from ban.core import models
 
 # Fail with chunksize other than 1
 # https://bitbucket.org/pypa/setuptools/issues/443/
-def xtest_import_municipalities():
+def xtest_import_municipalities(staff):
     path = Path(__file__).parent / 'data/municipalities.csv'
     municipalities(path)
     assert len(models.Municipality.select()) == 4
