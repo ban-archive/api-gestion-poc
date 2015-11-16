@@ -49,6 +49,8 @@ class ForeignKeyField(peewee.ForeignKeyField):
     def coerce(self, value):
         if isinstance(value, peewee.Model):
             value = value.id
+        elif isinstance(value, str) and hasattr(self.rel_model, 'coerce'):
+            value = self.rel_model.coerce(value).id
         return super().coerce(value)
 
 

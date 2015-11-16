@@ -12,6 +12,7 @@ _ = lambda x: x
 
 
 class User(ResourceModel):
+    identifiers = ['email']
     resource_fields = ['username', 'email', 'company']
 
     username = db.CharField(verbose_name=_('username'), max_length=100)
@@ -35,6 +36,7 @@ class User(ResourceModel):
 
 
 class Client(ResourceModel):
+    identifiers = ['client_id']
 
     GRANT_AUTHORIZATION_CODE = 'authorization_code'
     GRANT_IMPLICIT = 'implicit'

@@ -14,22 +14,6 @@ from .auth import auth
 __all__ = ['Municipality', 'Street', 'Locality', 'Housenumber', 'Position']
 
 
-def extract_identifier(method):
-    # Move to middleware when https://github.com/falconry/falcon/pull/651 get
-    # merged.
-    def wrapper(resource, req, resp, **params):
-        if 'id' in params:
-            *identifier, id = params['id'].split(':')
-            identifier = identifier[0] if identifier else 'id'
-            if identifier not in resource.identifiers + ['id']:
-                msg = 'Invalid identifier: {}'.format(identifier)
-                raise falcon.HTTPBadRequest(msg, msg)
-            params['identifier'] = identifier
-            params['id'] = id
-        method(resource, req, resp, **params)
-    return wrapper
-
-
 def dispatch_route(method):
     def wrapper(resource, req, resp, **params):
         # TODO: custom router instead, so routes are compiled on load.
@@ -72,7 +56,6 @@ class URLMixin(object, metaclass=WithURL):
 
 
 class BaseCRUD(URLMixin):
-    identifiers = []
     DEFAULT_LIMIT = 20
     MAX_LIMIT = 100
 
@@ -96,19 +79,17 @@ class BaseCRUD(URLMixin):
         ]
         # return cls.base_url() + r'(?:(?P<key>[\w_]+)/(?P<ref>[\w_]+)/(?:(?P<route>[\w_]+)/(?:(?P<route_id>[\d]+)/)?)?)?$'  # noqa
 
-    def get_object(self, identifier, id, **kwargs):
+    def get_object(self, id, **kwargs):
         try:
-            return self.model.get(getattr(self.model, identifier) == id)
+            return self.model.coerce(id)
         except self.model.DoesNotExist:
             raise falcon.HTTPNotFound()
 
-    @extract_identifier
     @dispatch_route
     def on_get(self, req, resp, **params):
         instance = self.get_object(**params)
         resp.json(**instance.as_resource)
 
-    @extract_identifier
     @auth.protect
     def on_post(self, req, resp, *args, **kwargs):
         if 'id' in kwargs:
@@ -117,7 +98,6 @@ class BaseCRUD(URLMixin):
             instance = None
         self.save_object(req.params, req, resp, instance, **kwargs)
 
-    @extract_identifier
     @auth.protect
     def on_put(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
@@ -188,7 +168,6 @@ class Position(VersionnedResource):
 
 
 class Housenumber(VersionnedResource):
-    identifiers = ['cia']
     model = models.HouseNumber
 
     def on_get_positions(self, *args, **kwargs):
@@ -198,7 +177,6 @@ class Housenumber(VersionnedResource):
 
 class Locality(VersionnedResource):
     model = models.Locality
-    identifiers = ['fantoir']
 
     def on_get_housenumbers(self, *args, **kwargs):
         instance = self.get_object(**kwargs)
@@ -207,11 +185,9 @@ class Locality(VersionnedResource):
 
 class Street(Locality):
     model = models.Street
-    identifiers = ['fantoir']
 
 
 class Municipality(VersionnedResource):
-    identifiers = ['siren', 'insee']
     model = models.Municipality
 
     def on_get_streets(self, req, resp, *args, **kwargs):
@@ -224,5 +200,4 @@ class Municipality(VersionnedResource):
 
 
 class User(BaseCRUD):
-    identifiers = ['email']
     model = amodels.User

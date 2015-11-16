@@ -49,9 +49,9 @@ def test_api_url(name, kwargs, expected):
     assert reverse(name, kwargs=kwargs) == expected
 
 
-def test_invalid_identifier_returns_400(get):
+def test_invalid_identifier_returns_404(get):
     resp = get('/position/invalid:22')
-    assert resp.status == falcon.HTTP_400
+    assert resp.status == falcon.HTTP_404
 
 
 def test_cors(get):
@@ -128,6 +128,35 @@ def test_create_position(client):
 
 
 @authorize
+def test_create_position_with_housenumber_cia(client):
+    housenumber = HouseNumberFactory(number="22")
+    assert not cmodels.Position.select().count()
+    url = '/position'
+    data = {
+        "version": 1,
+        "center": "(3, 4)",
+        "housenumber": 'cia:{}'.format(housenumber.cia),
+    }
+    resp = client.post(url, data)
+    assert resp.status == falcon.HTTP_201
+    assert cmodels.Position.select().count() == 1
+
+
+@authorize
+def test_create_position_with_bad_housenumber_cia_is_422(client):
+    HouseNumberFactory(number="22")
+    assert not cmodels.Position.select().count()
+    url = '/position'
+    data = {
+        "version": 1,
+        "center": "(3, 4)",
+        "housenumber": 'cia:{}'.format('xxx'),
+    }
+    resp = client.post(url, data)
+    assert resp.status_code == 422
+
+
+@authorize
 def test_replace_position(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert cmodels.Position.select().count() == 1
@@ -143,6 +172,21 @@ def test_replace_position(client, url):
     assert resp.json['version'] == 2
     assert resp.json['center']['lon'] == 3
     assert resp.json['center']['lat'] == 4
+    assert cmodels.Position.select().count() == 1
+
+
+@authorize
+def test_replace_position_with_housenumber_cia(client, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
+    uri = url(http.Position, id=position.id, identifier="id")
+    data = {
+        "version": 2,
+        "center": (3, 4),
+        "housenumber": 'cia:{}'.format(position.housenumber.cia)
+    }
+    resp = client.put(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_200
     assert cmodels.Position.select().count() == 1
 
 
@@ -203,6 +247,21 @@ def test_update_position(client, url):
 
 
 @authorize
+def test_update_position_with_cia(client, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
+    uri = url(http.Position, id=position.id, identifier="id")
+    data = {
+        "version": 2,
+        "center": "(3.4, 5.678)",
+        "housenumber": 'cia:{}'.format(position.housenumber.cia)
+    }
+    resp = client.post(uri, data=data)
+    assert resp.status == falcon.HTTP_200
+    assert cmodels.Position.select().count() == 1
+
+
+@authorize
 def test_update_position_with_existing_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert cmodels.Position.select().count() == 1
@@ -255,6 +314,20 @@ def test_create_housenumber(client):
     assert resp.json['number'] == '20'
     assert resp.json['ordinal'] == ''
     assert resp.json['street']['id'] == street.id
+    assert cmodels.HouseNumber.select().count() == 1
+
+
+@authorize
+def test_create_housenumber_with_street_fantoir(client):
+    street = StreetFactory(name="Rue de Bonbons")
+    assert not cmodels.HouseNumber.select().count()
+    data = {
+        "version": 1,
+        "number": 20,
+        "street": 'fantoir:{}'.format(street.fantoir),
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status == falcon.HTTP_201
     assert cmodels.HouseNumber.select().count() == 1
 
 
@@ -325,6 +398,66 @@ def test_create_street(client):
     assert resp.json['name'] == 'Rue de la Plage'
     assert resp.json['municipality']['id'] == municipality.id
     assert cmodels.Street.select().count() == 1
+
+
+@authorize
+def test_create_street_with_municipality_insee(client):
+    municipality = MunicipalityFactory(name="Cabour")
+    assert not cmodels.Street.select().count()
+    data = {
+        "version": 1,
+        "name": "Rue de la Plage",
+        "fantoir": "0234H",
+        "municipality": "insee:{}".format(municipality.insee),
+    }
+    resp = client.post('/street', data)
+    assert resp.status == falcon.HTTP_201
+    assert cmodels.Street.select().count() == 1
+
+
+@authorize
+def test_create_street_with_municipality_siren(client):
+    municipality = MunicipalityFactory(name="Cabour")
+    assert not cmodels.Street.select().count()
+    data = {
+        "version": 1,
+        "name": "Rue de la Plage",
+        "fantoir": "0234H",
+        "municipality": "siren:{}".format(municipality.siren),
+    }
+    resp = client.post('/street', data)
+    assert resp.status == falcon.HTTP_201
+    assert cmodels.Street.select().count() == 1
+
+
+@authorize
+def test_create_street_with_bad_municipality_siren(client):
+    MunicipalityFactory(name="Cabour")
+    assert not cmodels.Street.select().count()
+    data = {
+        "version": 1,
+        "name": "Rue de la Plage",
+        "fantoir": "0234H",
+        "municipality": "siren:{}".format('bad'),
+    }
+    resp = client.post('/street', data)
+    assert resp.status_code == 422
+    assert not cmodels.Street.select().count()
+
+
+@authorize
+def test_create_street_with_invalid_municipality_identifier(client):
+    municipality = MunicipalityFactory(name="Cabour")
+    assert not cmodels.Street.select().count()
+    data = {
+        "version": 1,
+        "name": "Rue de la Plage",
+        "fantoir": "0234H",
+        "municipality": "invalid:{}".format(municipality.insee),
+    }
+    resp = client.post('/street', data)
+    assert resp.status_code == 422
+    assert not cmodels.Street.select().count()
 
 
 def test_get_municipality(get, url):

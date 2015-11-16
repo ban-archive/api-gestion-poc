@@ -1,5 +1,5 @@
 import peewee
-from cerberus import ValidationError, Validator
+from cerberus import ValidationError, Validator, errors
 
 from ban import db
 
@@ -15,6 +15,14 @@ class ResourceValidator(Validator):
     def _validate_type_point(self, field, value):
         if not isinstance(value, (str, list, tuple)):
             self._error(field, 'Invalid Point: {}'.format(value))
+
+    def _validate_coerce(self, coerce, field, value):
+        # See https://github.com/nicolaiarocci/cerberus/issues/171.
+        try:
+            value = coerce(value)
+        except (TypeError, ValueError, peewee.DoesNotExist):
+            self._error(field, errors.ERROR_COERCION_FAILED.format(field))
+        return value
 
     def save(self, instance=None):
         if self.errors:
@@ -52,6 +60,7 @@ class BaseResource(peewee.BaseModel):
 
 class ResourceModel(db.Model, metaclass=BaseResource):
     resource_fields = []
+    identifiers = []
 
     class Meta:
         abstract = True
@@ -108,3 +117,16 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     def as_relation_field(self, name):
         value = getattr(self, name)
         return getattr(value, 'id', value)
+
+    @classmethod
+    def coerce(cls, id, identifier=None):
+        if not identifier:
+            identifier = 'id'
+            if isinstance(id, str):
+                *extra, id = id.split(':')
+                if extra:
+                    identifier = extra[0]
+                if identifier not in cls.identifiers + ['id']:
+                    raise cls.DoesNotExist("Invalid identifier {}".format(
+                                                                identifier))
+        return cls.get(getattr(cls, identifier) == id)

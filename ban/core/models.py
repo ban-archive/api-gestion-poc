@@ -70,6 +70,7 @@ class NamedModel(TrackedModel):
 
 
 class Municipality(NamedModel):
+    identifiers = ['siren', 'insee']
     resource_fields = ['name', 'insee', 'siren']
 
     insee = db.CharField(max_length=5)
@@ -77,6 +78,7 @@ class Municipality(NamedModel):
 
 
 class BaseFantoirModel(NamedModel):
+    identifiers = ['fantoir']
     resource_fields = ['name', 'fantoir', 'municipality']
 
     fantoir = db.CharField(max_length=9, null=True)
@@ -102,6 +104,7 @@ class Street(BaseFantoirModel):
 
 
 class HouseNumber(TrackedModel):
+    identifiers = ['cia']
     resource_fields = ['number', 'ordinal', 'street', 'cia']
 
     number = db.CharField(max_length=16)
