@@ -45,7 +45,7 @@ class Command:
 
     @property
     def name(self):
-        return self.namespace + '.' + self.command.__name__
+        return self.namespace + ':' + self.command.__name__
 
     @property
     def help(self):
