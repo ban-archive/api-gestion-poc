@@ -119,6 +119,7 @@ class BaseCRUD(URLMixin):
             resp.status = str(status)
             resp.json(**instance.as_resource)
         else:
+            # See https://github.com/falconry/falcon/issues/627.
             resp.status = str(422)
             resp.json(errors=validator.errors)
 
