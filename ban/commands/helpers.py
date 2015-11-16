@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 import csv
+from functools import wraps
 import pkgutil
 import sys
 from importlib import import_module
@@ -105,6 +106,7 @@ def prompt(text, default=None, confirmation=False, coerce=None):
 
 
 def session(func):
+    @wraps(func)
     def decorated(*args, **kwargs):
         # TODO make configurable from command line
         user = User.select(User.is_staff == True).first()

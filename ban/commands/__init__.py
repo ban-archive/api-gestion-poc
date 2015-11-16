@@ -40,8 +40,9 @@ class Command:
 
     @property
     def namespace(self):
-        return getattr(inspect.getmodule(self.command), '__namespace__',
-                       inspect.getmodulename(inspect.getfile(self.command)))
+        module = inspect.getmodule(self.command)
+        return getattr(module, '__namespace__',
+                       inspect.getmodulename(module.__file__))
 
     @property
     def name(self):
