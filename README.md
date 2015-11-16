@@ -5,57 +5,58 @@ This is a POC of API for managing the future "Base adresses nationale".
 ## Install
 Make sure you have python >= 3.4 installed.
 
-- create a virtualenv (but you'd better use virtualenvwrapper or pew):
+Create a virtualenv (but you'd better use virtualenvwrapper or pew):
 
-  virtualenv banenv --python=`which python3.4`
-  source banenv/bin/activate
+    virtualenv banenv --python=`which python3.4`
+    source banenv/bin/activate
 
-- create a psql database
+Create a psql database
 
-  sudo -u postgres createdb ban -O youruser
+    sudo -u postgres createdb ban -O youruser
 
-- Add postgis and hstore extensions
+Add postgis and hstore extensions
 
-  psql ban
-  CREATE EXTENSION postgis;
-  CREATE EXTENSION hstore;
+    psql ban
+    CREATE EXTENSION postgis;
+    CREATE EXTENSION hstore;
 
-- clone repository
+Clone repository
 
-  git clone https://github.com/etalab/ban
-  cd ban/
+    git clone https://github.com/etalab/ban
+    cd ban/
 
-- install python dependencies
+Install python dependencies
 
-  pip install -r requirements.txt
+    pip install -r requirements.txt
 
-- install ban locally
+Install ban locally
 
-  python setup.py develop
+    python setup.py develop
 
 ## Data setup
 
-- create tables
+Create tables
 
-  ban db:syncdb
+    ban db:syncdb
 
-- create at least use staff user
+Create at least use staff user
 
-  ban db:createuser
+    ban db:createuser
 
-- import municipalities (get the file from
-  http://www.collectivites-locales.gouv.fr/files/files/epcicom2015.csv)
+Import municipalities (get the file from
+http://www.collectivites-locales.gouv.fr/files/files/epcicom2015.csv)
 
-  ban import:municipalities epcicom2015.csv --departement 33
+    ban import:municipalities epcicom2015.csv --departement 33
 
-- import some adresses (get data from http://bano.openstreetmap.fr/BAN_odbl/)
+Import some adresses (get data from http://bano.openstreetmap.fr/BAN_odbl/)
 
-  ban import:oldban BAN_odbl_33-json
+    ban import:oldban BAN_odbl_33-json
 
 ## Run the server
 
 For development:
-  ban server:run
+
+    ban server:run
 
 For production, you need to use either gunicorn or uwsgi.
 
