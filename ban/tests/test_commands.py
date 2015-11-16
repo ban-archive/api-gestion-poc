@@ -1,7 +1,9 @@
 from pathlib import Path
 
 from ban.commands.importer import municipalities
+from ban.commands.db import createuser
 from ban.core import models
+from ban.auth import models as amodels
 
 
 # Fail with chunksize other than 1
@@ -16,3 +18,12 @@ def xtest_import_municipalities_can_be_filtered_by_departement():
     path = Path(__file__).parent / 'data/municipalities.csv'
     municipalities(path, departement=33)
     assert len(models.Municipality.select()) == 1
+
+
+def xtest_create_user(staff, monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x: 'password')
+    assert amodels.User.select().count() == 1
+    createuser(username='testuser', email='aaaa@bbbb.org')
+    assert amodels.User.select().count() == 2
+    user = amodels.User.select().last()
+    assert not user.is_staff
