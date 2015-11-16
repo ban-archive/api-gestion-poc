@@ -49,7 +49,7 @@ class Command:
 
     @property
     def help(self):
-        return self.command.__doc__
+        return self.command.__doc__ or ''
 
     @property
     def short_help(self):
@@ -65,7 +65,7 @@ class Command:
 
     def parse_parameter_help(self, name):
         try:
-            return self.command.__doc__.split(name)[1].split('\n')[0].strip()
+            return self.help.split(name)[1].split('\n')[0].strip()
         except IndexError:
             return ''
 
