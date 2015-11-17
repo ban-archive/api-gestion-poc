@@ -37,11 +37,11 @@ Install ban locally
 
 Create tables
 
-    ban db:syncdb
+    ban db:create
 
 Create at least use staff user
 
-    ban db:createuser
+    ban auth:createuser
 
 Import municipalities (get the file from
 http://www.collectivites-locales.gouv.fr/files/files/epcicom2015.csv)

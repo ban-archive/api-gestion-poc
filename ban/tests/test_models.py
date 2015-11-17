@@ -12,8 +12,7 @@ def test_municipality_is_created_with_version_1():
 
 
 def test_municipality_is_versioned():
-    initial_name = "Moret-sur-Loing"
-    municipality = MunicipalityFactory(name=initial_name)
+    municipality = MunicipalityFactory(name="Moret-sur-Loing")
     assert len(municipality.versions) == 1
     assert municipality.version == 1
     municipality.name = "Orvanne"
@@ -25,6 +24,30 @@ def test_municipality_is_versioned():
     version2 = municipality.versions[1].load()
     assert version1.name == "Moret-sur-Loing"
     assert version2.name == "Orvanne"
+    assert municipality.versions[0].diff
+    diff = municipality.versions[1].diff
+    assert len(diff.diff) == 1  # name, version
+    assert diff.diff['name']['new'] == "Orvanne"
+    municipality.insee = "77316"
+    municipality.increment_version()
+    municipality.save()
+    assert len(municipality.versions) == 3
+    diff = municipality.versions[2].diff
+    assert diff.old == municipality.versions[1]
+    assert diff.new == municipality.versions[2]
+
+
+def test_municipality_diff_contain_only_changed_data():
+    municipality = MunicipalityFactory(name="Moret-sur-Loing", insee="77316")
+    municipality.name = "Orvanne"
+    # "Changed" with same value.
+    municipality.insee = "77316"
+    municipality.increment_version()
+    municipality.save()
+    diff = municipality.versions[1].diff
+    assert len(diff.diff) == 1  # name, version
+    assert 'insee' not in diff.diff
+    assert diff.diff['name']['new'] == "Orvanne"
 
 
 def test_street_is_versioned():
@@ -40,6 +63,10 @@ def test_street_is_versioned():
     version2 = street.versions[1].load()
     assert version1.name == "Rue des Pommes"
     assert version2.name == "Rue des Poires"
+    assert street.versions[0].diff
+    diff = street.versions[1].diff
+    assert len(diff.diff) == 1  # name, version
+    assert diff.diff['name']['new'] == "Rue des Poires"
 
 
 def test_tmp_fantoir_should_use_name():

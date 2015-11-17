@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ban.commands.importer import municipalities
-from ban.commands.db import createuser
+from ban.commands.auth import createuser
 from ban.core import models
 from ban.auth import models as amodels
 

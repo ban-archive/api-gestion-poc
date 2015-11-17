@@ -28,6 +28,37 @@ def dispatch_route(method):
     return wrapper
 
 
+class BaseCollection:
+    DEFAULT_LIMIT = 20
+    MAX_LIMIT = 100
+
+    def get_limit(self, req):
+        return min(int(req.params.get('limit', self.DEFAULT_LIMIT)),
+                   self.MAX_LIMIT)
+
+    def get_offset(self, req):
+        try:
+            return int(req.params.get('offset'))
+        except (ValueError, TypeError):
+            return 0
+
+    def collection(self, req, resp, queryset):
+        limit = self.get_limit(req)
+        offset = self.get_offset(req)
+        end = offset + limit
+        count = queryset.count()
+        kwargs = {
+            'collection': list(queryset[offset:end]),
+            'total': count,
+        }
+        url = '{}://{}{}'.format(req.protocol, req.host, req.path)
+        if count > end:
+            kwargs['next'] = '{}?{}'.format(url, urlencode({'offset': end}))
+        if offset >= limit:
+            kwargs['previous'] = '{}?{}'.format(url, urlencode({'offset': offset - limit}))  # noqa
+        resp.json(**kwargs)
+
+
 class WithURL(type):
 
     urls = []
@@ -55,9 +86,7 @@ class URLMixin(object, metaclass=WithURL):
         return cls.base_url()
 
 
-class BaseCRUD(URLMixin):
-    DEFAULT_LIMIT = 20
-    MAX_LIMIT = 100
+class BaseCRUD(URLMixin, BaseCollection):
 
     def not_found(self, msg='Not found'):
         return self.error(404, msg)
@@ -122,32 +151,6 @@ class BaseCRUD(URLMixin):
             # See https://github.com/falconry/falcon/issues/627.
             resp.status = str(422)
             resp.json(errors=validator.errors)
-
-    def get_limit(self, req):
-        return min(int(req.params.get('limit', self.DEFAULT_LIMIT)),
-                   self.MAX_LIMIT)
-
-    def get_offset(self, req):
-        try:
-            return int(req.params.get('offset'))
-        except (ValueError, TypeError):
-            return 0
-
-    def collection(self, req, resp, queryset):
-        limit = self.get_limit(req)
-        offset = self.get_offset(req)
-        end = offset + limit
-        count = queryset.count()
-        kwargs = {
-            'collection': list(queryset[offset:end]),
-            'total': count,
-        }
-        url = '{}://{}{}'.format(req.protocol, req.host, req.path)
-        if count > end:
-            kwargs['next'] = '{}?{}'.format(url, urlencode({'offset': end}))
-        if offset >= limit:
-            kwargs['previous'] = '{}?{}'.format(url, urlencode({'offset': offset - limit}))  # noqa
-        resp.json(**kwargs)
 
 
 class VersionnedResource(BaseCRUD):

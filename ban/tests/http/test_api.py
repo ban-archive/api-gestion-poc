@@ -1,5 +1,4 @@
 import json
-from functools import wraps
 
 import falcon
 import pytest
@@ -9,25 +8,10 @@ from ban.core import models as cmodels
 from ban.auth import models as amodels
 
 from ..factories import (HouseNumberFactory, MunicipalityFactory,
-                         PositionFactory, StreetFactory, TokenFactory)
+                         PositionFactory, StreetFactory)
+from .utils import authorize
 
 pytestmark = pytest.mark.django_db
-
-
-def authorize(func):
-
-    @wraps(func)
-    def inner(*args, **kwargs):
-        token = TokenFactory()
-
-        def attach(kwargs):
-            kwargs['headers']['Authorization'] = 'Bearer {}'.format(token.access_token)  # noqa
-
-        # Subtly plug in authenticated user.
-        if 'client' in kwargs:
-            kwargs['client'].before(attach)
-        return func(*args, **kwargs)
-    return inner
 
 
 @pytest.mark.xfail

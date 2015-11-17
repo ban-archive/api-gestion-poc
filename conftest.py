@@ -3,7 +3,7 @@ import pytest
 from ban.tests.factories import UserFactory, TokenFactory, SessionFactory
 
 from ban import db
-from ban.commands.db import models, syncdb
+from ban.commands.db import models, create as createdb, truncate as truncatedb
 from ban.core import context
 from ban.http import application
 
@@ -12,7 +12,7 @@ def pytest_configure(config):
     db.test.connect()
     for model in models:
         model._meta.database = db.test
-    syncdb(fail_silently=True)
+    createdb(fail_silently=True)
     verbose = config.getoption('verbose')
     if verbose:
         import logging
@@ -25,10 +25,7 @@ def pytest_unconfigure(config):
 
 
 def pytest_runtest_setup(item):
-    # Delete in reverse way not to break FK constraints.
-    for model in models[::-1]:
-        model.delete().execute()
-        assert not model.select().count()
+    truncatedb(force=True)
 
 
 @pytest.fixture()

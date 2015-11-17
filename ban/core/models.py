@@ -1,14 +1,10 @@
 import re
-from datetime import datetime
 
 # from django.utils.translation import ugettext as _
 import peewee
 from unidecode import unidecode
 
 from ban import db
-from ban.auth.models import Session
-
-from . import context
 from .versioning import Versioned, BaseVersioned
 from .resource import ResourceModel, BaseResource
 
@@ -23,39 +19,17 @@ class BaseModel(BaseResource, BaseVersioned):
     pass
 
 
-class TrackedModel(ResourceModel, Versioned, metaclass=BaseModel):
-    # Allow null modified_by and created_by until proper auth management.
-    created_at = db.DateTimeField()
-    created_by = db.ForeignKeyField(Session)
-    modified_at = db.DateTimeField()
-    modified_by = db.ForeignKeyField(Session)
+class Model(ResourceModel, Versioned, metaclass=BaseModel):
 
     class Meta:
-        abstract = True
         validate_backrefs = False
-
-    def save(self, *args, **kwargs):
-        session = context.get('session')
-        if session:
-            try:
-                getattr(self, 'created_by', None)
-            except Session.DoesNotExist:
-                # Field is not nullable, we can't access it when it's not yet
-                # defined.
-                self.created_by = session
-            self.modified_by = session
-        now = datetime.now()
-        if not self.created_at:
-            self.created_at = now
-        self.modified_at = now
-        super().save(*args, **kwargs)
 
     @classmethod
     def get_resource_fields(cls):
         return cls.resource_fields + ['id', 'version']
 
 
-class NamedModel(TrackedModel):
+class NamedModel(Model):
     name = db.CharField(max_length=200, verbose_name=_("name"))
 
     def __unicode__(self):
@@ -103,7 +77,7 @@ class Street(BaseFantoirModel):
     pass
 
 
-class HouseNumber(TrackedModel):
+class HouseNumber(Model):
     identifiers = ['cia']
     resource_fields = ['number', 'ordinal', 'street', 'cia']
 
@@ -158,7 +132,7 @@ class HouseNumber(TrackedModel):
         return position.center_json if position else None
 
 
-class Position(TrackedModel):
+class Position(Model):
     resource_fields = ['center', 'source', 'housenumber', 'attributes',
                        'kind', 'comment']
 

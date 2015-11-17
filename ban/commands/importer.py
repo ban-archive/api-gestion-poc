@@ -1,5 +1,6 @@
 from ban.commands import command, report
 from ban.core import models
+from ban.core.versioning import Diff
 
 from .helpers import batch, load_csv, session
 
@@ -9,8 +10,13 @@ __namespace__ = 'import'
 @command
 def municipalities(path, update=False, departement=None):
     """Import municipalities from
-    http://www.collectivites-locales.gouv.fr/files/files/epcicom2015.csv."""
+    http://www.collectivites-locales.gouv.fr/files/files/epcicom2015.csv.
+
+    update          allow to override already existing Municipality
+    departement     only import departement (insee id: 01, 31, 2A…)
+    """
     rows = load_csv(path, encoding='latin1')
+    Diff.ACTIVE = False  # No diff for initial imports.
     if departement:
         rows = [r for r in rows if r['dep_epci'] == str(departement)]
     batch(add_municipality, rows, max_value=len(list(rows)))

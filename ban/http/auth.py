@@ -55,7 +55,7 @@ def grantgetter(client_id, code):
 class Token:
 
     @auth.token_endpoint
-    def on_post(req, resp, *args, **kwargs):
+    def on_post(self, req, resp, *args, **kwargs):
         return {}
 
 app.add_route('/auth/token', Token())

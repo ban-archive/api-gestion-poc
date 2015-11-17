@@ -105,6 +105,28 @@ def prompt(text, default=None, confirmation=False, coerce=None):
         sys.stderr.write('Error: the two entered values do not match')
 
 
+def confirm(text, default=None):
+    """Ask for confirmation."""
+    value = None
+    if default:
+        default_text = 'Yn'
+    elif default is False:
+        default_text = 'yN'
+    else:
+        default_text = 'yn'
+    while 1:
+        try:
+            value = input('{} [{}]: '.format(text, default_text))
+        except (KeyboardInterrupt, EOFError):
+            abort('Aborted.')
+        if value.lower() in ('y', 'yes'):
+            return True
+        if value.lower() in ('n', 'no'):
+            return False
+        if value == '' and default is not None:
+            return default
+
+
 def session(func):
     @wraps(func)
     def decorated(*args, **kwargs):
