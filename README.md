@@ -25,6 +25,10 @@ Clone repository
     git clone https://github.com/etalab/ban
     cd ban/
 
+Install psycopg2 dependencies
+
+    sudo apt-get build-dep python-psycopg2
+    
 Install python dependencies
 
     pip install -r requirements.txt
