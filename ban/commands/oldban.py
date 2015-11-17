@@ -3,19 +3,18 @@ import json
 from ban.commands import command, report
 from ban.core.models import (HouseNumber, Locality, Municipality, Position,
                              Street)
-from ban.core.versioning import Diff
 
-from .helpers import batch, iter_file, session
+from . helpers import batch, iter_file, session, nodiff
 
 __namespace__ = 'import'
 
 
 @command
+@nodiff
 def oldban(path):
     """Import from BAN json stream files from
     http://bano.openstreetmap.fr/BAN_odbl/"""
     max_value = sum(1 for line in iter_file(path))
-    Diff.ACTIVE = False  # No diff for initial imports.
     rows = iter_file(path, formatter=json.loads)
     batch(process_row, rows, chunksize=100, max_value=max_value)
 

@@ -3,11 +3,11 @@ import sys
 from ban.auth.models import Token, User
 from ban.commands import command
 from ban.core import context
-from .helpers import session, prompt
+from . import helpers
 
 
 @command
-@session
+@helpers.session
 def dummytoken():
     """Create a dummy token for dev."""
     session = context.get('session')
@@ -23,10 +23,10 @@ def createuser(username=None, email=None, is_staff=True):
     is_staff    set user staff
     """
     if not username:
-        username = prompt('Username')
+        username = helpers.prompt('Username')
     if not email:
-        email = prompt('Email')
-    password = prompt('Password', confirmation=True)
+        email = helpers.prompt('Email')
+    password = helpers.prompt('Password', confirmation=True)
     validator = User.validator(username=username, email=email)
     if not validator.errors:
         user = validator.save()

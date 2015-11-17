@@ -10,6 +10,7 @@ from progressbar import ProgressBar
 
 from ban.auth.models import Session, User
 from ban.core import context
+from ban.core.versioning import Diff
 
 
 def load_commands():
@@ -137,4 +138,15 @@ def session(func):
         session = Session.create(user=user)
         context.set('session', session)
         return func(*args, **kwargs)
+    return decorated
+
+
+def nodiff(func):
+    """Deactivate Diff for this function."""
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        Diff.ACTIVE = False
+        res = func(*args, **kwargs)
+        return res
+        Diff.ACTIVE = True
     return decorated
