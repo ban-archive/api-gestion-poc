@@ -4,7 +4,7 @@ from ban.commands import command, report
 from ban.core.models import (HouseNumber, Locality, Municipality, Position,
                              Street)
 
-from . helpers import batch, iter_file, session, nodiff
+from .helpers import batch, iter_file, nodiff, session
 
 __namespace__ = 'import'
 

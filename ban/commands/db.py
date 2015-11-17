@@ -1,9 +1,9 @@
 from ban.auth import models as amodels
 from ban.commands import command
 from ban.core import models as cmodels
-from ban.core.versioning import Version, Diff
+from ban.core.versioning import Diff, Version
 
-from .helpers import confirm, abort
+from .helpers import abort, confirm
 
 models = [Version, Diff, amodels.User, amodels.Client, amodels.Grant,
           amodels.Session, amodels.Token, cmodels.Municipality,

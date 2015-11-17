@@ -1,11 +1,11 @@
-from concurrent.futures import ThreadPoolExecutor
 import csv
-from functools import wraps
 import pkgutil
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from importlib import import_module
 from pathlib import Path
 
+import decorator
 from progressbar import ProgressBar
 
 from ban.auth.models import Session, User
@@ -128,25 +128,20 @@ def confirm(text, default=None):
             return default
 
 
-def session(func):
-    @wraps(func)
-    def decorated(*args, **kwargs):
-        # TODO make configurable from command line
-        user = User.select(User.is_staff == True).first()
-        if not user:
-            abort('No admin user')
-        session = Session.create(user=user)
-        context.set('session', session)
-        return func(*args, **kwargs)
-    return decorated
+@decorator.decorator
+def session(func, *args, **kwargs):
+    # TODO make configurable from command line
+    user = User.select(User.is_staff == True).first()
+    if not user:
+        abort('No admin user')
+    session = Session.create(user=user)
+    context.set('session', session)
+    return func(*args, **kwargs)
 
 
-def nodiff(func):
-    """Deactivate Diff for this function."""
-    @wraps(func)
-    def decorated(*args, **kwargs):
-        Diff.ACTIVE = False
-        res = func(*args, **kwargs)
-        return res
-        Diff.ACTIVE = True
-    return decorated
+@decorator.decorator
+def nodiff(func, *args, **kwargs):
+    Diff.ACTIVE = False
+    res = func(*args, **kwargs)
+    Diff.ACTIVE = True
+    return res

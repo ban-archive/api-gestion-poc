@@ -3,6 +3,7 @@ import sys
 from ban.auth.models import Token, User
 from ban.commands import command
 from ban.core import context
+
 from . import helpers
 
 
