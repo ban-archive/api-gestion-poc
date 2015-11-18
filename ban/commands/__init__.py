@@ -7,7 +7,7 @@ from itertools import zip_longest
 NO_DEFAULT = object()
 
 parser = argparse.ArgumentParser()
-subparsers = parser.add_subparsers(title='Available commands')
+subparsers = parser.add_subparsers(title='Available commands', metavar='')
 
 
 def report(name, item):
