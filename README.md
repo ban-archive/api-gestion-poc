@@ -3,7 +3,11 @@
 This is a POC of API for managing the future "Base adresses nationale".
 
 ## Install
-Make sure you have python >= 3.4 installed.
+
+Install system dependencies
+
+    sudo apt-get build-dep python-psycopg2
+    sudo apt-get install python3.4 python3.4-dev python-virtualenv postgresql-9.4 postgis
 
 Create a virtualenv (but you'd better use virtualenvwrapper or pew):
 
@@ -25,10 +29,6 @@ Clone repository
     git clone https://github.com/etalab/ban
     cd ban/
 
-Install psycopg2 dependencies
-
-    sudo apt-get build-dep python-psycopg2
-    
 Install python dependencies
 
     pip install -r requirements.txt
