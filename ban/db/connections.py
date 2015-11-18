@@ -8,6 +8,7 @@ default = PostgresqlExtDatabase(
     user=os.environ.get('DB_USER'),
     password=os.environ.get('DB_PASSWORD'),
     host=os.environ.get('DB_HOST'),
+    port=os.environ.get('DB_PORT'),
 )
 test = PostgresqlExtDatabase(
     'test_' + os.environ.get('DB_NAME', 'ban'),
@@ -15,4 +16,5 @@ test = PostgresqlExtDatabase(
     user=os.environ.get('DB_USER'),
     password=os.environ.get('DB_PASSWORD'),
     host=os.environ.get('DB_HOST'),
+    port=os.environ.get('DB_PORT'),
 )
