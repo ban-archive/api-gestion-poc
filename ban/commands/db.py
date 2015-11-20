@@ -6,9 +6,9 @@ from ban.core.versioning import Diff, Version
 from .helpers import abort, confirm
 
 models = [Version, Diff, amodels.User, amodels.Client, amodels.Grant,
-          amodels.Session, amodels.Token, cmodels.Municipality,
-          cmodels.Street, cmodels.Locality, cmodels.HouseNumber,
-          cmodels.Position]
+          amodels.Session, amodels.Token, cmodels.ZipCode,
+          cmodels.Municipality, cmodels.MunicipalityZipCode, cmodels.Street,
+          cmodels.Locality, cmodels.HouseNumber, cmodels.Position]
 
 
 @command

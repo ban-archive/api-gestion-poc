@@ -27,12 +27,3 @@ class TestDBProxy(DBProxy):
 
 default = DBProxy()
 test = TestDBProxy()
-
-# test = PostgresqlExtDatabase(
-#     'test_' + os.environ.get('DB_NAME', 'ban'),
-#     autorollback=True,
-#     user=os.environ.get('DB_USER'),
-#     password=os.environ.get('DB_PASSWORD'),
-#     host=os.environ.get('DB_HOST'),
-#     port=os.environ.get('DB_PORT'),
-# )

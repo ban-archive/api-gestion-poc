@@ -55,3 +55,30 @@ def test_can_update_position(session):
     assert len(models.Position.select()) == 1
     assert position.center == (3, 4)
     assert position.version == 2
+
+
+def test_can_create_zipcode(session):
+    validator = models.ZipCode.validator(code="31310", version=1)
+    zipcode = validator.save()
+    assert zipcode.code == "31310"
+
+
+def test_can_create_zipcode_with_integer(session):
+    validator = models.ZipCode.validator(code=31310, version=1)
+    zipcode = validator.save()
+    assert zipcode.code == "31310"
+
+
+def test_cannot_create_zipcode_with_code_shorter_than_5_chars(session):
+    validator = models.ZipCode.validator(code="3131", version=1)
+    assert 'code' in validator.errors
+
+
+def test_cannot_create_zipcode_with_code_bigger_than_5_chars(session):
+    validator = models.ZipCode.validator(code="313100", version=1)
+    assert 'code' in validator.errors
+
+
+def test_cannot_create_zipcode_with_code_non_digit(session):
+    validator = models.ZipCode.validator(code="2A000", version=1)
+    assert 'code' in validator.errors

@@ -43,12 +43,36 @@ class NamedModel(Model):
         ordering = ('name', )
 
 
+class ZipCode(Model):
+    resource_fields = ['code', 'municipalities']
+    code = db.ZipCodeField()
+
+    @property
+    def municipalities(self):
+        return Municipality.select().join(MunicipalityZipCode).where(MunicipalityZipCode.zipcode == self)  # noqa
+
+
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
     resource_fields = ['name', 'insee', 'siren']
 
     insee = db.CharField(max_length=5)
     siren = db.CharField(max_length=9)
+
+    @property
+    def zipcodes(self):
+        return ZipCode.select().join(MunicipalityZipCode).where(MunicipalityZipCode.municipality == self)  # noqa
+
+    def add_zipcode(self, zipcode):
+        if isinstance(zipcode, str):
+            zipcode = ZipCode.get(ZipCode.code == zipcode)
+        MunicipalityZipCode.create(municipality=self, zipcode=zipcode)
+        return zipcode
+
+
+class MunicipalityZipCode(db.Model):
+    municipality = db.ForeignKeyField(Municipality)
+    zipcode = db.ForeignKeyField(ZipCode)
 
 
 class BaseFantoirModel(NamedModel):
@@ -86,6 +110,7 @@ class HouseNumber(Model):
     street = db.ForeignKeyField(Street, null=True)
     locality = db.ForeignKeyField(Locality, null=True)
     cia = db.CharField(max_length=100)
+    zipcode = db.ForeignKeyField(ZipCode, null=True)
 
     class Meta:
         # Does not work, as SQL does not consider NULL has values. Is there

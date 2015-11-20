@@ -3,7 +3,7 @@ import pytest
 from ban.core import models
 
 from .factories import (HouseNumberFactory, MunicipalityFactory,
-                        PositionFactory, StreetFactory)
+                        PositionFactory, StreetFactory, ZipCodeFactory)
 
 
 def test_municipality_is_created_with_version_1():
@@ -48,6 +48,28 @@ def test_municipality_diff_contain_only_changed_data():
     assert len(diff.diff) == 1  # name, version
     assert 'insee' not in diff.diff
     assert diff.diff['name']['new'] == "Orvanne"
+
+
+def test_municipality_zipcodes():
+    zipcode1 = ZipCodeFactory(code="75010")
+    zipcode2 = ZipCodeFactory(code="75011")
+    municipality = MunicipalityFactory(name="Paris")
+    municipality.add_zipcode(zipcode1)
+    municipality.add_zipcode(zipcode2)
+    zipcodes = municipality.zipcodes
+    assert len(zipcodes) == 2
+    assert zipcode1 in zipcodes
+    assert zipcode2 in zipcodes
+
+
+def test_zipcode_municipalities():
+    zipcode = ZipCodeFactory(code="31310")
+    municipality1 = MunicipalityFactory(name="Montbrun-Bocage")
+    municipality2 = MunicipalityFactory(name="Montesquieu-Volvestre")
+    municipality1.add_zipcode(zipcode)
+    municipality2.add_zipcode(zipcode)
+    assert municipality1 in zipcode.municipalities
+    assert municipality2 in zipcode.municipalities
 
 
 def test_street_is_versioned():

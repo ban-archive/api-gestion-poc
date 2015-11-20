@@ -5,7 +5,7 @@ from playhouse import postgres_ext
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
-           'BooleanField', 'BinaryJSONField']
+           'BooleanField', 'BinaryJSONField', 'ZipCodeField']
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
@@ -101,3 +101,17 @@ class DateTimeField(peewee.DateTimeField):
 
 class BooleanField(peewee.BooleanField):
     schema_type = 'bool'
+
+
+class ZipCodeField(CharField):
+
+    def __init__(self, *args, **kwargs):
+        kwargs['max_length'] = 5
+        kwargs['unique'] = True
+        super().__init__(*args, **kwargs)
+
+    def coerce(self, value):
+        value = str(value)
+        if not len(value) == 5 or not value.isdigit():
+            raise ValueError('Invalid zipcode')
+        return value

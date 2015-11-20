@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 import factory
-from factory.fuzzy import FuzzyText
+from factory.fuzzy import FuzzyText, FuzzyInteger
 from factory_peewee import PeeweeModelFactory
 
 from ban.core import models
@@ -63,6 +63,13 @@ class BaseFactory(BaseTestModel):
 
     class Meta:
         abstract = True
+
+
+class ZipCodeFactory(BaseFactory):
+    code = FuzzyInteger(10000, 97000)
+
+    class Meta:
+        model = models.ZipCode
 
 
 class MunicipalityFactory(BaseFactory):
