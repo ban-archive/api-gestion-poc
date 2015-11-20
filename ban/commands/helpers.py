@@ -1,4 +1,5 @@
 import csv
+import os
 import pkgutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -131,9 +132,14 @@ def confirm(text, default=None):
 @decorator.decorator
 def session(func, *args, **kwargs):
     # TODO make configurable from command line
-    user = User.select(User.is_staff == True).first()
-    if not user:
-        abort('No admin user')
+    qs = User.select().select(User.is_staff == True)
+    username = os.environ.get('SESSION_USER')
+    if username:
+        qs = qs.where(User.username == username)
+    try:
+        user = qs.get()
+    except User.DoesNotExist:
+        abort('Admin user not found {}'.format(username))
     session = Session.create(user=user)
     context.set('session', session)
     return func(*args, **kwargs)
