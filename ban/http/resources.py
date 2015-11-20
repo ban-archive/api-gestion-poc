@@ -174,17 +174,17 @@ class Position(VersionnedResource):
 class Housenumber(VersionnedResource):
     model = models.HouseNumber
 
-    def on_get_positions(self, *args, **kwargs):
+    def on_get_positions(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
-        return self.collection(instance.position_set.as_resource)
+        self.collection(req, resp, instance.position_set.as_resource())
 
 
 class Locality(VersionnedResource):
     model = models.Locality
 
-    def on_get_housenumbers(self, *args, **kwargs):
+    def on_get_housenumbers(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
-        return self.collection(instance.housenumber_set.as_resource)
+        self.collection(req, resp, instance.housenumber_set.as_resource())
 
 
 class Street(Locality):
