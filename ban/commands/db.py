@@ -12,7 +12,7 @@ models = [Version, Diff, amodels.User, amodels.Client, amodels.Grant,
 
 
 @command
-def create(fail_silently=False):
+def create(fail_silently=False, **kwargs):
     """Create database tables.
 
     fail_silently   Do not raise error if table already exists.
@@ -22,8 +22,8 @@ def create(fail_silently=False):
 
 
 @command
-def truncate(force=False):
-    """Create database tables.
+def truncate(force=False, **kwargs):
+    """Truncate database tables.
 
     force   Do not ask for confirm.
     """

@@ -9,7 +9,7 @@ from . import helpers
 
 @command
 @helpers.session
-def dummytoken():
+def dummytoken(**kwargs):
     """Create a dummy token for dev."""
     session = context.get('session')
     Token.delete().where(Token.access_token == 'token').execute()
@@ -18,7 +18,7 @@ def dummytoken():
 
 
 @command
-def createuser(username=None, email=None, is_staff=True):
+def createuser(username=None, email=None, is_staff=True, **kwargs):
     """Create a user.
 
     is_staff    set user staff

@@ -8,12 +8,12 @@ __namespace__ = 'import'
 
 @command
 @helpers.nodiff
-def municipalities(path, update=False, departement=None):
+def municipalities(path, update=False, departement=None, **kwargs):
     """Import municipalities from
     http://www.collectivites-locales.gouv.fr/files/files/epcicom2015.csv.
 
     update          allow to override already existing Municipality
-    departement     only import departement (insee id: 01, 31, 2A…)
+    departement     only import this departement id
     """
     rows = helpers.load_csv(path, encoding='latin1')
     if departement:

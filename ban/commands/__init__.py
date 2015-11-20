@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 import argparse
 import inspect
+import os
 import sys
 from itertools import zip_longest
 
@@ -19,24 +19,63 @@ def report(name, item):
 class Command:
 
     current = None
+    _globals = {
+        'db_port': None,
+        'db_host': None,
+        'db_user': None,
+        'db_password': None,
+        'db_name': None,
+        'session_user': None,
+    }
 
     def __init__(self, command):
         self.command = command
         self.inspect()
         self.init_parser()
+        self.set_globals()
         self._reports = {}
+        self._on_parse_args = []
+        self._on_before_call = []
+        self._on_after_call = []
 
     def __call__(self, *args, **kwargs):
         Command.current = self
+        for func in self._on_before_call:
+            func(self, args, kwargs)
         self.command(*args, **kwargs)
+        for func in self._on_after_call:
+            func(self, args, kwargs)
         self.reporting()
         Command.current = None
 
-    def invoke(self, args):
-        kwargs = {}
+    def invoke(self, parsed):
+        kwargs = {'cmd': self}
         for name, _ in self.spec:
-            kwargs[name] = getattr(args, name)
+            kwargs[name] = getattr(parsed, name)
+        for func in self._on_parse_args:
+            func(self, parsed, kwargs)
+        self.parse_globals(parsed, **kwargs)
         self(**kwargs)
+
+    def on_parse_args(self, func):
+        self._on_parse_args.append(func)
+
+    def on_before_call(self, func):
+        self._on_before_call.append(func)
+
+    def on_after_call(self, func):
+        self._on_after_call.append(func)
+
+    def set_globals(self):
+        for name, default in self._globals.items():
+            self.add_argument(name, default)
+
+    def parse_globals(self, parsed, **kwargs):
+        for name in self._globals.keys():
+            value = getattr(parsed, name, None)
+            if value:
+                # TODO small config system instead.
+                os.environ.setdefault(name.upper(), value)
 
     @property
     def namespace(self):
@@ -66,7 +105,7 @@ class Command:
 
     def parse_parameter_help(self, name):
         try:
-            return self.help.split(name)[1].split('\n')[0].strip()
+            return self.help.split(name, 1)[1].split('\n')[0].strip()
         except IndexError:
             return ''
 

@@ -11,7 +11,7 @@ __namespace__ = 'import'
 
 @command
 @nodiff
-def oldban(path):
+def oldban(path, **kwargs):
     """Import from BAN json stream files from
     http://bano.openstreetmap.fr/BAN_odbl/"""
     max_value = sum(1 for line in iter_file(path))
