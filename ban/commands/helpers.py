@@ -154,7 +154,7 @@ def session(func, *args, **kwargs):
     try:
         user = qs.get()
     except User.DoesNotExist:
-        abort('Admin user not found {}'.format(username))
+        abort('Admin user not found {}'.format(username or ''))
     session = Session.create(user=user)
     context.set('session', session)
     return func(*args, **kwargs)

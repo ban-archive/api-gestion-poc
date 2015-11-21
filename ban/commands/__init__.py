@@ -27,6 +27,8 @@ class Command:
         'db_name': None,
         'session_user': None,
         'workers': os.cpu_count(),
+        'verbose': False,
+        'filter': False,
     }
 
     def __init__(self, command):
@@ -43,11 +45,16 @@ class Command:
         Command.current = self
         for func in self._on_before_call:
             func(self, args, kwargs)
-        self.command(*args, **kwargs)
-        for func in self._on_after_call:
-            func(self, args, kwargs)
-        self.reporting()
-        Command.current = None
+        try:
+            self.command(*args, **kwargs)
+        except KeyboardInterrupt:
+            pass
+        else:
+            for func in self._on_after_call:
+                func(self, args, kwargs)
+        finally:
+            self.reporting()
+            Command.current = None
 
     def invoke(self, parsed):
         kwargs = {'cmd': self}
@@ -146,9 +153,13 @@ class Command:
 
     def reporting(self):
         if self._reports:
-            sys.stdout.write('\n# Stats:')
+            sys.stdout.write('\n# Reports:')
             for name, items in self._reports.items():
-                sys.stdout.write('\n{}: {}'.format(name, len(items)))
+                sys.stdout.write('\n✔ {}: {}'.format(name, len(items)))
+                if os.environ.get('VERBOSE'):
+                    for item in items:
+                        sys.stdout.write('\n  ⚫ {}'.format(item))
+        sys.stdout.write('\n')
 
 
 def command(func):

@@ -14,11 +14,11 @@ def dummytoken(**kwargs):
     session = context.get('session')
     Token.delete().where(Token.access_token == 'token').execute()
     Token.create(session=session.id, access_token="token", expires_in=3600*24)
-    print('Created token "token"')
+    sys.stdout.write('Created token "token"')
 
 
 @command
-def createuser(username=None, email=None, is_staff=True, **kwargs):
+def createuser(username=None, email=None, is_staff=False, **kwargs):
     """Create a user.
 
     is_staff    set user staff
