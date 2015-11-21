@@ -7,7 +7,7 @@ from importlib import import_module
 from pathlib import Path
 
 import decorator
-from progressbar import ProgressBar
+import progressbar
 
 from ban.auth.models import Session, User
 from ban.core import context
@@ -53,16 +53,30 @@ def abort(msg):
     sys.exit(1)
 
 
+class Bar(progressbar.ProgressBar):
+
+    def __init__(self, *args, **kwargs):
+        kwargs['redirect_stdout'] = True
+        super().__init__(*args, **kwargs)
+
+    def default_widgets(self):
+        widgets = super().default_widgets()
+        if self.max_value:
+            # Simpler option to override the bar fill char…
+            widgets[5] = progressbar.widgets.Bar('█')
+        return widgets
+
+
 def bar(iterable, *args, **kwargs):
-    return ProgressBar(*args, **kwargs)(iterable)
+    return Bar(*args, **kwargs)(iterable)
 
 
 def batch(func, iterable, chunksize=1000, max_value=None):
-    pbar = ProgressBar(max_value=max_value).start()
+    bar = Bar(max_value=max_value).start()
     with ThreadPoolExecutor(max_workers=4) as executor:
         for i, res in enumerate(executor.map(func, iterable)):
-            pbar.update(i)
-        pbar.finish()
+            bar.update(i)
+        bar.finish()
 
 
 def prompt(text, default=None, confirmation=False, coerce=None):
