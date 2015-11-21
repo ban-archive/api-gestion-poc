@@ -24,6 +24,7 @@ install:
 - python setup.py develop
 
 before_script:
+- psql -U postgres -c "CREATE DATABASE test_ban;"
 - psql -U postgres -c "create extension postgis"
 - psql -U postgres -c "create extension hstore"
 
