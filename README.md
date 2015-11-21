@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/etalab/ban.svg)](https://travis-ci.org/etalab/ban)
+
 # BAN
 
 This is a POC of API for managing the future "Base adresses nationale".
