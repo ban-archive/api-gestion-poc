@@ -26,6 +26,7 @@ class Command:
         'db_password': None,
         'db_name': None,
         'session_user': None,
+        'workers': os.cpu_count(),
     }
 
     def __init__(self, command):
@@ -75,7 +76,7 @@ class Command:
             value = getattr(parsed, name, None)
             if value:
                 # TODO small config system instead.
-                os.environ.setdefault(name.upper(), value)
+                os.environ.setdefault(name.upper(), str(value))
 
     @property
     def namespace(self):
