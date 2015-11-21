@@ -4,6 +4,9 @@ import os
 import sys
 from itertools import zip_longest
 
+from ban.core import config
+
+
 NO_DEFAULT = object()
 
 parser = argparse.ArgumentParser()
@@ -82,8 +85,7 @@ class Command:
         for name in self._globals.keys():
             value = getattr(parsed, name, None)
             if value:
-                # TODO small config system instead.
-                os.environ.setdefault(name.upper(), str(value))
+                config.set(name, value)
 
     @property
     def namespace(self):
@@ -156,7 +158,7 @@ class Command:
             sys.stdout.write('\n# Reports:')
             for name, items in self._reports.items():
                 sys.stdout.write('\n✔ {}: {}'.format(name, len(items)))
-                if os.environ.get('VERBOSE'):
+                if config.get('VERBOSE'):
                     for item in items:
                         sys.stdout.write('\n  ⚫ {}'.format(item))
         sys.stdout.write('\n')

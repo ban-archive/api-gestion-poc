@@ -23,10 +23,19 @@ def test_import_municipalities_can_be_filtered_by_departement(staff):
     assert not len(Diff.select())
 
 
-def test_create_user(monkeypatch):
+def test_create_user_is_not_staff_by_default(monkeypatch):
     monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: 'pwd')
     assert not amodels.User.select().count()
     createuser(username='testuser', email='aaaa@bbbb.org')
+    assert amodels.User.select().count() == 1
+    user = amodels.User.first()
+    assert not user.is_staff
+
+
+def test_create_user_should_accept_is_staff_kwarg(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: 'pwd')
+    assert not amodels.User.select().count()
+    createuser(username='testuser', email='aaaa@bbbb.org', is_staff=True)
     assert amodels.User.select().count() == 1
     user = amodels.User.first()
     assert user.is_staff

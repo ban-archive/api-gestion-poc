@@ -1,7 +1,6 @@
-import os
-
 import peewee
 from playhouse.postgres_ext import PostgresqlExtDatabase
+from ban.core import config
 
 
 class DBProxy(peewee.Proxy):
@@ -11,11 +10,11 @@ class DBProxy(peewee.Proxy):
     def __getattr__(self, attr):
         if not self.obj:
             db = PostgresqlExtDatabase(
-                self.prefix + os.environ.get('DB_NAME', 'ban'),
-                user=os.environ.get('DB_USER'),
-                password=os.environ.get('DB_PASSWORD'),
-                host=os.environ.get('DB_HOST'),
-                port=os.environ.get('DB_PORT'),
+                self.prefix + config.DB_NAME,
+                user=config.get('DB_USER'),
+                password=config.get('DB_PASSWORD'),
+                host=config.get('DB_HOST'),
+                port=config.get('DB_PORT'),
             )
             self.initialize(db)
         return getattr(self.obj, attr)

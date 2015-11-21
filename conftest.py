@@ -77,3 +77,27 @@ def url():
                 break
         return url
     return _
+
+
+class MonkeyPatchWrapper(object):
+    def __init__(self, monkeypatch, wrapped_object):
+        super().__setattr__('monkeypatch', monkeypatch)
+        super().__setattr__('wrapped_object', wrapped_object)
+
+    def __getattr__(self, attr):
+        return getattr(self.wrapped_object, attr)
+
+    def __setattr__(self, attr, value):
+        self.monkeypatch.setattr(self.wrapped_object, attr, value,
+                                 raising=False)
+
+    def __delattr__(self, attr):
+        self.monkeypatch.delattr(self.wrapped_object, attr)
+
+
+@pytest.fixture()
+def config(request, monkeypatch):
+    from ban.core import config as ban_config
+    # Make sure config cache is empty.
+    ban_config.cache.clear()
+    return MonkeyPatchWrapper(monkeypatch, ban_config)

@@ -10,7 +10,7 @@ import decorator
 import progressbar
 
 from ban.auth.models import Session, User
-from ban.core import context
+from ban.core import context, config
 from ban.core.versioning import Diff
 
 
@@ -73,7 +73,7 @@ def bar(iterable, *args, **kwargs):
 
 def batch(func, iterable, chunksize=1000, max_value=None):
     bar = Bar(max_value=max_value).start()
-    workers = int(os.environ.get('WORKERS', os.cpu_count()))
+    workers = int(config.get('WORKERS', os.cpu_count()))
     with ThreadPoolExecutor(max_workers=workers) as executor:
         for i, res in enumerate(executor.map(func, iterable)):
             bar.update(i)
@@ -148,7 +148,7 @@ def confirm(text, default=None):
 def session(func, *args, **kwargs):
     # TODO make configurable from command line
     qs = User.select().select(User.is_staff == True)
-    username = os.environ.get('SESSION_USER')
+    username = config.get('SESSION_USER')
     if username:
         qs = qs.where(User.username == username)
     try:
