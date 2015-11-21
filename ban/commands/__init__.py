@@ -128,6 +128,8 @@ class Command:
                     kwargs['action'] = action
                 elif type_ in (int, str):
                     kwargs['type'] = type_
+                elif type_ in (list, tuple):
+                    kwargs['nargs'] = '*'
                 elif callable(default):
                     kwargs['type'] = type_
                     kwargs['default'] = ''

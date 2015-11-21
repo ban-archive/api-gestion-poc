@@ -73,7 +73,7 @@ def bar(iterable, *args, **kwargs):
 
 def batch(func, iterable, chunksize=1000, max_value=None):
     bar = Bar(max_value=max_value).start()
-    workers = int(os.environ.get('WORKERS'))
+    workers = int(os.environ.get('WORKERS', os.cpu_count()))
     with ThreadPoolExecutor(max_workers=workers) as executor:
         for i, res in enumerate(executor.map(func, iterable)):
             bar.update(i)

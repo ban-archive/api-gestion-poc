@@ -27,6 +27,7 @@ def pytest_unconfigure(config):
 
 def pytest_runtest_setup(item):
     truncatedb(force=True)
+    context.set('session', None)
 
 
 @pytest.fixture()
