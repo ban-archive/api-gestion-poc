@@ -47,7 +47,7 @@ Create tables
 
 Create at least use staff user
 
-    ban auth:createuser
+    ban auth:createuser --is-staff
 
 Import municipalities (get the file from
 http://www.collectivites-locales.gouv.fr/files/files/epcicom2015.csv)
