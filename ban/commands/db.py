@@ -7,8 +7,10 @@ from . import helpers
 
 models = [Version, Diff, amodels.User, amodels.Client, amodels.Grant,
           amodels.Session, amodels.Token, cmodels.ZipCode,
-          cmodels.Municipality, cmodels.MunicipalityZipCode, cmodels.Street,
-          cmodels.Locality, cmodels.HouseNumber, cmodels.Position]
+          cmodels.Municipality,
+          cmodels.Municipality.zipcodes.get_through_model(),
+          cmodels.Street, cmodels.Locality, cmodels.HouseNumber,
+          cmodels.Position]
 
 
 @command

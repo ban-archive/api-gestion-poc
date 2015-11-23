@@ -1,11 +1,12 @@
 import re
 
 import peewee
-from playhouse import postgres_ext
+from playhouse import postgres_ext, fields
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
-           'BooleanField', 'BinaryJSONField', 'ZipCodeField']
+           'BooleanField', 'BinaryJSONField', 'ZipCodeField',
+           'ManyToManyField']
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
@@ -115,3 +116,7 @@ class ZipCodeField(CharField):
         if not len(value) == 5 or not value.isdigit():
             raise ValueError('Invalid zipcode')
         return value
+
+
+class ManyToManyField(fields.ManyToManyField):
+    schema_type = 'list'
