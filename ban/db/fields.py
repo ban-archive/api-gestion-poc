@@ -2,13 +2,15 @@ import json
 import re
 
 import peewee
+
 from playhouse import postgres_ext, fields
+from playhouse.fields import PasswordField as PWDField
 from postgis import Point
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
            'BooleanField', 'BinaryJSONField', 'PostCodeField',
-           'ManyToManyField']
+           'ManyToManyField', 'PasswordField']
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
@@ -173,3 +175,11 @@ class ManyToManyField(fields.ManyToManyField):
         # https://github.com/coleifer/peewee/issues/794
         model_class._meta.fields[name] = self
         super().add_to_class(model_class, name)
+
+
+class PasswordField(PWDField):
+
+    def python_value(self, value):
+        if value is None:
+            return value
+        return super().python_value(value)

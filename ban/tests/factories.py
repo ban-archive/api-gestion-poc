@@ -23,7 +23,8 @@ class BaseTestModel(PeeweeModelFactory):
 
 class UserFactory(BaseTestModel):
     username = FuzzyText(length=12)
-    password = factory.PostGenerationMethodCall('set_password', 'password')
+    # Avoid running bcrypt crypting at each test.
+    # password = factory.PostGenerationMethodCall('set_password', 'password')
     email = factory.LazyAttribute(lambda obj: '%s@example.com' % obj.username)
 
     class Meta:
