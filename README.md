@@ -38,9 +38,10 @@ Add postgis and hstore extensions
 
 Install system dependencies
 
-- download and install python 3.5 from https://www.python.org/downloads/
+- download and install python 3.4 from https://www.python.org/downloads/release/python-343/
 - download and install git from https://git-scm.com/download/win
 - download and install postgresql from http://fr.enterprisedb.com/products-services-training/pgdownload
+- download and install postgreGIS from http://postgis.net/windows_downloads/
 
 -Configure your environment variables:
     setx path "%PATH%;C:\New Folder" (user variable)
