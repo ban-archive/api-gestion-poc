@@ -19,9 +19,7 @@ Create a virtualenv (but you'd better use virtualenvwrapper or pew):
     
 Install developpement tools
     
-    pip install ipython
-    pip install ipdb
-    pip install setuptools
+    pip install ipython ipdb
 
 
 Create a psql database
@@ -46,18 +44,6 @@ Install system dependencies
 -Configure your environment variables:
     setx path "%PATH%;C:\New Folder" (user variable)
 or  set path "%PATH%;C:\New Folder" (system variable)
-    
-Git:
-
-    setx path "%PATH%;C:\Program Files\Git\bin"
-
-Python:
-
-    setx path "%PATH%;C:\Python34"
-    
-PostgreSQL:
-
-    setx path "%PATH%;C:\Program Files\PostgreSQL\9.4\bin"
 
 Create a virtualenv
 
@@ -67,10 +53,7 @@ Create a virtualenv
 
 Install developpement tools
     
-    pip install ipython
-    pip install pyreadline
-    pip install ipdb
-    pip install setuptools
+    pip install ipython pyreadline ipdb
 
 Create a psql database
 
