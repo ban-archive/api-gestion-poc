@@ -5,6 +5,7 @@
 This is a POC of API for managing the future "Base adresses nationale".
 
 ## Install
+### Linux
 
 Install system dependencies
 
@@ -15,6 +16,13 @@ Create a virtualenv (but you'd better use virtualenvwrapper or pew):
 
     virtualenv banenv --python=`which python3.4`
     source banenv/bin/activate
+    
+Install developpement tools
+    
+    pip install ipython
+    pip install ipdb
+    pip install setuptools
+
 
 Create a psql database
 
@@ -25,6 +33,56 @@ Add postgis and hstore extensions
     psql ban
     CREATE EXTENSION postgis;
     CREATE EXTENSION hstore;
+
+### Windows
+
+Install system dependencies
+
+- download and install python 3.5 from https://www.python.org/downloads/
+- download and install git from https://git-scm.com/download/win
+- download and install postgresql from http://fr.enterprisedb.com/products-services-training/pgdownload
+
+-Configure your environment variables:
+    setx path "%PATH%;C:\New Folder" (user variable)
+or  set path "%PATH%;C:\New Folder" (system variable)
+    
+Git:
+
+    setx path "%PATH%;C:\Program Files\Git\bin"
+
+Python:
+
+    setx path "%PATH%;C:\Python34"
+    
+PostgreSQL:
+
+    setx path "%PATH%;C:\Program Files\PostgreSQL\9.4\bin"
+
+Create a virtualenv
+
+    pip install virtualenv
+    virtualenv banenv
+    banenv/Scripts/activate.bat
+
+Install developpement tools
+    
+    pip install ipython
+    pip install pyreadline
+    pip install ipdb
+    pip install setuptools
+
+Create a psql database
+
+    createdb -U youruser ban 
+
+Add postgis and hstore extensions
+
+    psql ban youruser
+    CREATE EXTENSION postgis;
+    CREATE EXTENSION hstore;
+
+
+## Project configuration
 
 Clone repository
 
@@ -38,6 +96,7 @@ Install python dependencies
 Install ban locally
 
     python setup.py develop
+
 
 ## Data setup
 
@@ -66,9 +125,4 @@ For development:
 
 For production, you need to use either gunicorn or uwsgi.
 
-## Windows install
-- download and install python 3.5 from https://www.python.org/downloads/
-- download and install git from https://git-scm.com/download/win
-- download and install postgresql from http://fr.enterprisedb.com/products-services-training/pgdownload
-- launch git-bash
-- clone ban project with git clone
+
