@@ -157,10 +157,10 @@ class Command:
         if self._reports:
             sys.stdout.write('\n# Reports:')
             for name, items in self._reports.items():
-                sys.stdout.write('\n✔ {}: {}'.format(name, len(items)))
+                sys.stdout.write('\nok {}: {}'.format(name, len(items)))
                 if config.get('VERBOSE'):
                     for item in items:
-                        sys.stdout.write('\n  ⚫ {}'.format(item))
+                        sys.stdout.write('\n  . {}'.format(item))
         sys.stdout.write('\n')
 
 
