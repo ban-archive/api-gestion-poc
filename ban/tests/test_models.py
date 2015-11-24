@@ -206,4 +206,5 @@ def test_get_instantiate_object_properly():
 ])
 def test_position_center_coerce(given, expected):
     position = PositionFactory(center=given)
-    assert models.Position.get(models.Position.id == position.id).center == expected  # noqa
+    center = models.Position.get(models.Position.id == position.id).center
+    assert center.coords == expected

@@ -2,6 +2,7 @@ import re
 
 import peewee
 from playhouse import postgres_ext, fields
+from postgis import Point
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
@@ -10,37 +11,33 @@ __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
-point_template = 'POINT ({} {})'
-
-# https://github.com/MAPC/rental-listing-aggregator/blob/09d3d8d75ea3697431dd080f49c4fc1f28a83263/.ipynb_checkpoints/Untitled-checkpoint.ipynb
-# https://github.com/mima3/estat/blob/537689ad4ebc96af34e1c66a9997241fa847d8c1/estat_db.py
-# https://github.com/ryanj/flask-postGIS/blob/master/map.py
-# http://chrishaganreporting.com/2014/03/inserting-geometry-with-postgis-and-psycopg2/
-# http://stackoverflow.com/questions/14940285/using-postgis-on-python-3
-# http://stackoverflow.com/questions/29888040/how-to-join-on-spatial-functions-in-peewee
 
 
 class PointField(peewee.Field):
     db_field = 'point'
     schema_type = 'point'
+    srid = 4326
 
     def db_value(self, value):
-        return str(self.coerce(value))
+        return self.coerce(value)
 
     def python_value(self, value):
         return self.coerce(value)
 
     def coerce(self, value):
         if not value:
-            value = tuple()
-        elif isinstance(value, str):
+            return None
+        if isinstance(value, Point):
+            return value
+        if isinstance(value, str):
             search = lonlat_pattern.search(value)
             if search:
                 value = (float(search.group('lon')),
                          float(search.group('lat')))
-        elif isinstance(value, list):
-            value = tuple(value)
-        return value
+        return Point(value[0], value[1], srid=self.srid)
+
+postgres_ext.PostgresqlExtDatabase.register_fields({'point':
+                                                    'geometry(Point)'})
 
 
 class ForeignKeyField(peewee.ForeignKeyField):
@@ -71,9 +68,6 @@ class CharField(peewee.CharField):
     def python_value(self, value):
         value = self.coerce(value)
         return super().python_value(value)
-
-peewee.PostgresqlDatabase.register_fields({'point': 'point'})
-peewee.SqliteDatabase.register_fields({'point': 'point'})
 
 
 class IntegerField(peewee.IntegerField):

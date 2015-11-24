@@ -6,3 +6,4 @@ peewee==2.7.3
 progressbar2==3.3.0
 psycopg2==2.6.1
 git+https://github.com/yohanboniface/falcon-oauth
+git+https://github.com/yohanboniface/psycopg-postgis

@@ -1,6 +1,7 @@
 import peewee
 from playhouse.postgres_ext import PostgresqlExtDatabase
 from ban.core import config
+import postgis
 
 
 class DBProxy(peewee.Proxy):
@@ -17,6 +18,7 @@ class DBProxy(peewee.Proxy):
                 port=config.get('DB_PORT'),
             )
             self.initialize(db)
+            postgis.register(self.obj.get_cursor())
         return getattr(self.obj, attr)
 
 

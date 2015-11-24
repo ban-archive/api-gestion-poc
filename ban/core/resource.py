@@ -2,6 +2,7 @@ import peewee
 from cerberus import ValidationError, Validator, errors
 
 from ban import db
+from postgis import Point
 
 
 class ResourceValidator(Validator):
@@ -14,7 +15,7 @@ class ResourceValidator(Validator):
         super().__init__(model._meta.resource_schema, *args, **kwargs)
 
     def _validate_type_point(self, field, value):
-        if not isinstance(value, (str, list, tuple)):
+        if not isinstance(value, (str, list, tuple, Point)):
             self._error(field, 'Invalid Point: {}'.format(value))
 
     def _validate_coerce(self, coerce, field, value):
