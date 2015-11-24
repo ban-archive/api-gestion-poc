@@ -29,3 +29,11 @@ before_script:
 - psql -U postgres -c "create extension hstore" -d test_ban
 
 script: py.test
+
+notifications:
+  irc:
+    channels:
+    - irc.freenode.net##ban
+    on_success: change
+    on_failure: always
+  email: false
