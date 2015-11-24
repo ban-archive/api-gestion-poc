@@ -20,6 +20,7 @@ cache:
   - $HOME/.cache/pip
 
 install:
+- pip install cython
 - pip install -r requirements-dev.txt
 - python setup.py develop
 
