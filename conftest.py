@@ -5,7 +5,7 @@ from ban.tests.factories import UserFactory, TokenFactory, SessionFactory
 from ban import db
 from ban.commands.db import models, create as createdb, truncate as truncatedb
 from ban.core import context
-from ban.http import application
+from ban.http import application, reverse
 
 
 def pytest_configure(config):
@@ -64,18 +64,8 @@ def get(client):
 
 @pytest.fixture()
 def url():
-    def _(klass, **kwargs):
-        url = None
-        if 'identifier' in kwargs:
-            kwargs['id'] = '{identifier}:{id}'.format(**kwargs)
-        for route in klass.routes()[::-1]:
-            try:
-                url = route.format(**kwargs)
-            except KeyError:
-                continue
-            else:
-                break
-        return url
+    def _(class_, **kwargs):
+        return reverse(class_, **kwargs)
     return _
 
 

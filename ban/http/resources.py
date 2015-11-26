@@ -78,10 +78,6 @@ class URLMixin(object, metaclass=WithURL):
         return "/" + re.sub("([a-z])([A-Z])", "\g<1>/\g<2>", cls.__name__).lower()
 
     @classmethod
-    def url_name(cls):
-        return re.sub("([a-z])([A-Z])", "\g<1>-\g<2>", cls.__name__).lower()
-
-    @classmethod
     def url_path(cls):
         return cls.base_url()
 
@@ -96,17 +92,12 @@ class BaseCRUD(URLMixin, BaseCollection):
 
     @classmethod
     def routes(cls):
-        # Falcon does not allow to have those two routes in the same time:
-        # '/path/{id}'
-        # '/path/{identifier}:{id}'
         return [
             cls.base_url(),
-            # cls.base_url() + '/{id}',
             cls.base_url() + '/{id}',
             cls.base_url() + '/{id}/{route}',
             cls.base_url() + '/{id}/{route}/{route_id}',
         ]
-        # return cls.base_url() + r'(?:(?P<key>[\w_]+)/(?P<ref>[\w_]+)/(?:(?P<route>[\w_]+)/(?:(?P<route_id>[\d]+)/)?)?)?$'  # noqa
 
     def get_object(self, id, **kwargs):
         try:

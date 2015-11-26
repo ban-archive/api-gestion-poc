@@ -14,23 +14,26 @@ from .utils import authorize
 pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize('name,kwargs,expected', [
-    ['api:position', {"ref": 1, "key": "id"}, '/api/position/id/1/'],
-    ['api:position', {}, '/api/position/'],
-    ['api:housenumber', {"ref": 1, "key": "id"}, '/api/housenumber/id/1/'],
-    ['api:housenumber', {"ref": "93031_1491H_84_BIS", "key": "cia"}, '/api/housenumber/cia/93031_1491H_84_BIS/'],  # noqa
-    ['api:housenumber', {}, '/api/housenumber/'],
-    ['api:street', {"ref": 1, "key": "id"}, '/api/street/id/1/'],
-    ['api:street', {"ref": "930310644M", "key": "fantoir"}, '/api/street/fantoir/930310644M/'],  # noqa
-    ['api:street', {}, '/api/street/'],
-    ['api:municipality', {"ref": 1, "key": "id"}, '/api/municipality/id/1/'],
-    ['api:municipality', {"ref": "93031", "key": "insee"}, '/api/municipality/insee/93031/'],  # noqa
-    ['api:municipality', {"ref": "93031321", "key": "siren"}, '/api/municipality/siren/93031321/'],  # noqa
-    ['api:municipality', {}, '/api/municipality/'],
+    [http.Position, {"id": 1}, '/position/1'],
+    [http.Position, {"id": 1, "identifier": "id"}, '/position/id:1'],
+    [http.Position, {}, '/position'],
+    [http.Housenumber, {"id": 1}, '/housenumber/1'],
+    [http.Housenumber, {"id": 1, "identifier": "id"}, '/housenumber/id:1'],
+    [http.Housenumber, {"id": "93031_1491H_84_BIS", "identifier": "cia"}, '/housenumber/cia:93031_1491H_84_BIS'],  # noqa
+    [http.Housenumber, {}, '/housenumber'],
+    [http.Street, {"id": 1}, '/street/1'],
+    [http.Street, {"id": 1, "identifier": "id"}, '/street/id:1'],
+    [http.Street, {"id": "930310644M", "identifier": "fantoir"}, '/street/fantoir:930310644M'],  # noqa
+    [http.Street, {}, '/street'],
+    [http.Municipality, {"id": 1}, '/municipality/1'],
+    [http.Municipality, {"id": 1, "identifier": "id"}, '/municipality/id:1'],
+    [http.Municipality, {"id": "93031", "identifier": "insee"}, '/municipality/insee:93031'],  # noqa
+    [http.Municipality, {"id": "93031321", "identifier": "siren"}, '/municipality/siren:93031321'],  # noqa
+    [http.Municipality, {}, '/municipality'],
 ])
-def test_api_url(name, kwargs, expected):
-    assert reverse(name, kwargs=kwargs) == expected
+def test_api_url(name, kwargs, expected, url):
+    assert url(name, **kwargs) == expected
 
 
 def test_invalid_identifier_returns_404(get):
