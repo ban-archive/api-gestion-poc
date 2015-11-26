@@ -84,12 +84,6 @@ class URLMixin(object, metaclass=WithURL):
 
 class BaseCRUD(URLMixin, BaseCollection):
 
-    def not_found(self, msg='Not found'):
-        return self.error(404, msg)
-
-    def error(self, status=400, msg='Invalid request'):
-        return self.json(status, error=msg)
-
     @classmethod
     def routes(cls):
         return [

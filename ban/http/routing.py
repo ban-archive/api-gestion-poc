@@ -27,7 +27,6 @@ class Router(DefaultRouter):
 
     def cls_name(self, cls):
         return re.sub("([a-z])([A-Z])", "\g<1>-\g<2>", cls.__name__).lower()
-        # return resource.__class__.__name__.lower()
 
     def index(self, template, resource):
         # We want only one name by endpoint, and let the url reverse define
