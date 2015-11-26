@@ -101,22 +101,25 @@ class BaseCRUD(URLMixin, BaseCollection):
 
     @dispatch_route
     def on_get(self, req, resp, **params):
-        instance = self.get_object(**params)
-        resp.json(**instance.as_resource)
+        if 'id' in params:
+            instance = self.get_object(**params)
+            resp.json(**instance.as_resource)
+        else:
+            self.collection(req, resp, self.model.select().as_resource())
 
     @auth.protect
-    def on_post(self, req, resp, *args, **kwargs):
-        if 'id' in kwargs:
-            instance = self.get_object(**kwargs)
+    def on_post(self, req, resp, *args, **params):
+        if 'id' in params:
+            instance = self.get_object(**params)
         else:
             instance = None
-        self.save_object(req.params, req, resp, instance, **kwargs)
+        self.save_object(req.params, req, resp, instance, **params)
 
     @auth.protect
-    def on_put(self, req, resp, *args, **kwargs):
-        instance = self.get_object(**kwargs)
+    def on_put(self, req, resp, *args, **params):
+        instance = self.get_object(**params)
         data = req.json
-        self.save_object(data, req, resp, instance, **kwargs)
+        self.save_object(data, req, resp, instance, **params)
 
     def save_object(self, data, req, resp, instance=None, **kwargs):
         validator = self.model.validator(**data)

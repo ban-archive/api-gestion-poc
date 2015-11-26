@@ -72,6 +72,16 @@ def test_zipcode_municipalities():
     assert municipality2 in zipcode.municipalities
 
 
+def test_municipality_as_resource():
+    municipality = MunicipalityFactory(name="Montbrun-Bocage", insee="31365",
+                                       siren="210100566")
+    assert municipality.as_resource['name'] == "Montbrun-Bocage"
+    assert municipality.as_resource['insee'] == "31365"
+    assert municipality.as_resource['siren'] == "210100566"
+    assert municipality.as_resource['version'] == 1
+    assert municipality.as_resource['id'] == municipality.id
+
+
 def test_street_is_versioned():
     initial_name = "Rue des Pommes"
     street = StreetFactory(name=initial_name)

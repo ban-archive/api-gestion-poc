@@ -77,6 +77,14 @@ def test_get_housenumber_with_cia(get, url):
     assert resp.json['number'] == "22"
 
 
+def test_get_housenumber_collection(get, url):
+    objs = HouseNumberFactory.create_batch(5)
+    resp = get(url(http.Housenumber))
+    assert resp.json['total'] == 5
+    for i, obj in enumerate(objs):
+        assert resp.json['collection'][i] == obj.as_resource
+
+
 def test_get_street(get, url):
     street = StreetFactory(name="Rue des Boulets")
     resp = get(url(http.Street, id=street.id, identifier="id"))
