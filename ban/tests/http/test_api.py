@@ -85,6 +85,44 @@ def test_get_housenumber_collection(get, url):
         assert resp.json['collection'][i] == obj.as_resource
 
 
+def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
+    position = PositionFactory(center=(1, 1))
+    PositionFactory(center=(-1, -1))
+    bbox = dict(north=2, south=0, west=0, east=2)
+    resp = get(url(http.Housenumber, query_string=bbox))
+    assert resp.json['total'] == 1
+    assert resp.json['collection'][0] == position.housenumber.as_resource
+
+
+def test_get_housenumber_collection_filtered_by_bbox_is_paginated(get, url):
+    PositionFactory.create_batch(9, center=(1, 1))
+    params = dict(north=2, south=0, west=0, east=2, limit=5)
+    PositionFactory(center=(-1, -1))
+    resp = get(url(http.Housenumber, query_string=params))
+    page1 = resp.json
+    assert len(page1['collection']) == 5
+    assert page1['total'] == 9
+    assert 'next' in page1
+    assert 'previous' not in page1
+    resp = get(page1['next'])
+    page2 = resp.json
+    assert len(page2['collection']) == 4
+    assert page2['total'] == 9
+    assert 'next' not in page2
+    assert 'previous' in page2
+    resp = get(page2['previous'])
+    assert resp.json == page1
+
+
+def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get, url):
+    position = PositionFactory(center=(1, 1))
+    PositionFactory(center=(1.1, 1.1), housenumber=position.housenumber)
+    bbox = dict(north=2, south=0, west=0, east=2)
+    resp = get(url(http.Housenumber, query_string=bbox))
+    assert resp.json['total'] == 1
+    assert resp.json['collection'][0] == position.housenumber.as_resource
+
+
 def test_get_street(get, url):
     street = StreetFactory(name="Rue des Boulets")
     resp = get(url(http.Street, id=street.id, identifier="id"))
@@ -486,23 +524,23 @@ def test_get_municipality_streets_collection(get, url):
 
 def test_get_municipality_streets_collection_is_paginated(get, url):
     municipality = MunicipalityFactory(name="Cabour")
-    StreetFactory.create_batch(30, municipality=municipality)
+    StreetFactory.create_batch(6, municipality=municipality)
     uri = url(http.Municipality, id=municipality.id, identifier="id",
-              route="streets")
+              route="streets", query_string=dict(limit=4))
     resp = get(uri)
-    page1 = json.loads(resp.body)
-    assert len(page1['collection']) == 20
-    assert page1['total'] == 30
+    page1 = resp.json
+    assert len(page1['collection']) == 4
+    assert page1['total'] == 6
     assert 'next' in page1
     assert 'previous' not in page1
     resp = get(page1['next'])
-    page2 = json.loads(resp.body)
-    assert len(page2['collection']) == 10
-    assert page2['total'] == 30
+    page2 = resp.json
+    assert len(page2['collection']) == 2
+    assert page2['total'] == 6
     assert 'next' not in page2
     assert 'previous' in page2
     resp = get(page2['previous'])
-    assert json.loads(resp.body) == page1
+    assert resp.json == page1
 
 
 def test_get_municipality_versions(get, url):

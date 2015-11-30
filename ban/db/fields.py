@@ -13,6 +13,18 @@ __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
 
 
+peewee.OP.update(
+    BBOX2D='&&',
+    BBOXCONTAINS='~',
+    BBOXCONTAINED='@',
+)
+postgres_ext.PostgresqlExtDatabase.register_ops({
+    peewee.OP.BBOX2D: peewee.OP.BBOX2D,
+    peewee.OP.BBOXCONTAINED: peewee.OP.BBOXCONTAINED,
+})
+
+
+# TODO: mv to a third-party module.
 class PointField(peewee.Field):
     db_field = 'point'
     schema_type = 'point'
@@ -35,6 +47,19 @@ class PointField(peewee.Field):
                 value = (float(search.group('lon')),
                          float(search.group('lat')))
         return Point(value[0], value[1], srid=self.srid)
+
+    def contained(self, geom):
+        return peewee.Expression(self, peewee.OP.BBOXCONTAINED, geom)
+
+    def contains(self, geom):
+        return peewee.Expression(self, peewee.OP.BBOXCONTAIND, geom)
+
+    def in_bbox(self, south, north, east, west):
+        return self.contained(
+            peewee.fn.ST_MakeBox2D(Point(west, south, srid=self.srid),
+                                   Point(east, north, srid=self.srid)),
+            )
+
 
 postgres_ext.PostgresqlExtDatabase.register_fields({'point':
                                                     'geometry(Point)'})

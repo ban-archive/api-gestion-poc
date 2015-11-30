@@ -53,9 +53,13 @@ class BaseCollection:
         }
         url = '{}://{}{}'.format(req.protocol, req.host, req.path)
         if count > end:
-            kwargs['next'] = '{}?{}'.format(url, urlencode({'offset': end}))
+            query_string = req.params.copy()
+            query_string.update({'offset': end})
+            kwargs['next'] = '{}?{}'.format(url, urlencode(query_string))
         if offset >= limit:
-            kwargs['previous'] = '{}?{}'.format(url, urlencode({'offset': offset - limit}))  # noqa
+            query_string = req.params.copy()
+            query_string.update({'offset': offset - limit})
+            kwargs['previous'] = '{}?{}'.format(url, urlencode(query_string))
         resp.json(**kwargs)
 
 
@@ -99,13 +103,17 @@ class BaseCRUD(URLMixin, BaseCollection):
         except self.model.DoesNotExist:
             raise falcon.HTTPNotFound()
 
+    def get_collection(self, req, resp, **params):
+        return self.model.select()
+
     @dispatch_route
     def on_get(self, req, resp, **params):
         if 'id' in params:
             instance = self.get_object(**params)
             resp.json(**instance.as_resource)
         else:
-            self.collection(req, resp, self.model.select().as_resource())
+            qs = self.get_collection(req, resp, **params)
+            self.collection(req, resp, qs.as_resource())
 
     @auth.protect
     def on_post(self, req, resp, *args, **params):
@@ -162,9 +170,29 @@ class Position(VersionnedResource):
 class Housenumber(VersionnedResource):
     model = models.HouseNumber
 
+    def get_bbox(self, req):
+        bbox = {}
+        req.get_param_as_int('north', store=bbox)
+        req.get_param_as_int('south', store=bbox)
+        req.get_param_as_int('east', store=bbox)
+        req.get_param_as_int('west', store=bbox)
+        if any(v is None for v in bbox.values()):
+            return None
+        return bbox
+
+    def get_collection(self, req, resp, **kwargs):
+        qs = super().get_collection(req, resp, **kwargs)
+        bbox = self.get_bbox(req)
+        if bbox:
+            qs = (qs.join(models.Position)
+                    .where(models.Position.center.in_bbox(**bbox))
+                    .group_by(models.HouseNumber.id))
+        return qs
+
     def on_get_positions(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
-        self.collection(req, resp, instance.position_set.as_resource())
+        qs = instance.position_set.as_resource()
+        self.collection(req, resp, qs)
 
 
 class Locality(VersionnedResource):

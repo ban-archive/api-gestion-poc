@@ -1,3 +1,4 @@
+from urllib.parse import urlencode
 import pytest
 
 from ban.tests.factories import UserFactory, TokenFactory, SessionFactory
@@ -64,8 +65,11 @@ def get(client):
 
 @pytest.fixture()
 def url():
-    def _(class_, **kwargs):
-        return reverse(class_, **kwargs)
+    def _(class_, query_string=None, **kwargs):
+        url = reverse(class_, **kwargs)
+        if query_string:
+            url = '{}?{}'.format(url, urlencode(query_string))
+        return url
     return _
 
 
