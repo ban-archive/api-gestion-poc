@@ -123,6 +123,18 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get, url):
     assert resp.json['collection'][0] == position.housenumber.as_resource
 
 
+def test_get_housenumber_positions(get, url):
+    housenumber = HouseNumberFactory()
+    pos1 = PositionFactory(housenumber=housenumber, center=(1, 1))
+    pos2 = PositionFactory(housenumber=housenumber, center=(2, 2))
+    pos3 = PositionFactory(housenumber=housenumber, center=(3, 3))
+    resp = get(url(http.Housenumber, id=housenumber.id, route='positions'))
+    assert resp.json['total'] == 3
+    assert pos1.as_resource in resp.json['collection']
+    assert pos2.as_resource in resp.json['collection']
+    assert pos3.as_resource in resp.json['collection']
+
+
 def test_get_street(get, url):
     street = StreetFactory(name="Rue des Boulets")
     resp = get(url(http.Street, id=street.id, identifier="id"))
@@ -139,6 +151,18 @@ def test_get_street_with_fantoir(get, url):
     street = StreetFactory(name="Rue des Boulets")
     resp = get(url(http.Street, id=street.fantoir, identifier="fantoir"))
     assert resp.json['name'] == "Rue des Boulets"
+
+
+def test_get_street_housenumbers(get, url):
+    street = StreetFactory()
+    hn1 = HouseNumberFactory(number="1", street=street)
+    hn2 = HouseNumberFactory(number="2", street=street)
+    hn3 = HouseNumberFactory(number="3", street=street)
+    resp = get(url(http.Street, id=street.id, route='housenumbers'))
+    assert resp.json['total'] == 3
+    assert resp.json['collection'][0] == hn1.as_resource
+    assert resp.json['collection'][1] == hn2.as_resource
+    assert resp.json['collection'][2] == hn3.as_resource
 
 
 @authorize

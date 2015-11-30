@@ -9,6 +9,12 @@ from ban.auth import models as auth_models
 
 
 class BaseTestModel(PeeweeModelFactory):
+
+    @classmethod
+    def _setup_next_sequence(cls, *args, **kwargs):
+        # Workaround https://github.com/cam-stitt/factory_boy-peewee/pull/6.
+        return 1
+
     class Meta:
         database = models.db
         abstract = True

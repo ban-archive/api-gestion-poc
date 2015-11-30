@@ -94,10 +94,8 @@ class HouseNumber(Model):
     zipcode = db.ForeignKeyField(ZipCode, null=True)
 
     class Meta:
-        # Does not work, as SQL does not consider NULL has values. Is there
-        # any way to enforce that at the DB level anyway?
-        unique_together = ('number', 'ordinal', 'street', 'locality')
         resource_schema = {'cia': {'required': False}}
+        order_by = ('number', 'ordinal')
 
     def __str__(self):
         return ' '.join([self.number, self.ordinal])
