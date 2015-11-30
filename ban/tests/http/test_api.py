@@ -15,22 +15,22 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize('name,kwargs,expected', [
-    [http.Position, {"id": 1}, '/position/1'],
-    [http.Position, {"id": 1, "identifier": "id"}, '/position/id:1'],
-    [http.Position, {}, '/position'],
-    [http.Housenumber, {"id": 1}, '/housenumber/1'],
-    [http.Housenumber, {"id": 1, "identifier": "id"}, '/housenumber/id:1'],
-    [http.Housenumber, {"id": "93031_1491H_84_BIS", "identifier": "cia"}, '/housenumber/cia:93031_1491H_84_BIS'],  # noqa
-    [http.Housenumber, {}, '/housenumber'],
-    [http.Street, {"id": 1}, '/street/1'],
-    [http.Street, {"id": 1, "identifier": "id"}, '/street/id:1'],
-    [http.Street, {"id": "930310644M", "identifier": "fantoir"}, '/street/fantoir:930310644M'],  # noqa
-    [http.Street, {}, '/street'],
-    [http.Municipality, {"id": 1}, '/municipality/1'],
-    [http.Municipality, {"id": 1, "identifier": "id"}, '/municipality/id:1'],
-    [http.Municipality, {"id": "93031", "identifier": "insee"}, '/municipality/insee:93031'],  # noqa
-    [http.Municipality, {"id": "93031321", "identifier": "siren"}, '/municipality/siren:93031321'],  # noqa
-    [http.Municipality, {}, '/municipality'],
+    ['position-resource', {"identifier": 1}, '/position/1'],
+    ['position-resource', {"id": 1, "identifier": "id"}, '/position/id:1'],
+    ['position', {}, '/position'],
+    ['housenumber-resource', {"identifier": 1}, '/housenumber/1'],
+    ['housenumber-resource', {"id": 1, "identifier": "id"}, '/housenumber/id:1'],  # noqa
+    ['housenumber-resource', {"id": "93031_1491H_84_BIS", "identifier": "cia"}, '/housenumber/cia:93031_1491H_84_BIS'],  # noqa
+    ['housenumber', {}, '/housenumber'],
+    ['street-resource', {"identifier": 1}, '/street/1'],
+    ['street-resource', {"id": 1, "identifier": "id"}, '/street/id:1'],
+    ['street-resource', {"id": "930310644M", "identifier": "fantoir"}, '/street/fantoir:930310644M'],  # noqa
+    ['street', {}, '/street'],
+    ['municipality-resource', {"identifier": 1}, '/municipality/1'],
+    ['municipality-resource', {"id": 1, "identifier": "id"}, '/municipality/id:1'],  # noqa
+    ['municipality-resource', {"id": "93031", "identifier": "insee"}, '/municipality/insee:93031'],  # noqa
+    ['municipality-resource', {"id": "93031321", "identifier": "siren"}, '/municipality/siren:93031321'],  # noqa
+    ['municipality', {}, '/municipality'],
 ])
 def test_api_url(name, kwargs, expected, url):
     assert url(name, **kwargs) == expected
@@ -50,7 +50,7 @@ def test_cors(get):
 
 def test_get_housenumber(get, url):
     housenumber = HouseNumberFactory(number="22")
-    resp = get(url(http.Housenumber, id=housenumber.id, identifier="id"))
+    resp = get(url('housenumber-resource', identifier=housenumber.id))
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
@@ -59,7 +59,7 @@ def test_get_housenumber(get, url):
 
 def test_get_housenumber_without_explicit_identifier(get, url):
     housenumber = HouseNumberFactory(number="22")
-    resp = get(url(http.Housenumber, id=housenumber.id))
+    resp = get(url('housenumber-resource', identifier=housenumber.id))
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
@@ -67,19 +67,20 @@ def test_get_housenumber_without_explicit_identifier(get, url):
 
 
 def test_get_housenumber_with_unknown_id_is_404(get, url):
-    resp = get(url(http.Housenumber, id=22, identifier="id"))
+    resp = get(url('housenumber-resource', identifier=22))
     assert resp.status == falcon.HTTP_404
 
 
 def test_get_housenumber_with_cia(get, url):
     housenumber = HouseNumberFactory(number="22")
-    resp = get(url(http.Housenumber, id=housenumber.cia, identifier="cia"))
+    resp = get(url('housenumber-resource', id=housenumber.cia,
+                   identifier="cia"))
     assert resp.json['number'] == "22"
 
 
 def test_get_housenumber_collection(get, url):
     objs = HouseNumberFactory.create_batch(5)
-    resp = get(url(http.Housenumber))
+    resp = get(url('housenumber'))
     assert resp.json['total'] == 5
     for i, obj in enumerate(objs):
         assert resp.json['collection'][i] == obj.as_resource
@@ -89,7 +90,7 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
     position = PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     bbox = dict(north=2, south=0, west=0, east=2)
-    resp = get(url(http.Housenumber, query_string=bbox))
+    resp = get(url('housenumber', query_string=bbox))
     assert resp.json['total'] == 1
     assert resp.json['collection'][0] == position.housenumber.as_resource
 
@@ -98,7 +99,7 @@ def test_get_housenumber_collection_filtered_by_bbox_is_paginated(get, url):
     PositionFactory.create_batch(9, center=(1, 1))
     params = dict(north=2, south=0, west=0, east=2, limit=5)
     PositionFactory(center=(-1, -1))
-    resp = get(url(http.Housenumber, query_string=params))
+    resp = get(url('housenumber', query_string=params))
     page1 = resp.json
     assert len(page1['collection']) == 5
     assert page1['total'] == 9
@@ -118,7 +119,7 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get, url):
     position = PositionFactory(center=(1, 1))
     PositionFactory(center=(1.1, 1.1), housenumber=position.housenumber)
     bbox = dict(north=2, south=0, west=0, east=2)
-    resp = get(url(http.Housenumber, query_string=bbox))
+    resp = get(url('housenumber', query_string=bbox))
     assert resp.json['total'] == 1
     assert resp.json['collection'][0] == position.housenumber.as_resource
 
@@ -128,7 +129,7 @@ def test_get_housenumber_positions(get, url):
     pos1 = PositionFactory(housenumber=housenumber, center=(1, 1))
     pos2 = PositionFactory(housenumber=housenumber, center=(2, 2))
     pos3 = PositionFactory(housenumber=housenumber, center=(3, 3))
-    resp = get(url(http.Housenumber, id=housenumber.id, route='positions'))
+    resp = get(url('housenumber-positions', identifier=housenumber.id))
     assert resp.json['total'] == 3
 
     def check(position):
@@ -145,19 +146,19 @@ def test_get_housenumber_positions(get, url):
 
 def test_get_street(get, url):
     street = StreetFactory(name="Rue des Boulets")
-    resp = get(url(http.Street, id=street.id, identifier="id"))
+    resp = get(url('street-resource', id=street.id, identifier="id"))
     assert resp.json['name'] == "Rue des Boulets"
 
 
 def test_get_street_without_explicit_identifier(get, url):
     street = StreetFactory(name="Rue des Boulets")
-    resp = get(url(http.Street, id=street.id))
+    resp = get(url('street-resource', identifier=street.id))
     assert resp.json['name'] == "Rue des Boulets"
 
 
 def test_get_street_with_fantoir(get, url):
     street = StreetFactory(name="Rue des Boulets")
-    resp = get(url(http.Street, id=street.fantoir, identifier="fantoir"))
+    resp = get(url('street-resource', id=street.fantoir, identifier="fantoir"))
     assert resp.json['name'] == "Rue des Boulets"
 
 
@@ -166,7 +167,7 @@ def test_get_street_housenumbers(get, url):
     hn1 = HouseNumberFactory(number="1", street=street)
     hn2 = HouseNumberFactory(number="2", street=street)
     hn3 = HouseNumberFactory(number="3", street=street)
-    resp = get(url(http.Street, id=street.id, route='housenumbers'))
+    resp = get(url('street-housenumbers', identifier=street.id))
     assert resp.json['total'] == 3
     assert resp.json['collection'][0] == hn1.as_list
     assert resp.json['collection'][1] == hn2.as_list
@@ -224,7 +225,7 @@ def test_create_position_with_bad_housenumber_cia_is_422(client):
 def test_replace_position(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert cmodels.Position.select().count() == 1
-    uri = url(http.Position, id=position.id, identifier="id")
+    uri = url('position-resource', identifier=position.id)
     data = {
         "version": 2,
         "center": (3, 4),
@@ -242,7 +243,7 @@ def test_replace_position(client, url):
 def test_replace_position_with_housenumber_cia(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert cmodels.Position.select().count() == 1
-    uri = url(http.Position, id=position.id, identifier="id")
+    uri = url('position-resource', identifier=position.id)
     data = {
         "version": 2,
         "center": (3, 4),
@@ -257,7 +258,7 @@ def test_replace_position_with_housenumber_cia(client, url):
 def test_replace_position_with_existing_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert cmodels.Position.select().count() == 1
-    uri = url(http.Position, id=position.id, identifier="id")
+    uri = url('position-resource', identifier=position.id)
     data = {
         "version": 1,
         "center": (3, 4),
@@ -275,7 +276,7 @@ def test_replace_position_with_existing_version_fails(client, url):
 def test_replace_position_with_non_incremental_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert cmodels.Position.select().count() == 1
-    uri = url(http.Position, id=position.id, identifier="id")
+    uri = url('position-resource', identifier=position.id)
     data = {
         "version": 18,
         "center": (3, 4),
@@ -293,7 +294,7 @@ def test_replace_position_with_non_incremental_version_fails(client, url):
 def test_update_position(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert cmodels.Position.select().count() == 1
-    uri = url(http.Position, id=position.id, identifier="id")
+    uri = url('position-resource', identifier=position.id)
     data = {
         "version": 2,
         "center": "(3.4, 5.678)",
@@ -310,7 +311,7 @@ def test_update_position(client, url):
 def test_update_position_with_cia(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert cmodels.Position.select().count() == 1
-    uri = url(http.Position, id=position.id, identifier="id")
+    uri = url('position-resource', identifier=position.id)
     data = {
         "version": 2,
         "center": "(3.4, 5.678)",
@@ -325,7 +326,7 @@ def test_update_position_with_cia(client, url):
 def test_update_position_with_existing_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert cmodels.Position.select().count() == 1
-    uri = url(http.Position, id=position.id, identifier="id")
+    uri = url('position-resource', identifier=position.id)
     data = {
         "version": 1,
         "center": "(3.4, 5.678)",
@@ -343,7 +344,7 @@ def test_update_position_with_existing_version_fails(client, url):
 def test_update_position_with_non_incremental_version_fails(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert cmodels.Position.select().count() == 1
-    uri = url(http.Position, id=position.id, identifier="id")
+    uri = url('position-resource', identifier=position.id)
     data = {
         "version": 3,
         "center": "(3.4, 5.678)",
@@ -407,7 +408,7 @@ def test_create_housenumber_does_not_honour_version_field(client):
 def test_replace_housenumber(client, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     assert cmodels.HouseNumber.select().count() == 1
-    uri = url(http.Housenumber, id=housenumber.id, identifier="id")
+    uri = url('housenumber-resource', identifier=housenumber.id)
     data = {
         "version": 2,
         "number": housenumber.number,
@@ -428,7 +429,7 @@ def test_replace_housenumber(client, url):
 def test_replace_housenumber_with_missing_field_fails(client, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     assert cmodels.HouseNumber.select().count() == 1
-    uri = url(http.Housenumber, id=housenumber.id, identifier="id")
+    uri = url('housenumber-resource', identifier=housenumber.id)
     data = {
         "version": 2,
         "ordinal": 'bis',
@@ -520,7 +521,7 @@ def test_create_street_with_invalid_municipality_identifier(client):
 
 def test_get_municipality(get, url):
     municipality = MunicipalityFactory(name="Cabour")
-    uri = url(http.Municipality, id=municipality.id, identifier="id")
+    uri = url('municipality-resource', identifier=municipality.id)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['id']
@@ -529,7 +530,7 @@ def test_get_municipality(get, url):
 
 def test_get_municipality_without_explicit_identifier(get, url):
     municipality = MunicipalityFactory(name="Cabour")
-    uri = url(http.Municipality, id=municipality.id)
+    uri = url('municipality-resource', identifier=municipality.id)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['id']
@@ -539,8 +540,7 @@ def test_get_municipality_without_explicit_identifier(get, url):
 def test_get_municipality_streets_collection(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     street = StreetFactory(municipality=municipality, name="Rue de la Plage")
-    uri = url(http.Municipality, id=municipality.id, identifier="id",
-              route="streets")
+    uri = url('municipality-streets', identifier=municipality.id)
     resp = get(uri, query_string='pouet=ah')
     assert resp.status == falcon.HTTP_200
     assert resp.json['collection'][0] == street.as_list
@@ -550,8 +550,8 @@ def test_get_municipality_streets_collection(get, url):
 def test_get_municipality_streets_collection_is_paginated(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     StreetFactory.create_batch(6, municipality=municipality)
-    uri = url(http.Municipality, id=municipality.id, identifier="id",
-              route="streets", query_string=dict(limit=4))
+    uri = url('municipality-streets', identifier=municipality.id,
+              query_string=dict(limit=4))
     resp = get(uri)
     page1 = resp.json
     assert len(page1['collection']) == 4
@@ -573,8 +573,7 @@ def test_get_municipality_versions(get, url):
     municipality.version = 2
     municipality.name = "Cabour2"
     municipality.save()
-    uri = url(http.Municipality, id=municipality.id, identifier="id",
-              route="versions")
+    uri = url('municipality-versions', identifier=municipality.id)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert len(resp.json['collection']) == 2
@@ -588,14 +587,12 @@ def test_get_municipality_version(get, url):
     municipality.version = 2
     municipality.name = "Cabour2"
     municipality.save()
-    uri = url(http.Municipality, id=municipality.id, identifier="id",
-              route="versions", route_id=1)
+    uri = url('municipality-version', identifier=municipality.id, version=1)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == 'Cabour'
     assert resp.json['version'] == 1
-    uri = url(http.Municipality, id=municipality.id, identifier="id",
-              route="versions", route_id=2)
+    uri = url('municipality-version', identifier=municipality.id, version=2)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == 'Cabour2'
@@ -607,8 +604,7 @@ def test_get_street_versions(get, url):
     street.version = 2
     street.name = "Rue de la Guerre"
     street.save()
-    uri = url(http.Street, id=street.id, identifier="id",
-              route="versions")
+    uri = url('street-versions', identifier=street.id)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert len(resp.json['collection']) == 2
@@ -622,25 +618,16 @@ def test_get_street_version(get, url):
     street.version = 2
     street.name = "Rue de la Guerre"
     street.save()
-    uri = url(http.Street, id=street.id, identifier="id",
-              route="versions", route_id=1)
+    uri = url('street-version', identifier=street.id, version=1)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == 'Rue de la Paix'
     assert resp.json['version'] == 1
-    uri = url(http.Street, id=street.id, identifier="id",
-              route="versions", route_id=2)
+    uri = url('street-version', identifier=street.id, version=2)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == 'Rue de la Guerre'
     assert resp.json['version'] == 2
-
-
-def test_invalid_route_is_not_found(get, url):
-    resp = get(url(http.Street, id=1, identifier="id", route="invalid"))
-    assert resp.status == falcon.HTTP_404
-    resp = get(url(http.Street, id=1, identifier="id", route="save_object"))
-    assert resp.status == falcon.HTTP_404
 
 
 @authorize

@@ -56,6 +56,7 @@ class Token:
 
     @auth.token_endpoint
     def on_post(self, req, resp, *args, **kwargs):
+        """Get a token to use the API."""
         return {}
 
-app.add_route('/auth/token', Token())
+app.register_resource(Token())

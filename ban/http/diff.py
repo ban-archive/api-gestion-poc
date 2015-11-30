@@ -8,6 +8,11 @@ class Diff(BaseCollection):
 
     @auth.protect
     def on_get(self, req, resp, *args, **kwargs):
+        """Get database diffs.
+
+        Query parameters:
+        increment   the minimal increment value to retrieve
+        """
         qs = versioning.Diff.select()
         increment = req.get_param_as_int('increment')
         if increment:
@@ -15,4 +20,4 @@ class Diff(BaseCollection):
         self.collection(req, resp, qs.as_resource())
 
 
-app.add_route('/diff', Diff())
+app.register_resource(Diff())
