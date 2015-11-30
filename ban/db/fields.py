@@ -20,6 +20,7 @@ peewee.OP.update(
 )
 postgres_ext.PostgresqlExtDatabase.register_ops({
     peewee.OP.BBOX2D: peewee.OP.BBOX2D,
+    peewee.OP.BBOXCONTAINS: peewee.OP.BBOXCONTAINS,
     peewee.OP.BBOXCONTAINED: peewee.OP.BBOXCONTAINED,
 })
 
@@ -52,7 +53,7 @@ class PointField(peewee.Field):
         return peewee.Expression(self, peewee.OP.BBOXCONTAINED, geom)
 
     def contains(self, geom):
-        return peewee.Expression(self, peewee.OP.BBOXCONTAIND, geom)
+        return peewee.Expression(self, peewee.OP.BBOXCONTAINS, geom)
 
     def in_bbox(self, south, north, east, west):
         return self.contained(
