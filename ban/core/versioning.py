@@ -203,10 +203,11 @@ class Diff(db.Model):
     def as_resource(self):
         version = self.new or self.old
         return {
+            'increment': self.id,
             'old': self.old.as_resource if self.old else None,
             'new': self.new.as_resource if self.new else None,
             'diff': self.diff,
             'resource': version.model.lower(),
-            'id': version.model_id,
+            'resource_id': version.model_id,
             'created_at': self.created_at
         }

@@ -24,11 +24,14 @@ def test_diff_endpoint(client):
     assert 'collection' in resp.json
     # Created: Municipality, Street, HouseNumber, Position
     # Modified: Street, HouseNumber, Position
-    assert len(resp.json['collection']) == 7
-    street_create_diff = resp.json['collection'][1]
+    diffs = resp.json['collection']
+    assert len(diffs) == 7
+    street_create_diff = diffs[1]
+    assert street_create_diff['increment'] == diffs[0]['increment'] + 1
     assert street_create_diff['old'] == None
     assert street_create_diff['new']['id'] == street.id
-    street_update_diff = resp.json['collection'][-1]
+    assert street_create_diff['resource_id'] == street.id
+    street_update_diff = diffs[-1]
     assert street_update_diff['old']['id'] == street.id
     assert street_update_diff['new']['id'] == street.id
     assert street_update_diff['diff']['name'] == {
