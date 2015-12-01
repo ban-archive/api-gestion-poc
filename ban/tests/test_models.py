@@ -169,7 +169,7 @@ def test_can_create_two_housenumbers_with_same_number_but_different_street():
 def test_housenumber_center():
     housenumber = HouseNumberFactory()
     position = PositionFactory(housenumber=housenumber)
-    assert housenumber.center == position.center_json
+    assert housenumber.center == position.center_resource
 
 
 def test_housenumber_center_without_position():

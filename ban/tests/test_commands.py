@@ -1,15 +1,17 @@
+import json
 from pathlib import Path
 
 from ban.commands.importer import municipalities
 from ban.commands.auth import createuser
 from ban.commands.db import truncate
+from ban.commands.export import resources
 from ban.core import models
 from ban.core.versioning import Diff
 from ban.auth import models as amodels
 from ban.tests import factories
 
 
-def test_import_municipalities(staff, monkeypatch):
+def test_import_municipalities(staff):
     path = Path(__file__).parent / 'data/municipalities.csv'
     municipalities(path)
     assert len(models.Municipality.select()) == 4
@@ -63,3 +65,19 @@ def test_truncate_should_not_ask_for_confirm_in_force_mode(monkeypatch):
     factories.MunicipalityFactory()
     truncate(force=True)
     assert not models.Municipality.select().count()
+
+
+def test_export_resources():
+    mun = factories.MunicipalityFactory()
+    street = factories.StreetFactory(municipality=mun)
+    hn = factories.HouseNumberFactory(street=street)
+    factories.PositionFactory(housenumber=hn)
+    path = Path(__file__).parent / 'data/export.sjson'
+    resources(path)
+    with path.open() as f:
+        lines = f.readlines()
+        assert len(lines) == 3
+        assert json.loads(lines[0]) == mun.as_list
+        assert json.loads(lines[1]) == street.as_list
+        assert json.loads(lines[2]) == hn.as_list
+    path.unlink()

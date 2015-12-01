@@ -130,9 +130,9 @@ def test_get_housenumber_positions(get, url):
     pos3 = PositionFactory(housenumber=housenumber, center=(3, 3))
     resp = get(url(http.Housenumber, id=housenumber.id, route='positions'))
     assert resp.json['total'] == 3
-    assert pos1.as_resource in resp.json['collection']
-    assert pos2.as_resource in resp.json['collection']
-    assert pos3.as_resource in resp.json['collection']
+    assert pos1.as_list in resp.json['collection']
+    assert pos2.as_list in resp.json['collection']
+    assert pos3.as_list in resp.json['collection']
 
 
 def test_get_street(get, url):
@@ -160,9 +160,9 @@ def test_get_street_housenumbers(get, url):
     hn3 = HouseNumberFactory(number="3", street=street)
     resp = get(url(http.Street, id=street.id, route='housenumbers'))
     assert resp.json['total'] == 3
-    assert resp.json['collection'][0] == hn1.as_resource
-    assert resp.json['collection'][1] == hn2.as_resource
-    assert resp.json['collection'][2] == hn3.as_resource
+    assert resp.json['collection'][0] == hn1.as_list
+    assert resp.json['collection'][1] == hn2.as_list
+    assert resp.json['collection'][2] == hn3.as_list
 
 
 @authorize
@@ -179,8 +179,7 @@ def test_create_position(client):
     assert resp.status == falcon.HTTP_201
     position = cmodels.Position.first()
     assert resp.json['id'] == position.id
-    assert resp.json['center']['lon'] == 3
-    assert resp.json['center']['lat'] == 4
+    assert resp.json['center']['coordinates'] == [3, 4]
     assert resp.json['housenumber']['id'] == housenumber.id
 
 
@@ -227,8 +226,7 @@ def test_replace_position(client, url):
     assert resp.status == falcon.HTTP_200
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 2
-    assert resp.json['center']['lon'] == 3
-    assert resp.json['center']['lat'] == 4
+    assert resp.json['center']['coordinates'] == [3, 4]
     assert cmodels.Position.select().count() == 1
 
 
@@ -261,8 +259,7 @@ def test_replace_position_with_existing_version_fails(client, url):
     assert resp.status == falcon.HTTP_409
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 1
-    assert resp.json['center']['lon'] == 1
-    assert resp.json['center']['lat'] == 2
+    assert resp.json['center']['coordinates'] == [1, 2]
     assert cmodels.Position.select().count() == 1
 
 
@@ -280,8 +277,7 @@ def test_replace_position_with_non_incremental_version_fails(client, url):
     assert resp.status == falcon.HTTP_409
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 1
-    assert resp.json['center']['lon'] == 1
-    assert resp.json['center']['lat'] == 2
+    assert resp.json['center']['coordinates'] == [1, 2]
     assert cmodels.Position.select().count() == 1
 
 
@@ -298,8 +294,7 @@ def test_update_position(client, url):
     resp = client.post(uri, data=data)
     assert resp.status == falcon.HTTP_200
     assert resp.json['id'] == position.id
-    assert resp.json['center']['lon'] == 3.4
-    assert resp.json['center']['lat'] == 5.678
+    assert resp.json['center']['coordinates'] == [3.4, 5.678]
     assert cmodels.Position.select().count() == 1
 
 
@@ -332,8 +327,7 @@ def test_update_position_with_existing_version_fails(client, url):
     assert resp.status == falcon.HTTP_409
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 1
-    assert resp.json['center']['lon'] == 1
-    assert resp.json['center']['lat'] == 2
+    assert resp.json['center']['coordinates'] == [1, 2]
     assert cmodels.Position.select().count() == 1
 
 
@@ -351,8 +345,7 @@ def test_update_position_with_non_incremental_version_fails(client, url):
     assert resp.status == falcon.HTTP_409
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 1
-    assert resp.json['center']['lon'] == 1
-    assert resp.json['center']['lat'] == 2
+    assert resp.json['center']['coordinates'] == [1, 2]
     assert cmodels.Position.select().count() == 1
 
 
@@ -542,7 +535,7 @@ def test_get_municipality_streets_collection(get, url):
               route="streets")
     resp = get(uri, query_string='pouet=ah')
     assert resp.status == falcon.HTTP_200
-    assert resp.json['collection'][0] == street.as_resource
+    assert resp.json['collection'][0] == street.as_list
     assert resp.json['total'] == 1
 
 

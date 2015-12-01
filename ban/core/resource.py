@@ -45,11 +45,22 @@ class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
         return instance.as_resource
 
 
+class ResourceListQueryResultWrapper(peewee.ModelQueryResultWrapper):
+
+    def process_row(self, row):
+        instance = super().process_row(row)
+        return instance.as_list
+
+
 class SelectQuery(db.SelectQuery):
 
     @peewee.returns_clone
     def as_resource(self):
         self._result_wrapper = ResourceQueryResultWrapper
+
+    @peewee.returns_clone
+    def as_resource_list(self):
+        self._result_wrapper = ResourceListQueryResultWrapper
 
 
 class BaseResource(peewee.BaseModel):
@@ -104,20 +115,36 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     def get_resource_fields(cls):
         return cls.resource_fields + ['id']
 
+    @classmethod
+    def get_list_fields(cls):
+        return cls.get_resource_fields() + ['resource']
+
+    @property
+    def resource(self):
+        return self.__class__.__name__.lower()
+
     @property
     def as_resource(self):
         return {f: self.as_resource_field(f) for f in self.get_resource_fields()}
+
+    @property
+    def as_list(self):
+        return {f: self.as_list_field(f) for f in self.get_list_fields()}
 
     @property
     def as_relation(self):
         return {f: self.as_relation_field(f) for f in self.get_resource_fields()}
 
     def as_resource_field(self, name):
-        value = getattr(self, '{}_json'.format(name), getattr(self, name))
+        value = getattr(self, '{}_resource'.format(name), getattr(self, name))
         return getattr(value, 'as_relation', value)
 
     def as_relation_field(self, name):
         value = getattr(self, name)
+        return getattr(value, 'id', value)
+
+    def as_list_field(self, name):
+        value = getattr(self, '{}_resource'.format(name), getattr(self, name))
         return getattr(value, 'id', value)
 
     @classmethod

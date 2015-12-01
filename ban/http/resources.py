@@ -192,7 +192,7 @@ class Housenumber(VersionnedResource):
 
     def on_get_positions(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
-        qs = instance.position_set.as_resource()
+        qs = instance.position_set.as_resource_list()
         self.collection(req, resp, qs)
 
 
@@ -201,7 +201,7 @@ class Locality(VersionnedResource):
 
     def on_get_housenumbers(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
-        self.collection(req, resp, instance.housenumber_set.as_resource())
+        self.collection(req, resp, instance.housenumber_set.as_resource_list())
 
 
 class Street(Locality):
@@ -213,11 +213,11 @@ class Municipality(VersionnedResource):
 
     def on_get_streets(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
-        self.collection(req, resp, instance.street_set.as_resource())
+        self.collection(req, resp, instance.street_set.as_resource_list())
 
     def on_get_localities(self, req, resp, *args, **kwargs):
         instance = self.get_object(**kwargs)
-        self.collection(req, resp, instance.locality_set.as_resource())
+        self.collection(req, resp, instance.locality_set.as_resource_list())
 
 
 class User(BaseCRUD):

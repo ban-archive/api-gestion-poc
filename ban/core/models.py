@@ -1,6 +1,7 @@
 import re
 
 import peewee
+from postgis import Point
 from unidecode import unidecode
 
 from ban import db
@@ -133,7 +134,7 @@ class HouseNumber(Model):
     @property
     def center(self):
         position = self.position_set.first()
-        return position.center_json if position else None
+        return position.center.geojson if position else None
 
 
 class Position(Model):
@@ -151,5 +152,7 @@ class Position(Model):
         unique_together = ('housenumber', 'source')
 
     @property
-    def center_json(self):
-        return {'lat': self.center[1], 'lon': self.center[0]}
+    def center_resource(self):
+        if not isinstance(self.center, Point):
+            self.center = Point(*self.center)
+        return self.center.geojson
