@@ -40,6 +40,22 @@ def test_diff_endpoint(client):
     }
 
 
+@authorize
+def test_diff_endpoint_accept_increment_parameter(client):
+    position = PositionFactory()
+    resp = client.get('/diff')
+    assert len(resp.json['collection']) == 4
+    increment = resp.json['collection'][-1]['increment']
+    position.center = (3, 4)
+    position.increment_version()
+    position.save()
+    resp = client.get('/diff')
+    assert len(resp.json['collection']) == 5
+    resp = client.get('/diff?increment={}'.format(increment))
+    assert len(resp.json['collection']) == 1
+    assert resp.json['collection'][0]['increment'] == increment + 1
+
+
 def test_diff_endpoint_is_protected(client):
     resp = client.get('/diff')
     assert resp.status == falcon.HTTP_401
