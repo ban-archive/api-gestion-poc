@@ -130,9 +130,17 @@ def test_get_housenumber_positions(get, url):
     pos3 = PositionFactory(housenumber=housenumber, center=(3, 3))
     resp = get(url(http.Housenumber, id=housenumber.id, route='positions'))
     assert resp.json['total'] == 3
-    assert pos1.as_list in resp.json['collection']
-    assert pos2.as_list in resp.json['collection']
-    assert pos3.as_list in resp.json['collection']
+
+    def check(position):
+        data = position.as_list
+        # postgis uses tuples for coordinates, while json does not know
+        # tuple and transforms everything to lists.
+        data['center']['coordinates'] = list(data['center']['coordinates'])
+        assert data in resp.json['collection']
+
+    check(pos1)
+    check(pos2)
+    check(pos3)
 
 
 def test_get_street(get, url):
