@@ -599,6 +599,19 @@ def test_get_municipality_version(get, url):
     assert resp.json['version'] == 2
 
 
+def test_can_retrieve_municipality_with_old_insee(get, url):
+    municipality = MunicipalityFactory(insee="12345")
+    # This should create a redirect.
+    municipality.insee = '54321'
+    municipality.increment_version()
+    municipality.save()
+    # Request with old insee.
+    resp = get(url('municipality-resource', identifier='insee:12345'))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['id'] == municipality.id
+    assert resp.json['insee'] == '54321'
+
+
 def test_get_street_versions(get, url):
     street = StreetFactory(name="Rue de la Paix")
     street.version = 2

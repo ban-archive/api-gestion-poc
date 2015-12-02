@@ -125,7 +125,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     @property
     def as_resource(self):
-        return {f: self.as_resource_field(f) for f in self.get_resource_fields()}
+        return {f: self.as_resource_field(f)
+                for f in self.get_resource_fields()}
 
     @property
     def as_list(self):
@@ -133,7 +134,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     @property
     def as_relation(self):
-        return {f: self.as_relation_field(f) for f in self.get_resource_fields()}
+        return {f: self.as_relation_field(f)
+                for f in self.get_resource_fields()}
 
     def as_resource_field(self, name):
         value = getattr(self, '{}_resource'.format(name), getattr(self, name))
@@ -158,4 +160,13 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 if identifier not in cls.identifiers + ['id']:
                     raise cls.DoesNotExist("Invalid identifier {}".format(
                                                                 identifier))
-        return cls.get(getattr(cls, identifier) == id)
+        try:
+            return cls.get(getattr(cls, identifier) == id)
+        except cls.DoesNotExist:
+            # Is it an old identifier?
+            from .versioning import IdentifierRedirect
+            new = IdentifierRedirect.follow(cls, identifier, id)
+            if new:
+                return cls.get(getattr(cls, identifier) == new)
+            else:
+                raise

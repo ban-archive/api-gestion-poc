@@ -65,7 +65,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         if self.version > 1:
             old = self.load_version(self.version - 1)
         new = Version.create(
-            model=self.__class__.__name__,
+            model_name=self.__class__.__name__,
             model_id=self.id,
             sequential=self.version,
             data=self.serialize()
@@ -75,8 +75,9 @@ class Versioned(db.Model, metaclass=BaseVersioned):
 
     @property
     def versions(self):
-        return Version.select().where(Version.model == self.__class__.__name__,
-                                      Version.model_id == self.id)
+        return Version.select().where(
+            Version.model_name == self.__class__.__name__,
+            Version.model_id == self.id)
 
     def load_version(self, id):
         return self.versions.where(Version.sequential == id).first()
@@ -141,7 +142,7 @@ class SelectQuery(db.SelectQuery):
 
 
 class Version(db.Model):
-    model = peewee.CharField(max_length=64)
+    model_name = peewee.CharField(max_length=64)
     model_id = peewee.IntegerField()
     sequential = peewee.IntegerField()
     data = peewee.BlobField()
@@ -150,15 +151,19 @@ class Version(db.Model):
         manager = SelectQuery
 
     def __repr__(self):
-        return '<Version {} of {}({})>'.format(self.sequential, self.model,
-                                               self.model_id)
+        return '<Version {} of {}({})>'.format(self.sequential,
+                                               self.model_name, self.model_id)
 
     @property
     def as_resource(self):
         return pickle.loads(self.data)
 
+    @property
+    def model(self):
+        return BaseVersioned.registry[self.model_name]
+
     def load(self):
-        return BaseVersioned.registry[self.model](**self.as_resource)
+        return self.model(**self.as_resource)
 
     @property
     def diff(self):
@@ -198,6 +203,7 @@ class Diff(db.Model):
                         'new': str(new_value)
                     }
         super().save(*args, **kwargs)
+        IdentifierRedirect.from_diff(self)
 
     @property
     def as_resource(self):
@@ -207,7 +213,44 @@ class Diff(db.Model):
             'old': self.old.as_resource if self.old else None,
             'new': self.new.as_resource if self.new else None,
             'diff': self.diff,
-            'resource': version.model.lower(),
+            'resource': version.model_name.lower(),
             'resource_id': version.model_id,
             'created_at': self.created_at
         }
+
+
+class IdentifierRedirect(db.Model):
+    model_name = peewee.CharField(max_length=64)
+    identifier = peewee.CharField(max_length=64)
+    old = peewee.CharField(max_length=255)
+    new = peewee.CharField(max_length=255)
+
+    @classmethod
+    def from_diff(cls, diff):
+        if not diff.new or not diff.old:
+            # Only update makes sense for us, no creation nor deletion.
+            return
+        model = diff.new.model
+        identifiers = [i for i in model.identifiers if i in diff.diff]
+        for identifier in identifiers:
+            old = diff.diff[identifier]['old']
+            new = diff.diff[identifier]['new']
+            if not old or not new:
+                continue
+            cls.get_or_create(model_name=diff.new.model_name,
+                              identifier=identifier, old=old, new=new)
+            cls.refresh(model, identifier, old, new)
+
+    @classmethod
+    def follow(cls, model, identifier, old):
+        row = cls.select().where(cls.model_name == model.__name__,
+                                 cls.identifier == identifier,
+                                 cls.old == old).first()
+        return row.new if row else None
+
+    @classmethod
+    def refresh(cls, model, identifier, old, new):
+        """An identifier was a target and it becomes itself a target."""
+        cls.update(new=new).where(cls.new == old,
+                                  cls.model_name == model.__name__,
+                                  cls.identifier == identifier).execute()

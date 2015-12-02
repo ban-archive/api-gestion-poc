@@ -44,6 +44,7 @@ class NamedModel(Model):
 
 
 class ZipCode(Model):
+    identifiers = ['code']
     resource_fields = ['code', 'municipalities']
     code = db.ZipCodeField()
 

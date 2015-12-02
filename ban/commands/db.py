@@ -1,12 +1,12 @@
 from ban.auth import models as amodels
 from ban.commands import command, report
 from ban.core import models as cmodels
-from ban.core.versioning import Diff, Version
+from ban.core.versioning import Diff, Version, IdentifierRedirect
 
 from . import helpers
 
-models = [Version, Diff, amodels.User, amodels.Client, amodels.Grant,
-          amodels.Session, amodels.Token, cmodels.ZipCode,
+models = [Version, Diff, IdentifierRedirect, amodels.User, amodels.Client,
+          amodels.Grant, amodels.Session, amodels.Token, cmodels.ZipCode,
           cmodels.Municipality,
           cmodels.Municipality.zipcodes.get_through_model(),
           cmodels.Street, cmodels.Locality, cmodels.HouseNumber,
