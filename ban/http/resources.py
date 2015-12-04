@@ -39,11 +39,15 @@ class BaseCollection:
         if count > end:
             query_string = req.params.copy()
             query_string.update({'offset': end})
-            kwargs['next'] = '{}?{}'.format(url, urlencode(query_string))
+            uri = '{}?{}'.format(url, urlencode(query_string))
+            kwargs['next'] = uri
+            resp.add_link(uri, 'next')
         if offset >= limit:
             query_string = req.params.copy()
             query_string.update({'offset': offset - limit})
-            kwargs['previous'] = '{}?{}'.format(url, urlencode(query_string))
+            uri = '{}?{}'.format(url, urlencode(query_string))
+            kwargs['previous'] = uri
+            resp.add_link(uri, 'previous')
         resp.json(**kwargs)
 
 

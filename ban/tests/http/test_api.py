@@ -612,12 +612,14 @@ def test_get_municipality_streets_collection_is_paginated(get, url):
     assert page1['total'] == 6
     assert 'next' in page1
     assert 'previous' not in page1
+    assert page1['next'] in resp.headers['Link']
     resp = get(page1['next'])
     page2 = resp.json
     assert len(page2['collection']) == 2
     assert page2['total'] == 6
     assert 'next' not in page2
     assert 'previous' in page2
+    assert page2['previous'] in resp.headers['Link']
     resp = get(page2['previous'])
     assert resp.json == page1
 
