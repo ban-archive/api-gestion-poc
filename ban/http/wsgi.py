@@ -15,13 +15,13 @@ class API(falcon.API):
     def register_resource(self, resource):
         self._router.register_resource(resource)
 
-    def endpoint(self, path='', verb=None, name=None):
+    def endpoint(self, path='', verb=None, suffix=None):
         """Override default endpoint path and verb."""
 
         def wrapped(func):
             _, autoverb, *extra = func.__name__.split('_')
             func._path = path
-            func._name = name if name is not None else '-'.join(extra)
+            func._suffix = suffix if suffix is not None else '-'.join(extra)
             func._verb = verb or autoverb
             return func
 

@@ -3,6 +3,7 @@ import json
 import falcon
 import pytest
 
+from ban import http
 from ban.core import models as cmodels
 from ban.auth import models as amodels
 
@@ -33,6 +34,12 @@ pytestmark = pytest.mark.django_db
 ])
 def test_api_url(name, kwargs, expected, url):
     assert url(name, **kwargs) == expected
+
+
+def test_reverse_uri_are_attached_to_resource():
+    assert hasattr(http.Municipality, 'root_uri')
+    assert hasattr(http.Municipality, 'resource_uri')
+    assert hasattr(http.Municipality, 'versions_uri')
 
 
 def test_invalid_identifier_returns_404(get):

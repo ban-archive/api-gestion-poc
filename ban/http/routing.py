@@ -32,9 +32,21 @@ class Router(DefaultRouter):
         return re.sub("([a-z])([A-Z])", "\g<1>-\g<2>", cls.__name__).lower()
 
     def index(self, name, template):
-        if name in self._index and self._index[name] != template:
-            raise ValueError('{} already in {}'.format(name, self._index))
-        self._index[name] = template
+        if name in self._index:
+            if self._index[name] != template:
+                raise ValueError('{} already in {}'.format(name, self._index))
+        else:
+            self._index[name] = template
+
+    def attach_reverse(self, name, suffix, resource):
+        """Allow to call resource.name_uri for convenience."""
+        method_name = '{}_uri'.format(suffix.replace('-', '_'))
+        setattr(resource, method_name,
+                lambda s, r, i: self.attached_reverse(name, r, i))
+
+    def attached_reverse(self, name, req, instance):
+        return 'https://{}{}'.format(req.host,
+                                     reverse(name, identifier=instance.id))
 
     def register_route(self, api):
         api.add_route('/help', self)
@@ -49,44 +61,54 @@ class Router(DefaultRouter):
                                 if hasattr(func, '_path')}  # Not 405 attached.
         self.add_route(path, method_map, resource)
 
+    def default_method_endpoint(self, resource, attr):
+        method = getattr(resource.__class__, attr)
+        if not hasattr(method, '_path'):
+            _, verb, *path = method.__name__.split('_')
+            path = '/'.join(path)
+            if path:
+                path = '/' + path
+            setattr(method, '_path', path)
+            method._verb = verb
+            method._suffix = '-'.join(path)
+
+    def extend_method_map(self, method_map):
+        # See https://github.com/falconry/falcon/issues/667
+        allowed_methods = sorted(list(method_map.keys()))
+        if 'OPTIONS' not in method_map:
+            responder = create_default_options(allowed_methods)
+            allowed_methods.append('OPTIONS')
+        responder = create_method_not_allowed(allowed_methods)
+        for method in HTTP_METHODS:
+            if method not in allowed_methods:
+                method_map[method] = responder
+
     def register_resource(self, resource):
         base = self.cls_name(resource.__class__)
         paths = {}
         for attr in dir(resource):
             # Keep supporting default "on_VERB" format for simple cases.
             if attr.startswith('on_'):
-                method = getattr(resource.__class__, attr)
-                if not hasattr(method, '_path'):
-                    _, verb, *path = method.__name__.split('_')
-                    path = '/'.join(path)
-                    if path:
-                        path = '/' + path
-                    setattr(method, '_path', path)
-                    method._verb = verb
-                    method._name = '-'.join(path)
+                self.default_method_endpoint(resource, attr)
             responder = getattr(resource, attr)
             if hasattr(responder, '_path'):
                 path = '/{}{}'.format(base, responder._path)
                 name_els = [base]
-                if responder._name:
-                    name_els.append(responder._name)
+                suffix = responder._suffix
+                if suffix:
+                    name_els.append(suffix)
+                else:
+                    # Only for attached reverse, not for name
+                    suffix = 'root'
                 name = '-'.join(name_els)
                 self.index(name, path)
+                self.attach_reverse(name, suffix, resource.__class__)
                 if path not in paths:
                     paths[path] = {}
                 verb = responder._verb
                 paths[path][verb.upper()] = responder
         for path, method_map in paths.items():
-            # See https://github.com/falconry/falcon/issues/667
-            allowed_methods = sorted(list(method_map.keys()))
-            if 'OPTIONS' not in method_map:
-                responder = create_default_options(allowed_methods)
-                allowed_methods.append('OPTIONS')
-            responder = create_method_not_allowed(allowed_methods)
-            for method in HTTP_METHODS:
-                if method not in allowed_methods:
-                    method_map[method] = responder
-
+            self.extend_method_map(method_map)
             self.register_endpoint(path, method_map, resource)
 
     @property

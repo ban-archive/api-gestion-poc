@@ -7,7 +7,6 @@ from ban.auth import models as amodels
 
 from .wsgi import app
 from .auth import auth
-from .routing import reverse
 
 
 __all__ = ['Municipality', 'Street', 'Locality', 'Housenumber', 'Position']
@@ -60,12 +59,6 @@ class WithURL(type):
 
 
 class BaseCRUD(BaseCollection, metaclass=WithURL):
-
-    @classmethod
-    def resource_uri(cls, req, instance):
-        url_name = '{}-resource'.format(cls.__name__.lower())
-        return 'https://{}{}'.format(req.host,
-                                     reverse(url_name, identifier=instance.id))
 
     def get_object(self, identifier, **kwargs):
         try:
