@@ -128,8 +128,7 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
             resp.status = status
             resp.json(**instance.as_resource)
         else:
-            # See https://github.com/falconry/falcon/issues/627.
-            resp.status = str(422)
+            resp.status = falcon.HTTP_UNPROCESSABLE_ENTITY
             resp.json(errors=validator.errors)
 
 

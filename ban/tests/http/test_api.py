@@ -224,7 +224,7 @@ def test_create_position_with_bad_housenumber_cia_is_422(client):
         "housenumber": 'cia:{}'.format('xxx'),
     }
     resp = client.post(url, data)
-    assert resp.status_code == 422
+    assert resp.status == falcon.HTTP_422
 
 
 @authorize
@@ -484,7 +484,7 @@ def test_replace_housenumber_with_missing_field_fails(client, url):
         "street": housenumber.street.id,
     }
     resp = client.put(uri, body=json.dumps(data))
-    assert resp.status == '422'
+    assert resp.status == falcon.HTTP_422
     assert 'errors' in resp.json
     assert cmodels.HouseNumber.select().count() == 1
 
@@ -554,7 +554,7 @@ def test_create_street_with_bad_municipality_siren(client):
         "municipality": "siren:{}".format('bad'),
     }
     resp = client.post('/street', data)
-    assert resp.status_code == 422
+    assert resp.status == falcon.HTTP_422
     assert not cmodels.Street.select().count()
 
 
@@ -569,7 +569,7 @@ def test_create_street_with_invalid_municipality_identifier(client):
         "municipality": "invalid:{}".format(municipality.insee),
     }
     resp = client.post('/street', data)
-    assert resp.status_code == 422
+    assert resp.status == falcon.HTTP_422
     assert not cmodels.Street.select().count()
 
 
@@ -719,7 +719,7 @@ def test_cannot_create_user_without_username(client):
         'username': '',
         'email': 'test@test.com',
     })
-    assert resp.status_code == 422
+    assert resp.status == falcon.HTTP_422
     assert amodels.User.select().count() == 2
 
 
@@ -730,7 +730,7 @@ def test_cannot_create_user_without_email(client):
         'username': 'newuser',
         'email': '',
     })
-    assert resp.status_code == 422
+    assert resp.status == falcon.HTTP_422
     assert amodels.User.select().count() == 2
 
 
