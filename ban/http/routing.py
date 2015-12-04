@@ -1,5 +1,4 @@
 import re
-from string import Formatter
 
 from falcon import HTTP_METHODS, HTTP_404
 from falcon.responders import create_default_options, create_method_not_allowed
@@ -14,7 +13,6 @@ class Router(DefaultRouter):
         self._index = {}
         self.endpoints = {}
         reverse.attach_router(self)
-        self.formatter = Formatter()
         super().__init__(*args, **kwargs)
 
     def find(self, uri):

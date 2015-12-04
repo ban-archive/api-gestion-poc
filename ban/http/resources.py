@@ -7,6 +7,7 @@ from ban.auth import models as amodels
 
 from .wsgi import app
 from .auth import auth
+from .routing import reverse
 
 
 __all__ = ['Municipality', 'Street', 'Locality', 'Housenumber', 'Position']
@@ -60,6 +61,12 @@ class WithURL(type):
 
 class BaseCRUD(BaseCollection, metaclass=WithURL):
 
+    @classmethod
+    def resource_uri(cls, req, instance):
+        url_name = '{}-resource'.format(cls.__name__.lower())
+        return 'https://{}{}'.format(req.host,
+                                     reverse(url_name, identifier=instance.id))
+
     def get_object(self, identifier, **kwargs):
         try:
             return self.model.coerce(identifier)
@@ -93,16 +100,16 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
         self.save_object(req.params, req, resp, **params)
 
     @auth.protect
-    @app.endpoint(path='/{identifier}', name='resource')
-    def on_put(self, req, resp, *args, **params):
+    @app.endpoint(path='/{identifier}')
+    def on_put_resource(self, req, resp, *args, **params):
         """Update {resource}"""
         instance = self.get_object(**params)
         data = req.json
         self.save_object(data, req, resp, instance, **params)
 
     @auth.protect
-    @app.endpoint(path='/{identifier}', name='resource')
-    def on_patch(self, req, resp, *args, **params):
+    @app.endpoint(path='/{identifier}')
+    def on_patch_resource(self, req, resp, *args, **params):
         """Patch {resource}"""
         instance = self.get_object(**params)
         data = req.json
@@ -119,8 +126,12 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
                 # Return original object.
                 instance = self.get_object(**kwargs)
             else:
-                status = falcon.HTTP_OK if 'identifier' in kwargs \
-                                                       else falcon.HTTP_CREATED
+                if 'identifier' in kwargs:
+                    status = falcon.HTTP_OK
+                else:
+                    status = falcon.HTTP_CREATED
+                    resp.set_header('Location',
+                                    self.resource_uri(req, instance))
             resp.status = status
             resp.json(**instance.as_resource)
         else:

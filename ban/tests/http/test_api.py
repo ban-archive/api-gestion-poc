@@ -483,7 +483,7 @@ def test_replace_housenumber_with_missing_field_fails(client, url):
 
 
 @authorize
-def test_create_street(client):
+def test_create_street(client, url):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
@@ -498,10 +498,13 @@ def test_create_street(client):
     assert resp.json['name'] == 'Rue de la Plage'
     assert resp.json['municipality']['id'] == municipality.id
     assert cmodels.Street.select().count() == 1
+    uri = "https://falconframework.org{}".format(url('street-resource',
+                                                 identifier=resp.json['id']))
+    assert resp.headers['Location'] == uri
 
 
 @authorize
-def test_create_street_with_municipality_insee(client):
+def test_create_street_with_municipality_insee(client, url):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
@@ -513,6 +516,9 @@ def test_create_street_with_municipality_insee(client):
     resp = client.post('/street', data)
     assert resp.status == falcon.HTTP_201
     assert cmodels.Street.select().count() == 1
+    uri = "https://falconframework.org{}".format(url('street-resource',
+                                                 identifier=resp.json['id']))
+    assert resp.headers['Location'] == uri
 
 
 @authorize
@@ -685,7 +691,7 @@ def test_get_street_version(get, url):
 
 
 @authorize
-def test_create_user(client):
+def test_create_user(client, url):
     # Client user + session user == 2
     assert amodels.User.select().count() == 2
     resp = client.post('/user', {
@@ -694,6 +700,9 @@ def test_create_user(client):
     })
     assert resp.status == falcon.HTTP_201
     assert amodels.User.select().count() == 3
+    uri = "https://falconframework.org{}".format(url('user-resource',
+                                                 identifier=resp.json['id']))
+    assert resp.headers['Location'] == uri
 
 
 @authorize
