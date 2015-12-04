@@ -3,7 +3,6 @@ import json
 import falcon
 import pytest
 
-from ban.http import resources as http
 from ban.core import models as cmodels
 from ban.auth import models as amodels
 
@@ -356,6 +355,48 @@ def test_update_position_with_non_incremental_version_fails(client, url):
     assert resp.json['version'] == 1
     assert resp.json['center']['coordinates'] == [1, 2]
     assert cmodels.Position.select().count() == 1
+
+
+@authorize
+def test_patch_position_should_allow_to_update_only_some_fields(client, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
+    uri = url('position-resource', identifier=position.id)
+    data = {
+        "version": 2,
+        "center": "(3.4, 5.678)",
+    }
+    resp = client.patch(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['id'] == position.id
+    assert resp.json['center']['coordinates'] == [3.4, 5.678]
+    assert resp.json['housenumber']['id'] == position.housenumber.id
+    assert cmodels.Position.select().count() == 1
+
+
+@authorize
+def test_patch_without_version_should_fail(client, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
+    uri = url('position-resource', identifier=position.id)
+    data = {
+        "center": "(3.4, 5.678)",
+    }
+    resp = client.patch(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_409
+
+
+@authorize
+def test_patch_with_wrong_version_should_fail(client, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    assert cmodels.Position.select().count() == 1
+    uri = url('position-resource', identifier=position.id)
+    data = {
+        "version": 1,
+        "center": "(3.4, 5.678)",
+    }
+    resp = client.patch(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_409
 
 
 @authorize

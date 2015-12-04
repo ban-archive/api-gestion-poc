@@ -1,9 +1,7 @@
-import re
 from urllib.parse import urlencode
 
 import falcon
 
-# from ban.auth.decorators import protected
 from ban.core import models
 from ban.auth import models as amodels
 
@@ -85,7 +83,7 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
     @auth.protect
     @app.endpoint(path='/{identifier}')
     def on_post_resource(self, req, resp, *args, **params):
-        """Update {resource}"""
+        """Patch {resource} with 'identifier'."""
         instance = self.get_object(**params)
         self.save_object(req.params, req, resp, instance, **params)
 
@@ -102,8 +100,17 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
         data = req.json
         self.save_object(data, req, resp, instance, **params)
 
+    @auth.protect
+    @app.endpoint(path='/{identifier}', name='resource')
+    def on_patch(self, req, resp, *args, **params):
+        """Patch {resource}"""
+        instance = self.get_object(**params)
+        data = req.json
+        self.save_object(data, req, resp, instance, **params)
+
     def save_object(self, data, req, resp, instance=None, **kwargs):
-        validator = self.model.validator(**data)
+        update = instance and req.method != 'PUT'
+        validator = self.model.validator(update=update, **data)
         if not validator.errors:
             try:
                 instance = validator.save(instance=instance)

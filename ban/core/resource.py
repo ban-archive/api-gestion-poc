@@ -106,9 +106,9 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         return schema
 
     @classmethod
-    def validator(cls, instance=None, **data):
+    def validator(cls, instance=None, update=False, **data):
         validator = ResourceValidator(cls, instance)
-        validator(data)
+        validator(data, update=update)
         return validator
 
     @classmethod
