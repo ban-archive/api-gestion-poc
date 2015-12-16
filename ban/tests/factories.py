@@ -82,7 +82,7 @@ class ZipCodeFactory(BaseFactory):
 class MunicipalityFactory(BaseFactory):
     name = "Montbrun-Bocage"
     insee = FuzzyAttribute(lambda: str(Random().randint(10000, 97000)))
-    siren = "210100566"
+    siren = FuzzyAttribute(lambda: str(Random().randint(100000000, 300000000)))
 
     class Meta:
         model = models.Municipality

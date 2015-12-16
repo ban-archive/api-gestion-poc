@@ -83,10 +83,14 @@ def test_municipality_as_resource():
     assert municipality.as_resource['id'] == municipality.id
 
 
-def test_municipality_insee_is_unique():
-    MunicipalityFactory(insee="12345")
+@pytest.mark.parametrize('factory,kwargs', [
+    (MunicipalityFactory, {'insee': '12345'}),
+    (MunicipalityFactory, {'siren': '123456789'}),
+])
+def test_unique_fields(factory, kwargs):
+    factory(**kwargs)
     with pytest.raises(peewee.IntegrityError):
-        MunicipalityFactory(insee="12345")
+        factory(**kwargs)
 
 
 def test_street_is_versioned():
