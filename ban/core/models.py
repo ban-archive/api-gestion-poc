@@ -53,7 +53,7 @@ class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
     resource_fields = ['name', 'insee', 'siren']
 
-    insee = db.CharField(max_length=5)
+    insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9)
     zipcodes = db.ManyToManyField(ZipCode, related_name='municipalities')
 

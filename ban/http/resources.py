@@ -114,10 +114,11 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
 
     def save_object(self, data, req, resp, instance=None, **kwargs):
         update = instance and req.method != 'PUT'
-        validator = self.model.validator(update=update, **data)
+        validator = self.model.validator(update=update, instance=instance,
+                                         **data)
         if not validator.errors:
             try:
-                instance = validator.save(instance=instance)
+                instance = validator.save()
             except instance.ForcedVersionError:
                 status = falcon.HTTP_CONFLICT
                 # Return original object.

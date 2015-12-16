@@ -1,3 +1,4 @@
+import peewee
 import pytest
 
 from ban.core import models
@@ -80,6 +81,12 @@ def test_municipality_as_resource():
     assert municipality.as_resource['siren'] == "210100566"
     assert municipality.as_resource['version'] == 1
     assert municipality.as_resource['id'] == municipality.id
+
+
+def test_municipality_insee_is_unique():
+    MunicipalityFactory(insee="12345")
+    with pytest.raises(peewee.IntegrityError):
+        MunicipalityFactory(insee="12345")
 
 
 def test_street_is_versioned():

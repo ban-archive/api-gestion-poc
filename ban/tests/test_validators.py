@@ -2,9 +2,7 @@ import pytest
 
 from ban.core import models
 
-from .factories import (HouseNumberFactory, LocalityFactory,
-                        MunicipalityFactory, PositionFactory, StreetFactory,
-                        UserFactory)
+from .factories import HouseNumberFactory, MunicipalityFactory, PositionFactory
 
 
 def test_can_create_municipality(session):
@@ -26,14 +24,24 @@ def test_cannot_create_municipality_with_missing_fields(session):
 
 def test_can_update_municipality(session):
     municipality = MunicipalityFactory(insee="12345")
-    validator = models.Municipality.validator(name=municipality.name,
+    validator = models.Municipality.validator(instance=municipality,
+                                              name=municipality.name,
                                               siren=municipality.siren,
                                               insee="54321", version=2)
     assert not validator.errors
-    municipality = validator.save(instance=municipality)
+    municipality = validator.save()
     assert len(models.Municipality.select()) == 1
     assert municipality.insee == "54321"
     assert municipality.version == 2
+
+
+def test_cannot_duplicate_municipality_insee(session):
+    MunicipalityFactory(insee='12345')
+    validator = models.Municipality.validator(name='Carbone',
+                                              siren='123456789',
+                                              insee="12345", version=2)
+    assert 'insee' in validator.errors
+    assert '12345' in validator.errors['insee']
 
 
 def test_can_create_position(session):
@@ -48,10 +56,11 @@ def test_can_create_position(session):
 
 def test_can_update_position(session):
     position = PositionFactory(center=(1, 2))
-    validator = models.Position.validator(housenumber=position.housenumber,
+    validator = models.Position.validator(instance=position,
+                                          housenumber=position.housenumber,
                                           center=(3, 4), version=2)
     assert not validator.errors
-    position = validator.save(position)
+    position = validator.save()
     assert len(models.Position.select()) == 1
     assert position.center == (3, 4)
     assert position.version == 2

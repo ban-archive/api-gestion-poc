@@ -38,9 +38,9 @@ def add_municipality(data, update=False):
         return report('Existing', name)
 
     data = dict(insee=insee, name=name, siren=siren, version=version)
-    validator = models.Municipality.validator(**data)
+    validator = models.Municipality.validator(instance=instance, **data)
     if not validator.errors:
-        instance = validator.save(instance=instance)
+        instance = validator.save()
         report('Processed', instance)
     else:
         report('Error', validator.errors)

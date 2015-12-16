@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
+from random import Random
 
 import factory
-from factory.fuzzy import FuzzyText, FuzzyInteger
+from factory.fuzzy import FuzzyText, FuzzyInteger, FuzzyAttribute
 from factory_peewee import PeeweeModelFactory
 
 from ban.core import models
@@ -80,7 +81,7 @@ class ZipCodeFactory(BaseFactory):
 
 class MunicipalityFactory(BaseFactory):
     name = "Montbrun-Bocage"
-    insee = "31365"
+    insee = FuzzyAttribute(lambda: str(Random().randint(10000, 97000)))
     siren = "210100566"
 
     class Meta:

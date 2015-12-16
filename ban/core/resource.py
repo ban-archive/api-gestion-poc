@@ -18,6 +18,16 @@ class ResourceValidator(Validator):
         if not isinstance(value, (str, list, tuple, Point)):
             self._error(field, 'Invalid Point: {}'.format(value))
 
+    def _validate_unique(self, unique, field, value):
+        qs = self.model.select()
+        attr = getattr(self.model, field)
+        qs = qs.where(attr == value)
+        if self.instance:
+            qs = qs.where(self.model.id != self.instance.id)
+        if qs.exists():
+            self._error(field, 'Duplicate value for {}: {}'.format(field,
+                                                                   value))
+
     def _validate_coerce(self, coerce, field, value):
         # See https://github.com/nicolaiarocci/cerberus/issues/171.
         try:
@@ -26,16 +36,20 @@ class ResourceValidator(Validator):
             self._error(field, errors.ERROR_COERCION_FAILED.format(field))
         return value
 
-    def save(self, instance=None):
+    def validate(self, data, instance=None, **kwargs):
+        self.instance = instance
+        return super().validate(data, **kwargs)
+
+    def save(self):
         if self.errors:
             raise ValidationError('Invalid document')
-        if instance:
+        if self.instance:
             for key, value in self.document.items():
-                setattr(instance, key, value)
-            instance.save()
+                setattr(self.instance, key, value)
+            self.instance.save()
         else:
-            instance = self.model.create(**self.document)
-        return instance
+            self.instance = self.model.create(**self.document)
+        return self.instance
 
 
 class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
@@ -96,6 +110,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 'required': not field.null,
                 'coerce': field.coerce,
             }
+            if field.unique:
+                row['unique'] = True
             max_length = getattr(field, 'max_length', None)
             if max_length:
                 row['maxlength'] = max_length
@@ -108,7 +124,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     @classmethod
     def validator(cls, instance=None, update=False, **data):
         validator = ResourceValidator(cls, instance)
-        validator(data, update=update)
+        validator(data, update=update, instance=instance)
         return validator
 
     @classmethod

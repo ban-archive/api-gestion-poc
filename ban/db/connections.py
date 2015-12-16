@@ -16,6 +16,7 @@ class DBProxy(peewee.Proxy):
                 password=config.get('DB_PASSWORD'),
                 host=config.get('DB_HOST'),
                 port=config.get('DB_PORT'),
+                autorollback=True,
             )
             self.initialize(db)
             postgis.register(self.obj.get_cursor())

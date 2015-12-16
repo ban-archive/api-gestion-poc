@@ -573,6 +573,37 @@ def test_create_street_with_invalid_municipality_identifier(client):
     assert not cmodels.Street.select().count()
 
 
+def test_get_street_versions(get, url):
+    street = StreetFactory(name="Rue de la Paix")
+    street.version = 2
+    street.name = "Rue de la Guerre"
+    street.save()
+    uri = url('street-versions', identifier=street.id)
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert len(resp.json['collection']) == 2
+    assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['name'] == 'Rue de la Paix'
+    assert resp.json['collection'][1]['name'] == 'Rue de la Guerre'
+
+
+def test_get_street_version(get, url):
+    street = StreetFactory(name="Rue de la Paix")
+    street.version = 2
+    street.name = "Rue de la Guerre"
+    street.save()
+    uri = url('street-version', identifier=street.id, version=1)
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['name'] == 'Rue de la Paix'
+    assert resp.json['version'] == 1
+    uri = url('street-version', identifier=street.id, version=2)
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['name'] == 'Rue de la Guerre'
+    assert resp.json['version'] == 2
+
+
 def test_get_municipality(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     uri = url('municipality-resource', identifier=municipality.id)
@@ -668,35 +699,38 @@ def test_can_retrieve_municipality_with_old_insee(get, url):
     assert resp.json['insee'] == '54321'
 
 
-def test_get_street_versions(get, url):
-    street = StreetFactory(name="Rue de la Paix")
-    street.version = 2
-    street.name = "Rue de la Guerre"
-    street.save()
-    uri = url('street-versions', identifier=street.id)
-    resp = get(uri)
-    assert resp.status == falcon.HTTP_200
-    assert len(resp.json['collection']) == 2
-    assert resp.json['total'] == 2
-    assert resp.json['collection'][0]['name'] == 'Rue de la Paix'
-    assert resp.json['collection'][1]['name'] == 'Rue de la Guerre'
+@authorize
+def test_create_municipality(client, url):
+    assert not cmodels.Municipality.select().count()
+    data = {
+        "version": 1,
+        "name": "Fornex",
+        "insee": "12345",
+        "siren": '123456789',
+    }
+    resp = client.post(url('municipality'), data)
+    assert resp.status == falcon.HTTP_201
+    assert resp.json['id']
+    assert resp.json['name'] == 'Fornex'
+    assert cmodels.Municipality.select().count() == 1
+    uri = "https://falconframework.org{}".format(url('municipality-resource',
+                                                 identifier=resp.json['id']))
+    assert resp.headers['Location'] == uri
 
 
-def test_get_street_version(get, url):
-    street = StreetFactory(name="Rue de la Paix")
-    street.version = 2
-    street.name = "Rue de la Guerre"
-    street.save()
-    uri = url('street-version', identifier=street.id, version=1)
-    resp = get(uri)
-    assert resp.status == falcon.HTTP_200
-    assert resp.json['name'] == 'Rue de la Paix'
-    assert resp.json['version'] == 1
-    uri = url('street-version', identifier=street.id, version=2)
-    resp = get(uri)
-    assert resp.status == falcon.HTTP_200
-    assert resp.json['name'] == 'Rue de la Guerre'
-    assert resp.json['version'] == 2
+@authorize
+def test_cannot_duplicate_municipality(client, url):
+    MunicipalityFactory(insee="12345")
+    data = {
+        "version": 1,
+        "name": "Fornex",
+        "insee": "12345",
+        "siren": '123456789',
+    }
+    resp = client.post(url('municipality'), data)
+    assert resp.status == falcon.HTTP_422
+    assert resp.json['errors']['insee']
+    assert '12345' in resp.json['errors']['insee']
 
 
 @authorize
