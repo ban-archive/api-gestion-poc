@@ -2,7 +2,8 @@ import pytest
 
 from ban.core import models
 
-from .factories import HouseNumberFactory, MunicipalityFactory, PositionFactory
+from .factories import (DistrictFactory, HouseNumberFactory,
+                        MunicipalityFactory, PositionFactory, StreetFactory)
 
 
 def test_can_create_municipality(session):
@@ -132,3 +133,46 @@ def test_can_create_street_with_municipality_old_insee(session):
     street = validator.save()
     assert len(models.Street.select()) == 1
     assert street.municipality == municipality
+
+
+def test_can_create_housenumber(session):
+    street = StreetFactory()
+    validator = models.HouseNumber.validator(street=street, number='11',
+                                             version=1)
+    assert not validator.errors
+    housenumber = validator.save()
+    assert housenumber.number == '11'
+
+
+def test_can_create_housenumber_with_district(session):
+    district = DistrictFactory()
+    street = StreetFactory()
+    validator = models.HouseNumber.validator(street=street, number='11',
+                                             version=1,
+                                             districts=[district])
+    assert not validator.errors
+    housenumber = validator.save()
+    assert district in housenumber.districts
+
+
+def test_can_create_housenumber_with_district_ids(session):
+    district = DistrictFactory()
+    street = StreetFactory()
+    validator = models.HouseNumber.validator(street=street, number='11',
+                                             version=1,
+                                             districts=[district.id])
+    assert not validator.errors
+    housenumber = validator.save()
+    assert district in housenumber.districts
+
+
+def test_can_update_housenumber_district(session):
+    district = DistrictFactory()
+    housenumber = HouseNumberFactory()
+    validator = models.HouseNumber.validator(instance=housenumber,
+                                             update=True,
+                                             version=2,
+                                             districts=[district])
+    assert not validator.errors
+    housenumber = validator.save()
+    assert district in housenumber.districts

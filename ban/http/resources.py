@@ -205,6 +205,10 @@ class Street(Locality):
     model = models.Street
 
 
+class District(VersionnedResource):
+    model = models.District
+
+
 class Municipality(VersionnedResource):
     model = models.Municipality
 

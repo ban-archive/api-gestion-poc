@@ -58,6 +58,14 @@ class Municipality(NamedModel):
     zipcodes = db.ManyToManyField(ZipCode, related_name='municipalities')
 
 
+class District(NamedModel):
+    """Submunicipal non administrative area."""
+    resource_fields = ['name', 'attributes', 'municipality']
+
+    attributes = db.HStoreField(null=True)
+    municipality = db.ForeignKeyField(Municipality)
+
+
 class BaseFantoirModel(NamedModel):
     identifiers = ['fantoir']
     resource_fields = ['name', 'fantoir', 'municipality']
@@ -77,6 +85,7 @@ class BaseFantoirModel(NamedModel):
 
 
 class Locality(BaseFantoirModel):
+    """Any area referenced with a Fantoir."""
     pass
 
 
@@ -86,7 +95,8 @@ class Street(BaseFantoirModel):
 
 class HouseNumber(Model):
     identifiers = ['cia']
-    resource_fields = ['number', 'ordinal', 'street', 'cia', 'cea']
+    resource_fields = ['number', 'ordinal', 'street', 'cia', 'cea',
+                       'districts']
 
     number = db.CharField(max_length=16)
     ordinal = db.CharField(max_length=16, null=True)
@@ -95,6 +105,7 @@ class HouseNumber(Model):
     cia = db.CharField(max_length=100)
     cea = db.CharField(max_length=10, null=True)
     zipcode = db.ForeignKeyField(ZipCode, null=True)
+    districts = db.ManyToManyField(District, related_name='housenumbers')
 
     class Meta:
         resource_schema = {'cia': {'required': False}}
@@ -117,10 +128,13 @@ class HouseNumber(Model):
     def clean(self):
         if not self.street and not self.locality:
             raise ValueError('A housenumber number needs to be linked to either a street or a locality.')  # noqa
-        if HouseNumber.select().where(HouseNumber.number == self.number,
-                                      HouseNumber.ordinal == self.ordinal,
-                                      HouseNumber.street == self.street,
-                                      HouseNumber.locality == self.locality).exists():
+        qs = HouseNumber.select().where(HouseNumber.number == self.number,
+                                        HouseNumber.ordinal == self.ordinal,
+                                        HouseNumber.street == self.street,
+                                        HouseNumber.locality == self.locality)
+        if self.id:
+            qs = qs.where(HouseNumber.id != self.id)
+        if qs.exists():
             raise ValueError('Row with same number, ordinal, street and locality already exists')  # noqa
         self._clean_called = True
 

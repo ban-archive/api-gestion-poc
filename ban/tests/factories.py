@@ -2,11 +2,11 @@ from datetime import datetime, timedelta
 from random import Random
 
 import factory
-from factory.fuzzy import FuzzyText, FuzzyInteger, FuzzyAttribute
+from factory.fuzzy import FuzzyAttribute, FuzzyInteger, FuzzyText
 from factory_peewee import PeeweeModelFactory
 
-from ban.core import models
 from ban.auth import models as auth_models
+from ban.core import models
 
 
 class BaseTestModel(PeeweeModelFactory):
@@ -88,6 +88,14 @@ class MunicipalityFactory(BaseFactory):
         model = models.Municipality
 
 
+class DistrictFactory(BaseFactory):
+    name = "IIIe Arrondissement"
+    municipality = factory.SubFactory(MunicipalityFactory)
+
+    class Meta:
+        model = models.District
+
+
 class LocalityFactory(BaseFactory):
     name = "L'Empereur"
     fantoir = "0080N"
@@ -110,6 +118,14 @@ class HouseNumberFactory(BaseFactory):
     number = "18"
     ordinal = "bis"
     street = factory.SubFactory(StreetFactory)
+
+    @factory.post_generation
+    def districts(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        if extracted:
+            self.districts.add(extracted)
 
     class Meta:
         model = models.HouseNumber

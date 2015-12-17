@@ -1,5 +1,5 @@
-from ban.core.versioning import IdentifierRedirect
 from ban.core import models
+from ban.core.versioning import IdentifierRedirect
 
 from . import factories
 

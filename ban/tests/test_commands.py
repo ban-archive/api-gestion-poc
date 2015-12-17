@@ -1,13 +1,13 @@
 import json
 from pathlib import Path
 
-from ban.commands.importer import municipalities
+from ban.auth import models as amodels
 from ban.commands.auth import createuser
 from ban.commands.db import truncate
 from ban.commands.export import resources
+from ban.commands.importer import municipalities
 from ban.core import models
 from ban.core.versioning import Diff
-from ban.auth import models as amodels
 from ban.tests import factories
 
 

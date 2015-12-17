@@ -3,8 +3,9 @@ import pytest
 
 from ban.core import models
 
-from .factories import (HouseNumberFactory, MunicipalityFactory,
-                        PositionFactory, StreetFactory, ZipCodeFactory)
+from .factories import (DistrictFactory, HouseNumberFactory,
+                        MunicipalityFactory, PositionFactory, StreetFactory,
+                        ZipCodeFactory)
 
 
 def test_municipality_is_created_with_version_1():
@@ -170,7 +171,7 @@ def test_cannot_duplicate_housenumber_on_same_street():
         HouseNumberFactory(street=street, ordinal="b", number="10")
 
 
-def test_can_create_two_housenumbers_with_same_number_but_different_street():
+def test_can_create_two_housenumbers_with_same_number_but_different_streets():
     street = StreetFactory()
     street2 = StreetFactory()
     HouseNumberFactory(street=street, ordinal="b", number="10")
@@ -186,6 +187,23 @@ def test_housenumber_center():
 def test_housenumber_center_without_position():
     housenumber = HouseNumberFactory()
     assert housenumber.center is None
+
+
+def test_create_housenumber_with_district():
+    municipality = MunicipalityFactory()
+    district = DistrictFactory(municipality=municipality)
+    housenumber = HouseNumberFactory(districts=[district],
+                                     street__municipality=municipality)
+    assert district in housenumber.districts
+    assert housenumber in district.housenumbers
+
+
+def test_add_district_to_housenumber():
+    housenumber = HouseNumberFactory()
+    district = DistrictFactory(municipality=housenumber.parent.municipality)
+    housenumber.districts.add(district)
+    assert district in housenumber.districts
+    assert housenumber in district.housenumbers
 
 
 def test_position_is_versioned():

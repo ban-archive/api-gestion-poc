@@ -1,3 +1,4 @@
+import json
 import re
 
 import peewee
@@ -103,6 +104,11 @@ class IntegerField(peewee.IntegerField):
 class HStoreField(postgres_ext.HStoreField):
     schema_type = 'dict'
 
+    def coerce(self, value):
+        if isinstance(value, str):
+            value = json.loads(value)
+        return super().coerce(value)
+
 
 class BinaryJSONField(postgres_ext.BinaryJSONField):
     schema_type = 'dict'
@@ -140,3 +146,25 @@ class ZipCodeField(CharField):
 
 class ManyToManyField(fields.ManyToManyField):
     schema_type = 'list'
+
+    def __init__(self, *args, **kwargs):
+        # Try to better conform to Field API.
+        self.null = True
+        self.unique = False
+        self.index = False
+        super().__init__(*args, **kwargs)
+
+    def coerce(self, value):
+        if not isinstance(value, (tuple, list)):
+            value = [value]
+        # https://github.com/coleifer/peewee/pull/795
+        value = [self.rel_model.get(self.rel_model.id == item)
+                 if not isinstance(item, self.rel_model)
+                 else item
+                 for item in value]
+        return super().coerce(value)
+
+    def add_to_class(self, model_class, name):
+        # https://github.com/coleifer/peewee/issues/794
+        model_class._meta.fields[name] = self
+        super().add_to_class(model_class, name)

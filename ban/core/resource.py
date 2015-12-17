@@ -48,7 +48,18 @@ class ResourceValidator(Validator):
                 setattr(self.instance, key, value)
             self.instance.save()
         else:
-            self.instance = self.model.create(**self.document)
+            m2m = {}
+            data = {}
+            for key, value in self.document.items():
+                field = getattr(self.model, key)
+                if isinstance(field, db.ManyToManyField):
+                    m2m[key] = value
+                else:
+                    data[key] = value
+            self.instance = self.model.create(**data)
+            # m2m need the instance to be saved.
+            for key, value in m2m.items():
+                setattr(self.instance, key, value)
         return self.instance
 
 
@@ -97,8 +108,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     @classmethod
     def build_resource_schema(cls):
         schema = {}
-        for field in cls._meta.get_fields():
-            if field.name not in cls.get_resource_fields():
+        for name, field in cls._meta.fields.items():
+            if name not in cls.get_resource_fields():
                 continue
             if field.primary_key:
                 continue
@@ -117,8 +128,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 row['maxlength'] = max_length
             if not field.null:
                 row['empty'] = False
-            row.update(cls._meta.resource_schema.get(field.name, {}))
-            schema[field.name] = row
+            row.update(cls._meta.resource_schema.get(name, {}))
+            schema[name] = row
         return schema
 
     @classmethod

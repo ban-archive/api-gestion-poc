@@ -29,6 +29,11 @@ def test_municipality_can_be_instanciated():
     assert municipality.name
 
 
+def test_district_can_be_instanciated():
+    district = factories.DistrictFactory()
+    assert district.name
+
+
 def test_locality_can_be_instanciated():
     locality = factories.LocalityFactory()
     assert locality.name
