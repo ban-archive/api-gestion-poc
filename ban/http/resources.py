@@ -139,6 +139,7 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
     @auth.protect
     @app.endpoint(path='/{identifier}')
     def on_delete_resource(self, req, resp, *args, **params):
+        """Delete {resource}."""
         instance = self.get_object(**params)
         try:
             instance.delete_instance()
