@@ -94,6 +94,20 @@ def test_unique_fields(factory, kwargs):
         factory(**kwargs)
 
 
+def test_should_allow_deleting_municipality_not_linked():
+    municipality = MunicipalityFactory()
+    municipality.delete_instance()
+    assert not models.Municipality.select().count()
+
+
+def test_should_not_allow_deleting_municipality_linked_to_street():
+    municipality = MunicipalityFactory()
+    StreetFactory(municipality=municipality)
+    with pytest.raises(peewee.IntegrityError):
+        municipality.delete_instance()
+    assert models.Municipality.get(models.Municipality.id == municipality.id)
+
+
 def test_street_is_versioned():
     initial_name = "Rue des Pommes"
     street = StreetFactory(name=initial_name)
@@ -111,6 +125,20 @@ def test_street_is_versioned():
     diff = street.versions[1].diff
     assert len(diff.diff) == 1  # name, version
     assert diff.diff['name']['new'] == "Rue des Poires"
+
+
+def test_should_allow_deleting_street_not_linked():
+    street = StreetFactory()
+    street.delete_instance()
+    assert not models.Street.select().count()
+
+
+def test_should_not_allow_deleting_street_linked_to_housenumber():
+    street = StreetFactory()
+    HouseNumberFactory(street=street)
+    with pytest.raises(peewee.IntegrityError):
+        street.delete_instance()
+    assert models.Street.get(models.Street.id == street.id)
 
 
 def test_tmp_fantoir_should_use_name():
@@ -204,6 +232,20 @@ def test_add_district_to_housenumber():
     housenumber.districts.add(district)
     assert district in housenumber.districts
     assert housenumber in district.housenumbers
+
+
+def test_should_allow_deleting_housenumber_not_linked():
+    housenumber = HouseNumberFactory()
+    housenumber.delete_instance()
+    assert not models.HouseNumber.select().count()
+
+
+def test_should_not_allow_deleting_housenumber_not_linked():
+    housenumber = HouseNumberFactory()
+    PositionFactory(housenumber=housenumber)
+    with pytest.raises(peewee.IntegrityError):
+        housenumber.delete_instance()
+    assert models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
 
 
 def test_position_is_versioned():
