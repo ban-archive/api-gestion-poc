@@ -851,6 +851,50 @@ def test_patch_municipality_with_postcodes(client, url):
 
 
 @authorize
+def test_create_municipality_with_one_alias(client, url):
+    data = {
+        "name": "Orvane",
+        "insee": "12345",
+        "siren": '123456789',
+        "alias": 'Moret-sur-Loing'
+    }
+    resp = client.post(url('municipality'), data)
+    assert resp.status == falcon.HTTP_201
+    municipality = cmodels.Municipality.first()
+    assert 'Moret-sur-Loing' in municipality.alias
+
+
+@authorize
+def test_create_municipality_with_list_of_aliases(client, url):
+    data = {
+        "name": "Orvane",
+        "insee": "12345",
+        "siren": '123456789',
+        "alias": ['Moret-sur-Loing', 'Another-Name']
+    }
+    headers = {'Content-Type': 'application/json'}
+    resp = client.post(url('municipality'), json.dumps(data), headers=headers)
+    assert resp.status == falcon.HTTP_201
+    municipality = cmodels.Municipality.first()
+    assert 'Moret-sur-Loing' in municipality.alias
+    assert 'Another-Name' in municipality.alias
+
+
+@authorize
+def test_patch_municipality_with_alias(client, url):
+    municipality = MunicipalityFactory()
+    data = {
+        "version": 2,
+        "alias": ['Moret-sur-Loing']
+    }
+    uri = url('municipality-resource', identifier=municipality.id)
+    resp = client.patch(uri, json.dumps(data))
+    assert resp.status == falcon.HTTP_200
+    municipality = cmodels.Municipality.first()
+    assert 'Moret-sur-Loing' in municipality.alias
+
+
+@authorize
 def test_delete_municipality(client, url):
     municipality = MunicipalityFactory()
     uri = url('municipality-resource', identifier=municipality.id)
