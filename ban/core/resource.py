@@ -38,7 +38,10 @@ class ResourceValidator(Validator):
 
     def validate(self, data, instance=None, **kwargs):
         self.instance = instance
-        return super().validate(data, **kwargs)
+        super().validate(data, **kwargs)
+        if ('version' in self.schema and instance
+           and not self.document.get('version')):
+            self._error('version', errors.ERROR_REQUIRED_FIELD)
 
     def save(self):
         if self.errors:
@@ -134,7 +137,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     @classmethod
     def validator(cls, instance=None, update=False, **data):
-        validator = ResourceValidator(cls, instance)
+        validator = ResourceValidator(cls)
         validator(data, update=update, instance=instance)
         return validator
 

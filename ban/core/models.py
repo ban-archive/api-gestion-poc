@@ -23,6 +23,8 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
 
     class Meta:
         validate_backrefs = False
+        # 'version' is validated by us.
+        resource_schema = {'version': {'required': False}}
 
     @classmethod
     def get_resource_fields(cls):
@@ -112,7 +114,8 @@ class HouseNumber(Model):
     districts = db.ManyToManyField(District, related_name='housenumbers')
 
     class Meta:
-        resource_schema = {'cia': {'required': False}}
+        resource_schema = {'cia': {'required': False},
+                           'version': {'required': False}}
         order_by = ('number', 'ordinal')
 
     def __str__(self):

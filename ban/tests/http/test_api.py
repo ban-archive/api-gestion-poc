@@ -186,7 +186,6 @@ def test_create_housenumber(client):
     street = StreetFactory(name="Rue de Bonbons")
     assert not cmodels.HouseNumber.select().count()
     data = {
-        "version": 1,
         "number": 20,
         "street": street.id,
     }
@@ -204,7 +203,6 @@ def test_create_housenumber_with_street_fantoir(client):
     street = StreetFactory(name="Rue de Bonbons")
     assert not cmodels.HouseNumber.select().count()
     data = {
-        "version": 1,
         "number": 20,
         "street": 'fantoir:{}'.format(street.fantoir),
     }
@@ -285,7 +283,6 @@ def test_create_position(client):
     assert not cmodels.Position.select().count()
     url = '/position'
     data = {
-        "version": 1,
         "center": "(3, 4)",
         "housenumber": housenumber.id,
     }
@@ -303,7 +300,6 @@ def test_create_position_with_housenumber_cia(client):
     assert not cmodels.Position.select().count()
     url = '/position'
     data = {
-        "version": 1,
         "center": "(3, 4)",
         "housenumber": 'cia:{}'.format(housenumber.cia),
     }
@@ -318,7 +314,6 @@ def test_create_position_with_bad_housenumber_cia_is_422(client):
     assert not cmodels.Position.select().count()
     url = '/position'
     data = {
-        "version": 1,
         "center": "(3, 4)",
         "housenumber": 'cia:{}'.format('xxx'),
     }
@@ -489,7 +484,7 @@ def test_patch_without_version_should_fail(client, url):
         "center": "(3.4, 5.678)",
     }
     resp = client.patch(uri, body=json.dumps(data))
-    assert resp.status == falcon.HTTP_409
+    assert resp.status == falcon.HTTP_422
 
 
 @authorize
@@ -510,7 +505,6 @@ def test_create_street(client, url):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
-        "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
         "municipality": municipality.id,
@@ -531,7 +525,6 @@ def test_create_street_with_municipality_insee(client, url):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
-        "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
         "municipality": "insee:{}".format(municipality.insee),
@@ -549,7 +542,6 @@ def test_create_street_with_municipality_siren(client):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
-        "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
         "municipality": "siren:{}".format(municipality.siren),
@@ -564,7 +556,6 @@ def test_create_street_with_bad_municipality_siren(client):
     MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
-        "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
         "municipality": "siren:{}".format('bad'),
@@ -579,7 +570,6 @@ def test_create_street_with_invalid_municipality_identifier(client):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
-        "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
         "municipality": "invalid:{}".format(municipality.insee),
@@ -731,7 +721,6 @@ def test_can_retrieve_municipality_with_old_insee(get, url):
 def test_create_municipality(client, url):
     assert not cmodels.Municipality.select().count()
     data = {
-        "version": 1,
         "name": "Fornex",
         "insee": "12345",
         "siren": '123456789',
@@ -750,7 +739,6 @@ def test_create_municipality(client, url):
 def test_cannot_duplicate_municipality(client, url):
     MunicipalityFactory(insee="12345")
     data = {
-        "version": 1,
         "name": "Fornex",
         "insee": "12345",
         "siren": '123456789',
@@ -765,7 +753,6 @@ def test_cannot_duplicate_municipality(client, url):
 def test_create_municipality_with_postcodes(client, url):
     postcode = PostCodeFactory(code="09350")
     data = {
-        "version": 1,
         "name": "Fornex",
         "insee": "12345",
         "siren": '123456789',
@@ -806,7 +793,6 @@ def test_create_district(client, url):
     assert not cmodels.District.select().count()
     municipality = MunicipalityFactory()
     data = {
-        "version": 1,
         "name": "Lhomme",
         "attributes": {"key": "value"},
         "municipality": municipality.id
@@ -844,7 +830,6 @@ def test_get_postcode_with_code(get, url):
 def test_create_postcode(client, url):
     assert not cmodels.PostCode.select().count()
     data = {
-        "version": 1,
         "code": "09350"
     }
     resp = client.post(url('postcode'), data)
