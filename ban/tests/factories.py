@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
+from random import Random
 
 import factory
-from factory.fuzzy import FuzzyText, FuzzyInteger
+from factory.fuzzy import FuzzyAttribute, FuzzyInteger, FuzzyText
 from factory_peewee import PeeweeModelFactory
 
-from ban.core import models
 from ban.auth import models as auth_models
+from ban.core import models
 
 
 class BaseTestModel(PeeweeModelFactory):
@@ -71,20 +72,28 @@ class BaseFactory(BaseTestModel):
         abstract = True
 
 
-class ZipCodeFactory(BaseFactory):
+class PostCodeFactory(BaseFactory):
     code = FuzzyInteger(10000, 97000)
 
     class Meta:
-        model = models.ZipCode
+        model = models.PostCode
 
 
 class MunicipalityFactory(BaseFactory):
     name = "Montbrun-Bocage"
-    insee = "31365"
-    siren = "210100566"
+    insee = FuzzyAttribute(lambda: str(Random().randint(10000, 97000)))
+    siren = FuzzyAttribute(lambda: str(Random().randint(100000000, 300000000)))
 
     class Meta:
         model = models.Municipality
+
+
+class DistrictFactory(BaseFactory):
+    name = "IIIe Arrondissement"
+    municipality = factory.SubFactory(MunicipalityFactory)
+
+    class Meta:
+        model = models.District
 
 
 class LocalityFactory(BaseFactory):
@@ -109,6 +118,14 @@ class HouseNumberFactory(BaseFactory):
     number = "18"
     ordinal = "bis"
     street = factory.SubFactory(StreetFactory)
+
+    @factory.post_generation
+    def districts(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        if extracted:
+            self.districts.add(extracted)
 
     class Meta:
         model = models.HouseNumber

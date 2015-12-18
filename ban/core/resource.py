@@ -18,6 +18,16 @@ class ResourceValidator(Validator):
         if not isinstance(value, (str, list, tuple, Point)):
             self._error(field, 'Invalid Point: {}'.format(value))
 
+    def _validate_unique(self, unique, field, value):
+        qs = self.model.select()
+        attr = getattr(self.model, field)
+        qs = qs.where(attr == value)
+        if self.instance:
+            qs = qs.where(self.model.id != self.instance.id)
+        if qs.exists():
+            self._error(field, 'Duplicate value for {}: {}'.format(field,
+                                                                   value))
+
     def _validate_coerce(self, coerce, field, value):
         # See https://github.com/nicolaiarocci/cerberus/issues/171.
         try:
@@ -26,16 +36,34 @@ class ResourceValidator(Validator):
             self._error(field, errors.ERROR_COERCION_FAILED.format(field))
         return value
 
-    def save(self, instance=None):
+    def validate(self, data, instance=None, **kwargs):
+        self.instance = instance
+        super().validate(data, **kwargs)
+        if ('version' in self.schema and instance
+           and not self.document.get('version')):
+            self._error('version', errors.ERROR_REQUIRED_FIELD)
+
+    def save(self):
         if self.errors:
             raise ValidationError('Invalid document')
-        if instance:
+        if self.instance:
             for key, value in self.document.items():
-                setattr(instance, key, value)
-            instance.save()
+                setattr(self.instance, key, value)
+            self.instance.save()
         else:
-            instance = self.model.create(**self.document)
-        return instance
+            m2m = {}
+            data = {}
+            for key, value in self.document.items():
+                field = getattr(self.model, key)
+                if isinstance(field, db.ManyToManyField):
+                    m2m[key] = value
+                else:
+                    data[key] = value
+            self.instance = self.model.create(**data)
+            # m2m need the instance to be saved.
+            for key, value in m2m.items():
+                setattr(self.instance, key, value)
+        return self.instance
 
 
 class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
@@ -83,8 +111,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     @classmethod
     def build_resource_schema(cls):
         schema = {}
-        for field in cls._meta.get_fields():
-            if field.name not in cls.get_resource_fields():
+        for name, field in cls._meta.fields.items():
+            if name not in cls.get_resource_fields():
                 continue
             if field.primary_key:
                 continue
@@ -96,19 +124,21 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 'required': not field.null,
                 'coerce': field.coerce,
             }
+            if field.unique:
+                row['unique'] = True
             max_length = getattr(field, 'max_length', None)
             if max_length:
                 row['maxlength'] = max_length
             if not field.null:
                 row['empty'] = False
-            row.update(cls._meta.resource_schema.get(field.name, {}))
-            schema[field.name] = row
+            row.update(cls._meta.resource_schema.get(name, {}))
+            schema[name] = row
         return schema
 
     @classmethod
     def validator(cls, instance=None, update=False, **data):
-        validator = ResourceValidator(cls, instance)
-        validator(data, update=update)
+        validator = ResourceValidator(cls)
+        validator(data, update=update, instance=instance)
         return validator
 
     @classmethod

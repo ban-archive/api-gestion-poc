@@ -1,9 +1,11 @@
+import peewee
 import pytest
 
 from ban.core import models
 
-from .factories import (HouseNumberFactory, MunicipalityFactory,
-                        PositionFactory, StreetFactory, ZipCodeFactory)
+from .factories import (DistrictFactory, HouseNumberFactory,
+                        MunicipalityFactory, PositionFactory, PostCodeFactory,
+                        StreetFactory)
 
 
 def test_municipality_is_created_with_version_1():
@@ -50,26 +52,26 @@ def test_municipality_diff_contain_only_changed_data():
     assert diff.diff['name']['new'] == "Orvanne"
 
 
-def test_municipality_zipcodes():
-    zipcode1 = ZipCodeFactory(code="75010")
-    zipcode2 = ZipCodeFactory(code="75011")
+def test_municipality_postcodes():
+    postcode1 = PostCodeFactory(code="75010")
+    postcode2 = PostCodeFactory(code="75011")
     municipality = MunicipalityFactory(name="Paris")
-    municipality.zipcodes.add(zipcode1)
-    municipality.zipcodes.add(zipcode2)
-    zipcodes = municipality.zipcodes
-    assert len(zipcodes) == 2
-    assert zipcode1 in zipcodes
-    assert zipcode2 in zipcodes
+    municipality.postcodes.add(postcode1)
+    municipality.postcodes.add(postcode2)
+    postcodes = municipality.postcodes
+    assert len(postcodes) == 2
+    assert postcode1 in postcodes
+    assert postcode2 in postcodes
 
 
-def test_zipcode_municipalities():
-    zipcode = ZipCodeFactory(code="31310")
+def test_postcode_municipalities():
+    postcode = PostCodeFactory(code="31310")
     municipality1 = MunicipalityFactory(name="Montbrun-Bocage")
     municipality2 = MunicipalityFactory(name="Montesquieu-Volvestre")
-    municipality1.zipcodes.add(zipcode)
-    municipality2.zipcodes.add(zipcode)
-    assert municipality1 in zipcode.municipalities
-    assert municipality2 in zipcode.municipalities
+    municipality1.postcodes.add(postcode)
+    municipality2.postcodes.add(postcode)
+    assert municipality1 in postcode.municipalities
+    assert municipality2 in postcode.municipalities
 
 
 def test_municipality_as_resource():
@@ -80,6 +82,16 @@ def test_municipality_as_resource():
     assert municipality.as_resource['siren'] == "210100566"
     assert municipality.as_resource['version'] == 1
     assert municipality.as_resource['id'] == municipality.id
+
+
+@pytest.mark.parametrize('factory,kwargs', [
+    (MunicipalityFactory, {'insee': '12345'}),
+    (MunicipalityFactory, {'siren': '123456789'}),
+])
+def test_unique_fields(factory, kwargs):
+    factory(**kwargs)
+    with pytest.raises(peewee.IntegrityError):
+        factory(**kwargs)
 
 
 def test_street_is_versioned():
@@ -159,7 +171,7 @@ def test_cannot_duplicate_housenumber_on_same_street():
         HouseNumberFactory(street=street, ordinal="b", number="10")
 
 
-def test_can_create_two_housenumbers_with_same_number_but_different_street():
+def test_can_create_two_housenumbers_with_same_number_but_different_streets():
     street = StreetFactory()
     street2 = StreetFactory()
     HouseNumberFactory(street=street, ordinal="b", number="10")
@@ -175,6 +187,23 @@ def test_housenumber_center():
 def test_housenumber_center_without_position():
     housenumber = HouseNumberFactory()
     assert housenumber.center is None
+
+
+def test_create_housenumber_with_district():
+    municipality = MunicipalityFactory()
+    district = DistrictFactory(municipality=municipality)
+    housenumber = HouseNumberFactory(districts=[district],
+                                     street__municipality=municipality)
+    assert district in housenumber.districts
+    assert housenumber in district.housenumbers
+
+
+def test_add_district_to_housenumber():
+    housenumber = HouseNumberFactory()
+    district = DistrictFactory(municipality=housenumber.parent.municipality)
+    housenumber.districts.add(district)
+    assert district in housenumber.districts
+    assert housenumber in district.housenumbers
 
 
 def test_position_is_versioned():

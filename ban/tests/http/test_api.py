@@ -1,14 +1,15 @@
 import json
 
-import falcon
 import pytest
 
+import falcon
 from ban import http
-from ban.core import models as cmodels
 from ban.auth import models as amodels
+from ban.core import models as cmodels
 
-from ..factories import (HouseNumberFactory, MunicipalityFactory,
-                         PositionFactory, StreetFactory)
+from ..factories import (DistrictFactory, HouseNumberFactory,
+                         MunicipalityFactory, PositionFactory, PostCodeFactory,
+                         StreetFactory)
 from .utils import authorize
 
 pytestmark = pytest.mark.django_db
@@ -181,12 +182,107 @@ def test_get_street_housenumbers(get, url):
 
 
 @authorize
+def test_create_housenumber(client):
+    street = StreetFactory(name="Rue de Bonbons")
+    assert not cmodels.HouseNumber.select().count()
+    data = {
+        "number": 20,
+        "street": street.id,
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status == falcon.HTTP_201
+    assert resp.json['id']
+    assert resp.json['number'] == '20'
+    assert resp.json['ordinal'] == ''
+    assert resp.json['street']['id'] == street.id
+    assert cmodels.HouseNumber.select().count() == 1
+
+
+@authorize
+def test_create_housenumber_with_street_fantoir(client):
+    street = StreetFactory(name="Rue de Bonbons")
+    assert not cmodels.HouseNumber.select().count()
+    data = {
+        "number": 20,
+        "street": 'fantoir:{}'.format(street.fantoir),
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status == falcon.HTTP_201
+    assert cmodels.HouseNumber.select().count() == 1
+
+
+@authorize
+def test_create_housenumber_does_not_honour_version_field(client):
+    street = StreetFactory(name="Rue de Bonbons")
+    data = {
+        "version": 3,
+        "number": 20,
+        "street": street.id,
+    }
+    resp = client.post('/housenumber', data=data)
+    assert resp.status == falcon.HTTP_201
+    assert resp.json['id']
+    assert resp.json['version'] == 1
+
+
+@authorize
+def test_replace_housenumber(client, url):
+    housenumber = HouseNumberFactory(number="22", ordinal="B")
+    assert cmodels.HouseNumber.select().count() == 1
+    uri = url('housenumber-resource', identifier=housenumber.id)
+    data = {
+        "version": 2,
+        "number": housenumber.number,
+        "ordinal": 'bis',
+        "street": housenumber.street.id,
+    }
+    resp = client.put(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['id']
+    assert resp.json['version'] == 2
+    assert resp.json['number'] == '22'
+    assert resp.json['ordinal'] == 'bis'
+    assert resp.json['street']['id'] == housenumber.street.id
+    assert cmodels.HouseNumber.select().count() == 1
+
+
+@authorize
+def test_replace_housenumber_with_missing_field_fails(client, url):
+    housenumber = HouseNumberFactory(number="22", ordinal="B")
+    assert cmodels.HouseNumber.select().count() == 1
+    uri = url('housenumber-resource', identifier=housenumber.id)
+    data = {
+        "version": 2,
+        "ordinal": 'bis',
+        "street": housenumber.street.id,
+    }
+    resp = client.put(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_422
+    assert 'errors' in resp.json
+    assert cmodels.HouseNumber.select().count() == 1
+
+
+@authorize
+def test_patch_housenumber_with_districts(client, url):
+    housenumber = HouseNumberFactory()
+    district = DistrictFactory(municipality=housenumber.parent.municipality)
+    data = {
+        "version": 2,
+        "districts": [district.id],
+    }
+    uri = url('housenumber-resource', identifier=housenumber.id)
+    resp = client.patch(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_200
+    hn = cmodels.HouseNumber.get(cmodels.HouseNumber.id == housenumber.id)
+    assert district in hn.districts
+
+
+@authorize
 def test_create_position(client):
     housenumber = HouseNumberFactory(number="22")
     assert not cmodels.Position.select().count()
     url = '/position'
     data = {
-        "version": 1,
         "center": "(3, 4)",
         "housenumber": housenumber.id,
     }
@@ -204,7 +300,6 @@ def test_create_position_with_housenumber_cia(client):
     assert not cmodels.Position.select().count()
     url = '/position'
     data = {
-        "version": 1,
         "center": "(3, 4)",
         "housenumber": 'cia:{}'.format(housenumber.cia),
     }
@@ -219,7 +314,6 @@ def test_create_position_with_bad_housenumber_cia_is_422(client):
     assert not cmodels.Position.select().count()
     url = '/position'
     data = {
-        "version": 1,
         "center": "(3, 4)",
         "housenumber": 'cia:{}'.format('xxx'),
     }
@@ -390,7 +484,7 @@ def test_patch_without_version_should_fail(client, url):
         "center": "(3.4, 5.678)",
     }
     resp = client.patch(uri, body=json.dumps(data))
-    assert resp.status == falcon.HTTP_409
+    assert resp.status == falcon.HTTP_422
 
 
 @authorize
@@ -407,94 +501,10 @@ def test_patch_with_wrong_version_should_fail(client, url):
 
 
 @authorize
-def test_create_housenumber(client):
-    street = StreetFactory(name="Rue de Bonbons")
-    assert not cmodels.HouseNumber.select().count()
-    data = {
-        "version": 1,
-        "number": 20,
-        "street": street.id,
-    }
-    resp = client.post('/housenumber', data)
-    assert resp.status == falcon.HTTP_201
-    assert resp.json['id']
-    assert resp.json['number'] == '20'
-    assert resp.json['ordinal'] == ''
-    assert resp.json['street']['id'] == street.id
-    assert cmodels.HouseNumber.select().count() == 1
-
-
-@authorize
-def test_create_housenumber_with_street_fantoir(client):
-    street = StreetFactory(name="Rue de Bonbons")
-    assert not cmodels.HouseNumber.select().count()
-    data = {
-        "version": 1,
-        "number": 20,
-        "street": 'fantoir:{}'.format(street.fantoir),
-    }
-    resp = client.post('/housenumber', data)
-    assert resp.status == falcon.HTTP_201
-    assert cmodels.HouseNumber.select().count() == 1
-
-
-@authorize
-def test_create_housenumber_does_not_honour_version_field(client):
-    street = StreetFactory(name="Rue de Bonbons")
-    data = {
-        "version": 3,
-        "number": 20,
-        "street": street.id,
-    }
-    resp = client.post('/housenumber', data=data)
-    assert resp.status == falcon.HTTP_201
-    assert resp.json['id']
-    assert resp.json['version'] == 1
-
-
-@authorize
-def test_replace_housenumber(client, url):
-    housenumber = HouseNumberFactory(number="22", ordinal="B")
-    assert cmodels.HouseNumber.select().count() == 1
-    uri = url('housenumber-resource', identifier=housenumber.id)
-    data = {
-        "version": 2,
-        "number": housenumber.number,
-        "ordinal": 'bis',
-        "street": housenumber.street.id,
-    }
-    resp = client.put(uri, body=json.dumps(data))
-    assert resp.status == falcon.HTTP_200
-    assert resp.json['id']
-    assert resp.json['version'] == 2
-    assert resp.json['number'] == '22'
-    assert resp.json['ordinal'] == 'bis'
-    assert resp.json['street']['id'] == housenumber.street.id
-    assert cmodels.HouseNumber.select().count() == 1
-
-
-@authorize
-def test_replace_housenumber_with_missing_field_fails(client, url):
-    housenumber = HouseNumberFactory(number="22", ordinal="B")
-    assert cmodels.HouseNumber.select().count() == 1
-    uri = url('housenumber-resource', identifier=housenumber.id)
-    data = {
-        "version": 2,
-        "ordinal": 'bis',
-        "street": housenumber.street.id,
-    }
-    resp = client.put(uri, body=json.dumps(data))
-    assert resp.status == falcon.HTTP_422
-    assert 'errors' in resp.json
-    assert cmodels.HouseNumber.select().count() == 1
-
-
-@authorize
 def test_create_street(client, url):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
-        "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
         "municipality": municipality.id,
@@ -515,7 +525,6 @@ def test_create_street_with_municipality_insee(client, url):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
-        "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
         "municipality": "insee:{}".format(municipality.insee),
@@ -533,7 +542,6 @@ def test_create_street_with_municipality_siren(client):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
-        "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
         "municipality": "siren:{}".format(municipality.siren),
@@ -548,7 +556,6 @@ def test_create_street_with_bad_municipality_siren(client):
     MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
-        "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
         "municipality": "siren:{}".format('bad'),
@@ -563,7 +570,6 @@ def test_create_street_with_invalid_municipality_identifier(client):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
     data = {
-        "version": 1,
         "name": "Rue de la Plage",
         "fantoir": "0234H",
         "municipality": "invalid:{}".format(municipality.insee),
@@ -573,6 +579,37 @@ def test_create_street_with_invalid_municipality_identifier(client):
     assert not cmodels.Street.select().count()
 
 
+def test_get_street_versions(get, url):
+    street = StreetFactory(name="Rue de la Paix")
+    street.version = 2
+    street.name = "Rue de la Guerre"
+    street.save()
+    uri = url('street-versions', identifier=street.id)
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert len(resp.json['collection']) == 2
+    assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['name'] == 'Rue de la Paix'
+    assert resp.json['collection'][1]['name'] == 'Rue de la Guerre'
+
+
+def test_get_street_version(get, url):
+    street = StreetFactory(name="Rue de la Paix")
+    street.version = 2
+    street.name = "Rue de la Guerre"
+    street.save()
+    uri = url('street-version', identifier=street.id, version=1)
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['name'] == 'Rue de la Paix'
+    assert resp.json['version'] == 1
+    uri = url('street-version', identifier=street.id, version=2)
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['name'] == 'Rue de la Guerre'
+    assert resp.json['version'] == 2
+
+
 def test_get_municipality(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     uri = url('municipality-resource', identifier=municipality.id)
@@ -580,6 +617,18 @@ def test_get_municipality(get, url):
     assert resp.status == falcon.HTTP_200
     assert resp.json['id']
     assert resp.json['name'] == 'Cabour'
+
+
+def test_get_municipality_with_postcodes(get, url):
+    postcode = PostCodeFactory(code="33000")
+    municipality = MunicipalityFactory(name="Cabour")
+    municipality.postcodes.add(postcode)
+    uri = url('municipality-resource', identifier=municipality.id)
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['id']
+    assert resp.json['name'] == 'Cabour'
+    assert resp.json['postcodes'] == ['33000']
 
 
 def test_get_municipality_without_explicit_identifier(get, url):
@@ -668,35 +717,129 @@ def test_can_retrieve_municipality_with_old_insee(get, url):
     assert resp.json['insee'] == '54321'
 
 
-def test_get_street_versions(get, url):
-    street = StreetFactory(name="Rue de la Paix")
-    street.version = 2
-    street.name = "Rue de la Guerre"
-    street.save()
-    uri = url('street-versions', identifier=street.id)
-    resp = get(uri)
-    assert resp.status == falcon.HTTP_200
-    assert len(resp.json['collection']) == 2
-    assert resp.json['total'] == 2
-    assert resp.json['collection'][0]['name'] == 'Rue de la Paix'
-    assert resp.json['collection'][1]['name'] == 'Rue de la Guerre'
+@authorize
+def test_create_municipality(client, url):
+    assert not cmodels.Municipality.select().count()
+    data = {
+        "name": "Fornex",
+        "insee": "12345",
+        "siren": '123456789',
+    }
+    resp = client.post(url('municipality'), data)
+    assert resp.status == falcon.HTTP_201
+    assert resp.json['id']
+    assert resp.json['name'] == 'Fornex'
+    assert cmodels.Municipality.select().count() == 1
+    uri = "https://falconframework.org{}".format(url('municipality-resource',
+                                                 identifier=resp.json['id']))
+    assert resp.headers['Location'] == uri
 
 
-def test_get_street_version(get, url):
-    street = StreetFactory(name="Rue de la Paix")
-    street.version = 2
-    street.name = "Rue de la Guerre"
-    street.save()
-    uri = url('street-version', identifier=street.id, version=1)
-    resp = get(uri)
+@authorize
+def test_cannot_duplicate_municipality(client, url):
+    MunicipalityFactory(insee="12345")
+    data = {
+        "name": "Fornex",
+        "insee": "12345",
+        "siren": '123456789',
+    }
+    resp = client.post(url('municipality'), data)
+    assert resp.status == falcon.HTTP_422
+    assert resp.json['errors']['insee']
+    assert '12345' in resp.json['errors']['insee']
+
+
+@authorize
+def test_create_municipality_with_postcodes(client, url):
+    postcode = PostCodeFactory(code="09350")
+    data = {
+        "name": "Fornex",
+        "insee": "12345",
+        "siren": '123456789',
+        "postcodes": postcode.id
+    }
+    resp = client.post(url('municipality'), data)
+    assert resp.status == falcon.HTTP_201
+    municipality = cmodels.Municipality.first()
+    assert postcode in municipality.postcodes
+
+
+@authorize
+def test_patch_municipality_with_postcodes(client, url):
+    postcode = PostCodeFactory(code="09350")
+    municipality = MunicipalityFactory()
+    data = {
+        "version": 2,
+        "postcodes": postcode.id
+    }
+    uri = url('municipality-resource', identifier=municipality.id)
+    resp = client.post(uri, data)
     assert resp.status == falcon.HTTP_200
-    assert resp.json['name'] == 'Rue de la Paix'
-    assert resp.json['version'] == 1
-    uri = url('street-version', identifier=street.id, version=2)
-    resp = get(uri)
+    municipality = cmodels.Municipality.first()
+    assert postcode in municipality.postcodes
+
+
+def test_get_district(get, url):
+    district = DistrictFactory(name="Lhomme")
+    resp = get(url('district-resource', identifier=district.id))
     assert resp.status == falcon.HTTP_200
-    assert resp.json['name'] == 'Rue de la Guerre'
-    assert resp.json['version'] == 2
+    assert resp.json['id']
+    assert resp.json['name'] == 'Lhomme'
+    assert resp.json['municipality']['id'] == district.municipality.id
+
+
+@authorize
+def test_create_district(client, url):
+    assert not cmodels.District.select().count()
+    municipality = MunicipalityFactory()
+    data = {
+        "name": "Lhomme",
+        "attributes": {"key": "value"},
+        "municipality": municipality.id
+    }
+    # As attributes is a dict, we need to send form as json.
+    headers = {'Content-Type': 'application/json'}
+    resp = client.post(url('district'), json.dumps(data), headers=headers)
+    assert resp.status == falcon.HTTP_201
+    assert resp.json['id']
+    assert resp.json['name'] == 'Lhomme'
+    assert resp.json['attributes'] == {"key": "value"}
+    assert cmodels.District.select().count() == 1
+    uri = "https://falconframework.org{}".format(url('district-resource',
+                                                 identifier=resp.json['id']))
+    assert resp.headers['Location'] == uri
+
+
+def test_get_postcode(get, url):
+    postcode = PostCodeFactory(code="09350")
+    resp = get(url('postcode-resource', identifier=postcode.id))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['id']
+    assert resp.json['code'] == '09350'
+
+
+def test_get_postcode_with_code(get, url):
+    PostCodeFactory(code="09350")
+    resp = get(url('postcode-resource', identifier='code:09350'))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['id']
+    assert resp.json['code'] == '09350'
+
+
+@authorize
+def test_create_postcode(client, url):
+    assert not cmodels.PostCode.select().count()
+    data = {
+        "code": "09350"
+    }
+    resp = client.post(url('postcode'), data)
+    assert resp.status == falcon.HTTP_201
+    assert resp.json['id']
+    assert resp.json['code'] == '09350'
+    assert cmodels.PostCode.select().count() == 1
+    uri = "https://falconframework.org{}".format(url('postcode-resource',
+                                                 identifier=resp.json['id']))
+    assert resp.headers['Location'] == uri
 
 
 @authorize

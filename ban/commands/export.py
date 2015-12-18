@@ -12,7 +12,7 @@ def resources(path, **kwargs):
 
     path    path of file where to write resources
     """
-    resources = [models.ZipCode, models.Municipality, models.Locality,
+    resources = [models.PostCode, models.Municipality, models.Locality,
                  models.Street, models.HouseNumber]
     with Path(path).open(mode='w', encoding='utf-8') as f:
         for resource in resources:

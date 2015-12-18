@@ -23,6 +23,8 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
 
     class Meta:
         validate_backrefs = False
+        # 'version' is validated by us.
+        resource_schema = {'version': {'required': False}}
 
     @classmethod
     def get_resource_fields(cls):
@@ -43,19 +45,31 @@ class NamedModel(Model):
         ordering = ('name', )
 
 
-class ZipCode(Model):
+class PostCode(Model):
     identifiers = ['code']
     resource_fields = ['code', 'municipalities']
-    code = db.ZipCodeField()
+    code = db.PostCodeField()
 
 
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
-    resource_fields = ['name', 'insee', 'siren']
+    resource_fields = ['name', 'insee', 'siren', 'postcodes']
 
-    insee = db.CharField(max_length=5)
-    siren = db.CharField(max_length=9)
-    zipcodes = db.ManyToManyField(ZipCode, related_name='municipalities')
+    insee = db.CharField(max_length=5, unique=True)
+    siren = db.CharField(max_length=9, unique=True)
+    postcodes = db.ManyToManyField(PostCode, related_name='municipalities')
+
+    @property
+    def postcodes_resource(self):
+        return [p.code for p in self.postcodes]
+
+
+class District(NamedModel):
+    """Submunicipal non administrative area."""
+    resource_fields = ['name', 'attributes', 'municipality']
+
+    attributes = db.HStoreField(null=True)
+    municipality = db.ForeignKeyField(Municipality)
 
 
 class BaseFantoirModel(NamedModel):
@@ -77,6 +91,7 @@ class BaseFantoirModel(NamedModel):
 
 
 class Locality(BaseFantoirModel):
+    """Any area referenced with a Fantoir."""
     pass
 
 
@@ -86,7 +101,8 @@ class Street(BaseFantoirModel):
 
 class HouseNumber(Model):
     identifiers = ['cia']
-    resource_fields = ['number', 'ordinal', 'street', 'cia', 'cea']
+    resource_fields = ['number', 'ordinal', 'street', 'cia', 'cea',
+                       'districts']
 
     number = db.CharField(max_length=16)
     ordinal = db.CharField(max_length=16, null=True)
@@ -94,10 +110,12 @@ class HouseNumber(Model):
     locality = db.ForeignKeyField(Locality, null=True)
     cia = db.CharField(max_length=100)
     cea = db.CharField(max_length=10, null=True)
-    zipcode = db.ForeignKeyField(ZipCode, null=True)
+    postcode = db.ForeignKeyField(PostCode, null=True)
+    districts = db.ManyToManyField(District, related_name='housenumbers')
 
     class Meta:
-        resource_schema = {'cia': {'required': False}}
+        resource_schema = {'cia': {'required': False},
+                           'version': {'required': False}}
         order_by = ('number', 'ordinal')
 
     def __str__(self):
@@ -117,10 +135,13 @@ class HouseNumber(Model):
     def clean(self):
         if not self.street and not self.locality:
             raise ValueError('A housenumber number needs to be linked to either a street or a locality.')  # noqa
-        if HouseNumber.select().where(HouseNumber.number == self.number,
-                                      HouseNumber.ordinal == self.ordinal,
-                                      HouseNumber.street == self.street,
-                                      HouseNumber.locality == self.locality).exists():
+        qs = HouseNumber.select().where(HouseNumber.number == self.number,
+                                        HouseNumber.ordinal == self.ordinal,
+                                        HouseNumber.street == self.street,
+                                        HouseNumber.locality == self.locality)
+        if self.id:
+            qs = qs.where(HouseNumber.id != self.id)
+        if qs.exists():
             raise ValueError('Row with same number, ordinal, street and locality already exists')  # noqa
         self._clean_called = True
 
