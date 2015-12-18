@@ -43,10 +43,10 @@ class NamedModel(Model):
         ordering = ('name', )
 
 
-class ZipCode(Model):
+class PostCode(Model):
     identifiers = ['code']
     resource_fields = ['code', 'municipalities']
-    code = db.ZipCodeField()
+    code = db.PostCodeField()
 
 
 class Municipality(NamedModel):
@@ -55,7 +55,7 @@ class Municipality(NamedModel):
 
     insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9, unique=True)
-    zipcodes = db.ManyToManyField(ZipCode, related_name='municipalities')
+    postcodes = db.ManyToManyField(PostCode, related_name='municipalities')
 
 
 class District(NamedModel):
@@ -104,7 +104,7 @@ class HouseNumber(Model):
     locality = db.ForeignKeyField(Locality, null=True)
     cia = db.CharField(max_length=100)
     cea = db.CharField(max_length=10, null=True)
-    zipcode = db.ForeignKeyField(ZipCode, null=True)
+    postcode = db.ForeignKeyField(PostCode, null=True)
     districts = db.ManyToManyField(District, related_name='housenumbers')
 
     class Meta:

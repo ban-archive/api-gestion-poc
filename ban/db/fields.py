@@ -7,7 +7,7 @@ from postgis import Point
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
-           'BooleanField', 'BinaryJSONField', 'ZipCodeField',
+           'BooleanField', 'BinaryJSONField', 'PostCodeField',
            'ManyToManyField']
 
 
@@ -130,7 +130,7 @@ class BooleanField(peewee.BooleanField):
     schema_type = 'bool'
 
 
-class ZipCodeField(CharField):
+class PostCodeField(CharField):
 
     def __init__(self, *args, **kwargs):
         kwargs['max_length'] = 5
@@ -140,7 +140,7 @@ class ZipCodeField(CharField):
     def coerce(self, value):
         value = str(value)
         if not len(value) == 5 or not value.isdigit():
-            raise ValueError('Invalid zipcode')
+            raise ValueError('Invalid postcode')
         return value
 
 

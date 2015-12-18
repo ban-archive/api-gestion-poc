@@ -5,7 +5,7 @@ from ban.core import models
 
 from .factories import (DistrictFactory, HouseNumberFactory,
                         MunicipalityFactory, PositionFactory, StreetFactory,
-                        ZipCodeFactory)
+                        PostCodeFactory)
 
 
 def test_municipality_is_created_with_version_1():
@@ -52,26 +52,26 @@ def test_municipality_diff_contain_only_changed_data():
     assert diff.diff['name']['new'] == "Orvanne"
 
 
-def test_municipality_zipcodes():
-    zipcode1 = ZipCodeFactory(code="75010")
-    zipcode2 = ZipCodeFactory(code="75011")
+def test_municipality_postcodes():
+    postcode1 = PostCodeFactory(code="75010")
+    postcode2 = PostCodeFactory(code="75011")
     municipality = MunicipalityFactory(name="Paris")
-    municipality.zipcodes.add(zipcode1)
-    municipality.zipcodes.add(zipcode2)
-    zipcodes = municipality.zipcodes
-    assert len(zipcodes) == 2
-    assert zipcode1 in zipcodes
-    assert zipcode2 in zipcodes
+    municipality.postcodes.add(postcode1)
+    municipality.postcodes.add(postcode2)
+    postcodes = municipality.postcodes
+    assert len(postcodes) == 2
+    assert postcode1 in postcodes
+    assert postcode2 in postcodes
 
 
-def test_zipcode_municipalities():
-    zipcode = ZipCodeFactory(code="31310")
+def test_postcode_municipalities():
+    postcode = PostCodeFactory(code="31310")
     municipality1 = MunicipalityFactory(name="Montbrun-Bocage")
     municipality2 = MunicipalityFactory(name="Montesquieu-Volvestre")
-    municipality1.zipcodes.add(zipcode)
-    municipality2.zipcodes.add(zipcode)
-    assert municipality1 in zipcode.municipalities
-    assert municipality2 in zipcode.municipalities
+    municipality1.postcodes.add(postcode)
+    municipality2.postcodes.add(postcode)
+    assert municipality1 in postcode.municipalities
+    assert municipality2 in postcode.municipalities
 
 
 def test_municipality_as_resource():

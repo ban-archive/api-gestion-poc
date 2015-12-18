@@ -72,11 +72,11 @@ class BaseFactory(BaseTestModel):
         abstract = True
 
 
-class ZipCodeFactory(BaseFactory):
+class PostCodeFactory(BaseFactory):
     code = FuzzyInteger(10000, 97000)
 
     class Meta:
-        model = models.ZipCode
+        model = models.PostCode
 
 
 class MunicipalityFactory(BaseFactory):

@@ -6,9 +6,9 @@ from ban.core.versioning import Diff, Version, IdentifierRedirect
 from . import helpers
 
 models = [Version, Diff, IdentifierRedirect, amodels.User, amodels.Client,
-          amodels.Grant, amodels.Session, amodels.Token, cmodels.ZipCode,
+          amodels.Grant, amodels.Session, amodels.Token, cmodels.PostCode,
           cmodels.Municipality, cmodels.District,
-          cmodels.Municipality.zipcodes.get_through_model(),
+          cmodels.Municipality.postcodes.get_through_model(),
           cmodels.Street, cmodels.Locality, cmodels.HouseNumber,
           cmodels.HouseNumber.districts.get_through_model(),
           cmodels.Position]

@@ -19,9 +19,9 @@ def test_token_can_be_instanciated():
     assert token.access_token
 
 
-def test_zipcode_can_be_instanciated():
-    zipcode = factories.ZipCodeFactory(code='31310')
-    assert zipcode.code == '31310'
+def test_postcode_can_be_instanciated():
+    postcode = factories.PostCodeFactory(code='31310')
+    assert postcode.code == '31310'
 
 
 def test_municipality_can_be_instanciated():
