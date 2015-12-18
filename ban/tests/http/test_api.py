@@ -1,14 +1,15 @@
 import json
 
-import falcon
 import pytest
 
+import falcon
 from ban import http
-from ban.core import models as cmodels
 from ban.auth import models as amodels
+from ban.core import models as cmodels
 
-from ..factories import (HouseNumberFactory, MunicipalityFactory,
-                         PositionFactory, StreetFactory, DistrictFactory)
+from ..factories import (DistrictFactory, HouseNumberFactory,
+                         MunicipalityFactory, PositionFactory, PostCodeFactory,
+                         StreetFactory)
 from .utils import authorize
 
 pytestmark = pytest.mark.django_db
@@ -264,7 +265,7 @@ def test_replace_housenumber_with_missing_field_fails(client, url):
 
 
 @authorize
-def test_create_housenumber_with_districts(client, url):
+def test_patch_housenumber_with_districts(client, url):
     housenumber = HouseNumberFactory()
     district = DistrictFactory(municipality=housenumber.parent.municipality)
     data = {
@@ -628,6 +629,18 @@ def test_get_municipality(get, url):
     assert resp.json['name'] == 'Cabour'
 
 
+def test_get_municipality_with_postcodes(get, url):
+    postcode = PostCodeFactory(code="33000")
+    municipality = MunicipalityFactory(name="Cabour")
+    municipality.postcodes.add(postcode)
+    uri = url('municipality-resource', identifier=municipality.id)
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['id']
+    assert resp.json['name'] == 'Cabour'
+    assert resp.json['postcodes'] == ['33000']
+
+
 def test_get_municipality_without_explicit_identifier(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     uri = url('municipality-resource', identifier=municipality.id)
@@ -748,6 +761,37 @@ def test_cannot_duplicate_municipality(client, url):
     assert '12345' in resp.json['errors']['insee']
 
 
+@authorize
+def test_create_municipality_with_postcodes(client, url):
+    postcode = PostCodeFactory(code="09350")
+    data = {
+        "version": 1,
+        "name": "Fornex",
+        "insee": "12345",
+        "siren": '123456789',
+        "postcodes": postcode.id
+    }
+    resp = client.post(url('municipality'), data)
+    assert resp.status == falcon.HTTP_201
+    municipality = cmodels.Municipality.first()
+    assert postcode in municipality.postcodes
+
+
+@authorize
+def test_patch_municipality_with_postcodes(client, url):
+    postcode = PostCodeFactory(code="09350")
+    municipality = MunicipalityFactory()
+    data = {
+        "version": 2,
+        "postcodes": postcode.id
+    }
+    uri = url('municipality-resource', identifier=municipality.id)
+    resp = client.post(uri, data)
+    assert resp.status == falcon.HTTP_200
+    municipality = cmodels.Municipality.first()
+    assert postcode in municipality.postcodes
+
+
 def test_get_district(get, url):
     district = DistrictFactory(name="Lhomme")
     resp = get(url('district-resource', identifier=district.id))
@@ -776,6 +820,39 @@ def test_create_district(client, url):
     assert resp.json['attributes'] == {"key": "value"}
     assert cmodels.District.select().count() == 1
     uri = "https://falconframework.org{}".format(url('district-resource',
+                                                 identifier=resp.json['id']))
+    assert resp.headers['Location'] == uri
+
+
+def test_get_postcode(get, url):
+    postcode = PostCodeFactory(code="09350")
+    resp = get(url('postcode-resource', identifier=postcode.id))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['id']
+    assert resp.json['code'] == '09350'
+
+
+def test_get_postcode_with_code(get, url):
+    PostCodeFactory(code="09350")
+    resp = get(url('postcode-resource', identifier='code:09350'))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['id']
+    assert resp.json['code'] == '09350'
+
+
+@authorize
+def test_create_postcode(client, url):
+    assert not cmodels.PostCode.select().count()
+    data = {
+        "version": 1,
+        "code": "09350"
+    }
+    resp = client.post(url('postcode'), data)
+    assert resp.status == falcon.HTTP_201
+    assert resp.json['id']
+    assert resp.json['code'] == '09350'
+    assert cmodels.PostCode.select().count() == 1
+    uri = "https://falconframework.org{}".format(url('postcode-resource',
                                                  identifier=resp.json['id']))
     assert resp.headers['Location'] == uri
 

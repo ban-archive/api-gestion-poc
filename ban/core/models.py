@@ -51,11 +51,15 @@ class PostCode(Model):
 
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
-    resource_fields = ['name', 'insee', 'siren']
+    resource_fields = ['name', 'insee', 'siren', 'postcodes']
 
     insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9, unique=True)
     postcodes = db.ManyToManyField(PostCode, related_name='municipalities')
+
+    @property
+    def postcodes_resource(self):
+        return [p.code for p in self.postcodes]
 
 
 class District(NamedModel):

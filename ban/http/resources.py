@@ -209,6 +209,10 @@ class District(VersionnedResource):
     model = models.District
 
 
+class Postcode(VersionnedResource):
+    model = models.PostCode
+
+
 class Municipality(VersionnedResource):
     model = models.Municipality
 

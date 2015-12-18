@@ -4,8 +4,8 @@ import pytest
 from ban.core import models
 
 from .factories import (DistrictFactory, HouseNumberFactory,
-                        MunicipalityFactory, PositionFactory, StreetFactory,
-                        PostCodeFactory)
+                        MunicipalityFactory, PositionFactory, PostCodeFactory,
+                        StreetFactory)
 
 
 def test_municipality_is_created_with_version_1():

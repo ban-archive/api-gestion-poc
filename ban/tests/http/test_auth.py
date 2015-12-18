@@ -1,5 +1,6 @@
-import falcon
 import pytest
+
+import falcon
 
 from ..factories import ClientFactory, UserFactory
 
