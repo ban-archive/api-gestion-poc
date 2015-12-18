@@ -37,6 +37,16 @@ def test_api_url(name, kwargs, expected, url):
     assert url(name, **kwargs) == expected
 
 
+def test_root_url_returns_api_help(get):
+    resp = get('/')
+    assert 'contact' in resp.json
+
+
+def test_help_querystring_returns_endpoint_help(get):
+    resp = get('/municipality?help')
+    assert 'help' in resp.json
+
+
 def test_reverse_uri_are_attached_to_resource():
     assert hasattr(http.Municipality, 'root_uri')
     assert hasattr(http.Municipality, 'resource_uri')
