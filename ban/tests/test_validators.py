@@ -102,6 +102,13 @@ def test_can_update_position(session):
     assert position.version == 2
 
 
+def test_invalid_point_should_raise_an_error(session):
+    housenumber = HouseNumberFactory()
+    validator = models.Position.validator(housenumber=housenumber,
+                                          center=1)
+    assert 'center' in validator.errors
+
+
 def test_can_create_postcode(session):
     validator = models.PostCode.validator(code="31310")
     postcode = validator.save()
