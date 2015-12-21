@@ -25,7 +25,7 @@ def createuser(username=None, email=None, is_staff=False, **kwargs):
         username = helpers.prompt('Username')
     if not email:
         email = helpers.prompt('Email')
-    password = helpers.prompt('Password', confirmation=True)
+    password = helpers.prompt('Password', confirmation=True, hidden=True)
     validator = User.validator(username=username, email=email)
     if not validator.errors:
         user = validator.save()

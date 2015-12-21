@@ -1,4 +1,5 @@
 import csv
+import getpass
 import os
 import pkgutil
 import sys
@@ -80,7 +81,7 @@ def batch(func, iterable, chunksize=1000, max_value=None):
         bar.finish()
 
 
-def prompt(text, default=None, confirmation=False, coerce=None):
+def prompt(text, default=None, confirmation=False, coerce=None, hidden=False):
     """Prompts a user for input.  This is a convenience function that can
     be used to prompt a user for input later.
 
@@ -91,11 +92,12 @@ def prompt(text, default=None, confirmation=False, coerce=None):
     :param type: the type to use to check the value against.
     """
     result = None
+    func = getpass.getpass if hidden else input
 
     while 1:
         while 1:
             try:
-                result = input('{}: '.format(text))
+                result = func('{}: '.format(text))
             except (KeyboardInterrupt, EOFError):
                 abort('Bye.')
             if result:
@@ -112,7 +114,7 @@ def prompt(text, default=None, confirmation=False, coerce=None):
             return result
         while 1:
             try:
-                confirm = input('{} (again): '.format(text))
+                confirm = func('{} (again): '.format(text))
             except (KeyboardInterrupt, EOFError):
                 abort('Bye.')
             if confirm:
