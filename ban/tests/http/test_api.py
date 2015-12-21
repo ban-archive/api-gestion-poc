@@ -122,7 +122,10 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
     bbox = dict(north=2, south=0, west=0, east=2)
     resp = get(url('housenumber', query_string=bbox))
     assert resp.json['total'] == 1
-    assert resp.json['collection'][0] == position.housenumber.as_resource
+    # JSON transform internals tuples to lists.
+    resource = position.housenumber.as_resource
+    resource['center']['coordinates'] = list(resource['center']['coordinates'])  # noqa
+    assert resp.json['collection'][0] == resource
 
 
 def test_get_housenumber_collection_filtered_by_bbox_is_paginated(get, url):
@@ -151,7 +154,17 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get, url):
     bbox = dict(north=2, south=0, west=0, east=2)
     resp = get(url('housenumber', query_string=bbox))
     assert resp.json['total'] == 1
-    assert resp.json['collection'][0] == position.housenumber.as_resource
+    # JSON transform internals tuples to lists.
+    data = position.housenumber.as_resource
+    data['center']['coordinates'] = list(data['center']['coordinates'])
+    assert resp.json['collection'][0] == data
+
+
+def test_get_housenumber_with_position(get, url):
+    housenumber = HouseNumberFactory()
+    PositionFactory(housenumber=housenumber, center=(1, 1))
+    resp = get(url('housenumber-resource', identifier=housenumber.id))
+    assert resp.json['center'] == {'coordinates': [1, 1], 'type': 'Point'}
 
 
 def test_get_housenumber_positions(get, url):
