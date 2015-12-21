@@ -42,6 +42,11 @@ def test_root_url_returns_api_help(get):
     assert 'contact' in resp.json
 
 
+def test_404_returns_help_as_body(get):
+    resp = get('/invalid')
+    assert 'contact' in resp.json
+
+
 def test_help_querystring_returns_endpoint_help(get):
     resp = get('/municipality?help')
     assert 'help' in resp.json
