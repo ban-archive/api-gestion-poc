@@ -160,6 +160,10 @@ class HouseNumber(Model):
         position = self.position_set.first()
         return position.center.geojson if position else None
 
+    @property
+    def districts_resource(self):
+        return [d.as_relation for d in self.districts]
+
 
 class Position(Model):
     resource_fields = ['center', 'source', 'housenumber', 'attributes',

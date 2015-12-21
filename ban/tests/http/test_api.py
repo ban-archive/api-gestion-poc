@@ -95,6 +95,18 @@ def test_get_housenumber_with_cia(get, url):
     assert resp.json['number'] == "22"
 
 
+def test_get_housenumber_with_districts(get, url):
+    municipality = MunicipalityFactory()
+    district = DistrictFactory(municipality=municipality)
+    housenumber = HouseNumberFactory(districts=[district],
+                                     municipality=municipality)
+    resp = get(url('housenumber-resource', identifier=housenumber.id))
+    assert resp.status == falcon.HTTP_200
+    assert 'districts' in resp.json
+    assert resp.json['districts'][0]['id'] == district.id
+    assert resp.json['districts'][0]['name'] == district.name
+
+
 def test_get_housenumber_collection(get, url):
     objs = HouseNumberFactory.create_batch(5)
     resp = get(url('housenumber'))
