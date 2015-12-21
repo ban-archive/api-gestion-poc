@@ -181,7 +181,7 @@ class Housenumber(VersionnedResource):
         req.get_param_as_int('south', store=bbox)
         req.get_param_as_int('east', store=bbox)
         req.get_param_as_int('west', store=bbox)
-        if any(v is None for v in bbox.values()):
+        if not len(bbox) == 4:
             return None
         return bbox
 

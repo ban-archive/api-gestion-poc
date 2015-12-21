@@ -128,6 +128,22 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
     assert resp.json['collection'][0] == resource
 
 
+def test_missing_bbox_param_makes_bbox_ignored(get, url):
+    PositionFactory(center=(1, 1))
+    PositionFactory(center=(-1, -1))
+    bbox = dict(north=2, south=0, west=0)
+    resp = get(url('housenumber', query_string=bbox))
+    assert resp.json['total'] == 2
+
+
+def test_invalid_bbox_param_returns_bad_request(get, url):
+    PositionFactory(center=(1, 1))
+    PositionFactory(center=(-1, -1))
+    bbox = dict(north=2, south=0, west=0, east='invalid')
+    resp = get(url('housenumber', query_string=bbox))
+    assert resp.status == falcon.HTTP_400
+
+
 def test_get_housenumber_collection_filtered_by_bbox_is_paginated(get, url):
     PositionFactory.create_batch(9, center=(1, 1))
     params = dict(north=2, south=0, west=0, east=2, limit=5)
