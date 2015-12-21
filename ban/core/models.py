@@ -35,9 +35,6 @@ class NamedModel(Model):
     name = db.CharField(max_length=200)
     alias = db.ArrayField(db.CharField, null=True)
 
-    def __unicode__(self):
-        return self.name
-
     def __str__(self):
         return self.name
 

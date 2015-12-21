@@ -84,6 +84,11 @@ def test_municipality_as_resource():
     assert municipality.as_resource['id'] == municipality.id
 
 
+def test_municipality_str():
+    municipality = MunicipalityFactory(name="Salsein")
+    assert str(municipality) == 'Salsein'
+
+
 @pytest.mark.parametrize('factory,kwargs', [
     (MunicipalityFactory, {'insee': '12345'}),
     (MunicipalityFactory, {'siren': '123456789'}),
@@ -197,6 +202,16 @@ def test_cannot_duplicate_housenumber_on_same_street():
     HouseNumberFactory(street=street, ordinal="b", number="10")
     with pytest.raises(ValueError):
         HouseNumberFactory(street=street, ordinal="b", number="10")
+
+
+def test_cannot_create_housenumber_without_street_and_locality():
+    with pytest.raises(ValueError):
+        HouseNumberFactory(street=None, locality=None)
+
+
+def test_housenumber_str():
+    hn = HouseNumberFactory(ordinal="b", number="10")
+    assert str(hn) == '10 b'
 
 
 def test_can_create_two_housenumbers_with_same_number_but_different_streets():
