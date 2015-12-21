@@ -30,13 +30,14 @@ def process_row(metadata):
     klass = Street if kind == 'street' else Locality
     instance = klass.select().where(klass.fantoir == fantoir).first()
     if instance:
-        return report('Existing {}'.format(klass.__name__), {name: name,
-                                                             fantoir: fantoir})
+        return report('Existing {}'.format(klass.__name__),
+                      {name: name, fantoir: fantoir},
+                      report.WARNING)
 
     try:
         municipality = Municipality.get(Municipality.insee == insee)
     except Municipality.DoesNotExist:
-        return report('Error', 'Municipality does not exist: {}'.format(insee))
+        return report('Municipality does not exist', insee, report.ERROR)
 
     data = dict(
         name=name,
@@ -48,13 +49,13 @@ def process_row(metadata):
 
     if not validator.errors:
         item = validator.save()
-        report(kind, item)
+        report(kind, item, report.NOTICE)
         housenumbers = metadata.get('housenumbers')
         if housenumbers:
             for id, metadata in housenumbers.items():
                 add_housenumber(item, id, metadata)
     else:
-        report('Error', validator.errors)
+        report('Street error', validator.errors, report.ERROR)
 
 
 def add_housenumber(parent, id, metadata):
@@ -71,6 +72,6 @@ def add_housenumber(parent, id, metadata):
                                        housenumber=housenumber.id)
         if not validator.errors:
             validator.save()
-        report('housenumber', housenumber)
+        report('Housenumber', housenumber, report.NOTICE)
     else:
-        report('HouseNumber error', validator.errors)
+        report('Housenumber error', validator.errors, report.ERROR)

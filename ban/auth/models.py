@@ -26,6 +26,9 @@ class User(ResourceModel):
     class Meta:
         database = db.default
 
+    def __str__(self):
+        return self.username
+
     def set_password(self, password):
         # Waiting for https://github.com/coleifer/peewee/pull/672
         self.password = password

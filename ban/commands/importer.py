@@ -35,12 +35,12 @@ def add_municipality(data, update=False):
     except models.Municipality.DoesNotExist:
         instance = None
     if instance and not update:
-        return report('Existing', name)
+        return report('Existing', name, report.WARNING)
 
     data = dict(insee=insee, name=name, siren=siren, version=version)
     validator = models.Municipality.validator(instance=instance, **data)
     if not validator.errors:
         instance = validator.save()
-        report('Processed', instance)
+        report('Processed', instance, report.NOTICE)
     else:
-        report('Error', validator.errors)
+        report('Error', validator.errors, report.ERROR)

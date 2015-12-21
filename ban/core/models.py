@@ -100,7 +100,7 @@ class Street(BaseFantoirModel):
 class HouseNumber(Model):
     identifiers = ['cia']
     resource_fields = ['number', 'ordinal', 'street', 'cia', 'laposte',
-                       'districts', 'center']
+                       'districts', 'center', 'locality']
 
     number = db.CharField(max_length=16)
     ordinal = db.CharField(max_length=16, null=True)
