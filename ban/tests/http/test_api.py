@@ -690,6 +690,13 @@ def test_get_street_version(get, url):
     assert resp.json['version'] == 2
 
 
+def test_get_street_unknown_version_should_go_in_404(get, url):
+    street = StreetFactory(name="Rue de la Paix")
+    uri = url('street-version', identifier=street.id, version=2)
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_404
+
+
 @authorize
 def test_delete_street(client, url):
     street = StreetFactory()
