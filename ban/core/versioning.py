@@ -185,6 +185,7 @@ class Diff(db.Model):
     class Meta:
         validate_backrefs = False
         manager = SelectQuery
+        ordering = ('id', )
 
     def save(self, *args, **kwargs):
         if not self.diff:
