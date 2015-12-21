@@ -70,6 +70,16 @@ def test_cannot_duplicate_municipality_insee(session):
     assert '12345' in validator.errors['insee']
 
 
+def test_can_create_municipality_with_alias(session):
+    validator = models.Municipality.validator(name="Orvane",
+                                              alias=["Moret-sur-Loing"],
+                                              insee="12345",
+                                              siren="12345678")
+    assert not validator.errors
+    municipality = validator.save()
+    assert 'Moret-sur-Loing' in municipality.alias
+
+
 def test_can_create_position(session):
     housenumber = HouseNumberFactory()
     validator = models.Position.validator(housenumber=housenumber,
@@ -90,6 +100,13 @@ def test_can_update_position(session):
     assert len(models.Position.select()) == 1
     assert position.center == (3, 4)
     assert position.version == 2
+
+
+def test_invalid_point_should_raise_an_error(session):
+    housenumber = HouseNumberFactory()
+    validator = models.Position.validator(housenumber=housenumber,
+                                          center=1)
+    assert 'center' in validator.errors
 
 
 def test_can_create_postcode(session):

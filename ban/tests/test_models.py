@@ -84,6 +84,11 @@ def test_municipality_as_resource():
     assert municipality.as_resource['id'] == municipality.id
 
 
+def test_municipality_str():
+    municipality = MunicipalityFactory(name="Salsein")
+    assert str(municipality) == 'Salsein'
+
+
 @pytest.mark.parametrize('factory,kwargs', [
     (MunicipalityFactory, {'insee': '12345'}),
     (MunicipalityFactory, {'siren': '123456789'}),
@@ -92,6 +97,20 @@ def test_unique_fields(factory, kwargs):
     factory(**kwargs)
     with pytest.raises(peewee.IntegrityError):
         factory(**kwargs)
+
+
+def test_should_allow_deleting_municipality_not_linked():
+    municipality = MunicipalityFactory()
+    municipality.delete_instance()
+    assert not models.Municipality.select().count()
+
+
+def test_should_not_allow_deleting_municipality_linked_to_street():
+    municipality = MunicipalityFactory()
+    StreetFactory(municipality=municipality)
+    with pytest.raises(peewee.IntegrityError):
+        municipality.delete_instance()
+    assert models.Municipality.get(models.Municipality.id == municipality.id)
 
 
 def test_street_is_versioned():
@@ -111,6 +130,20 @@ def test_street_is_versioned():
     diff = street.versions[1].diff
     assert len(diff.diff) == 1  # name, version
     assert diff.diff['name']['new'] == "Rue des Poires"
+
+
+def test_should_allow_deleting_street_not_linked():
+    street = StreetFactory()
+    street.delete_instance()
+    assert not models.Street.select().count()
+
+
+def test_should_not_allow_deleting_street_linked_to_housenumber():
+    street = StreetFactory()
+    HouseNumberFactory(street=street)
+    with pytest.raises(peewee.IntegrityError):
+        street.delete_instance()
+    assert models.Street.get(models.Street.id == street.id)
 
 
 def test_tmp_fantoir_should_use_name():
@@ -171,6 +204,16 @@ def test_cannot_duplicate_housenumber_on_same_street():
         HouseNumberFactory(street=street, ordinal="b", number="10")
 
 
+def test_cannot_create_housenumber_without_street_and_locality():
+    with pytest.raises(ValueError):
+        HouseNumberFactory(street=None, locality=None)
+
+
+def test_housenumber_str():
+    hn = HouseNumberFactory(ordinal="b", number="10")
+    assert str(hn) == '10 b'
+
+
 def test_can_create_two_housenumbers_with_same_number_but_different_streets():
     street = StreetFactory()
     street2 = StreetFactory()
@@ -204,6 +247,20 @@ def test_add_district_to_housenumber():
     housenumber.districts.add(district)
     assert district in housenumber.districts
     assert housenumber in district.housenumbers
+
+
+def test_should_allow_deleting_housenumber_not_linked():
+    housenumber = HouseNumberFactory()
+    housenumber.delete_instance()
+    assert not models.HouseNumber.select().count()
+
+
+def test_should_not_allow_deleting_housenumber_not_linked():
+    housenumber = HouseNumberFactory()
+    PositionFactory(housenumber=housenumber)
+    with pytest.raises(peewee.IntegrityError):
+        housenumber.delete_instance()
+    assert models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
 
 
 def test_position_is_versioned():

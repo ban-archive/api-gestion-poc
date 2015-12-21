@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/etalab/ban.svg)](https://travis-ci.org/etalab/ban)
+[![Build Status](https://travis-ci.org/etalab/ban.svg)](https://travis-ci.org/etalab/ban) [![codecov.io](https://codecov.io/github/etalab/ban/coverage.svg?branch=master)](https://codecov.io/github/etalab/ban?branch=master)
 
 # BAN
 

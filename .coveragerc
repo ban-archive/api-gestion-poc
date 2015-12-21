@@ -1,0 +1,7 @@
+[run]
+omit =
+    ban/bin/__init__.py
+    ban/commands/oldban.py
+    ban/commands/server.py
+    ban/commands/helpers.py
+    ban/tests/*

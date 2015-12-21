@@ -164,8 +164,10 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     @property
     def as_relation(self):
-        return {f: self.as_relation_field(f)
-                for f in self.get_resource_fields()}
+        fields = self.get_resource_fields()
+        if 'version' in fields:
+            fields.remove('version')
+        return {f: self.as_relation_field(f) for f in fields}
 
     def as_resource_field(self, name):
         value = getattr(self, '{}_resource'.format(name), getattr(self, name))

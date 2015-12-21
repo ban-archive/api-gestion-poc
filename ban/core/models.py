@@ -32,10 +32,8 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
 
 
 class NamedModel(Model):
-    name = db.CharField(max_length=200, verbose_name=_("name"))
-
-    def __unicode__(self):
-        return self.name
+    name = db.CharField(max_length=200)
+    alias = db.ArrayField(db.CharField, null=True)
 
     def __str__(self):
         return self.name
@@ -53,7 +51,7 @@ class PostCode(Model):
 
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
-    resource_fields = ['name', 'insee', 'siren', 'postcodes']
+    resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
 
     insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9, unique=True)
@@ -66,7 +64,7 @@ class Municipality(NamedModel):
 
 class District(NamedModel):
     """Submunicipal non administrative area."""
-    resource_fields = ['name', 'attributes', 'municipality']
+    resource_fields = ['name', 'alias', 'attributes', 'municipality']
 
     attributes = db.HStoreField(null=True)
     municipality = db.ForeignKeyField(Municipality)
@@ -74,7 +72,7 @@ class District(NamedModel):
 
 class BaseFantoirModel(NamedModel):
     identifiers = ['fantoir']
-    resource_fields = ['name', 'fantoir', 'municipality']
+    resource_fields = ['name', 'alias', 'fantoir', 'municipality']
 
     fantoir = db.CharField(max_length=9, null=True)
     municipality = db.ForeignKeyField(Municipality)
@@ -102,7 +100,7 @@ class Street(BaseFantoirModel):
 class HouseNumber(Model):
     identifiers = ['cia']
     resource_fields = ['number', 'ordinal', 'street', 'cia', 'cea',
-                       'districts']
+                       'districts', 'center']
 
     number = db.CharField(max_length=16)
     ordinal = db.CharField(max_length=16, null=True)
@@ -158,6 +156,10 @@ class HouseNumber(Model):
     def center(self):
         position = self.position_set.first()
         return position.center.geojson if position else None
+
+    @property
+    def districts_resource(self):
+        return [d.as_relation for d in self.districts]
 
 
 class Position(Model):

@@ -79,5 +79,8 @@ def test_export_resources():
         assert len(lines) == 3
         assert json.loads(lines[0]) == mun.as_list
         assert json.loads(lines[1]) == street.as_list
-        assert json.loads(lines[2]) == hn.as_list
+        resource = hn.as_list
+        # JSON transform internals tuples to lists.
+        resource['center']['coordinates'] = list(resource['center']['coordinates'])  # noqa
+        assert json.loads(lines[2]) == resource
     path.unlink()

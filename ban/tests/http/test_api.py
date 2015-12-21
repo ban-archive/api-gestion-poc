@@ -37,6 +37,16 @@ def test_api_url(name, kwargs, expected, url):
     assert url(name, **kwargs) == expected
 
 
+def test_root_url_returns_api_help(get):
+    resp = get('/')
+    assert 'contact' in resp.json
+
+
+def test_help_querystring_returns_endpoint_help(get):
+    resp = get('/municipality?help')
+    assert 'help' in resp.json
+
+
 def test_reverse_uri_are_attached_to_resource():
     assert hasattr(http.Municipality, 'root_uri')
     assert hasattr(http.Municipality, 'resource_uri')
@@ -85,6 +95,19 @@ def test_get_housenumber_with_cia(get, url):
     assert resp.json['number'] == "22"
 
 
+def test_get_housenumber_with_districts(get, url):
+    municipality = MunicipalityFactory()
+    district = DistrictFactory(municipality=municipality)
+    housenumber = HouseNumberFactory(districts=[district],
+                                     municipality=municipality)
+    resp = get(url('housenumber-resource', identifier=housenumber.id))
+    assert resp.status == falcon.HTTP_200
+    assert 'districts' in resp.json
+    assert resp.json['districts'][0]['id'] == district.id
+    assert resp.json['districts'][0]['name'] == district.name
+    assert 'version' not in resp.json['districts'][0]
+
+
 def test_get_housenumber_collection(get, url):
     objs = HouseNumberFactory.create_batch(5)
     resp = get(url('housenumber'))
@@ -99,7 +122,10 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
     bbox = dict(north=2, south=0, west=0, east=2)
     resp = get(url('housenumber', query_string=bbox))
     assert resp.json['total'] == 1
-    assert resp.json['collection'][0] == position.housenumber.as_resource
+    # JSON transform internals tuples to lists.
+    resource = position.housenumber.as_resource
+    resource['center']['coordinates'] = list(resource['center']['coordinates'])  # noqa
+    assert resp.json['collection'][0] == resource
 
 
 def test_get_housenumber_collection_filtered_by_bbox_is_paginated(get, url):
@@ -128,7 +154,17 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get, url):
     bbox = dict(north=2, south=0, west=0, east=2)
     resp = get(url('housenumber', query_string=bbox))
     assert resp.json['total'] == 1
-    assert resp.json['collection'][0] == position.housenumber.as_resource
+    # JSON transform internals tuples to lists.
+    data = position.housenumber.as_resource
+    data['center']['coordinates'] = list(data['center']['coordinates'])
+    assert resp.json['collection'][0] == data
+
+
+def test_get_housenumber_with_position(get, url):
+    housenumber = HouseNumberFactory()
+    PositionFactory(housenumber=housenumber, center=(1, 1))
+    resp = get(url('housenumber-resource', identifier=housenumber.id))
+    assert resp.json['center'] == {'coordinates': [1, 1], 'type': 'Point'}
 
 
 def test_get_housenumber_positions(get, url):
@@ -275,6 +311,33 @@ def test_patch_housenumber_with_districts(client, url):
     assert resp.status == falcon.HTTP_200
     hn = cmodels.HouseNumber.get(cmodels.HouseNumber.id == housenumber.id)
     assert district in hn.districts
+
+
+@authorize
+def test_delete_housenumber(client, url):
+    housenumber = HouseNumberFactory()
+    uri = url('housenumber-resource', identifier=housenumber.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_204
+    assert not cmodels.HouseNumber.select().count()
+
+
+def test_cannot_delete_housenumber_if_not_authorized(client, url):
+    housenumber = HouseNumberFactory()
+    uri = url('housenumber-resource', identifier=housenumber.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_401
+    assert cmodels.HouseNumber.get(cmodels.HouseNumber.id == housenumber.id)
+
+
+@authorize
+def test_cannot_delete_housenumber_if_linked_to_position(client, url):
+    housenumber = HouseNumberFactory()
+    PositionFactory(housenumber=housenumber)
+    uri = url('housenumber-resource', identifier=housenumber.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_409
+    assert cmodels.HouseNumber.get(cmodels.HouseNumber.id == housenumber.id)
 
 
 @authorize
@@ -501,6 +564,23 @@ def test_patch_with_wrong_version_should_fail(client, url):
 
 
 @authorize
+def test_delete_position(client, url):
+    position = PositionFactory()
+    uri = url('position-resource', identifier=position.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_204
+    assert not cmodels.Position.select().count()
+
+
+def test_cannot_delete_position_if_not_authorized(client, url):
+    position = PositionFactory()
+    uri = url('position-resource', identifier=position.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_401
+    assert cmodels.Position.get(cmodels.Position.id == position.id)
+
+
+@authorize
 def test_create_street(client, url):
     municipality = MunicipalityFactory(name="Cabour")
     assert not cmodels.Street.select().count()
@@ -608,6 +688,33 @@ def test_get_street_version(get, url):
     assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == 'Rue de la Guerre'
     assert resp.json['version'] == 2
+
+
+@authorize
+def test_delete_street(client, url):
+    street = StreetFactory()
+    uri = url('street-resource', identifier=street.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_204
+    assert not cmodels.Street.select().count()
+
+
+def test_cannot_delete_street_if_not_authorized(client, url):
+    street = StreetFactory()
+    uri = url('street-resource', identifier=street.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_401
+    assert cmodels.Street.get(cmodels.Street.id == street.id)
+
+
+@authorize
+def test_cannot_delete_street_if_linked_to_housenumber(client, url):
+    street = StreetFactory()
+    HouseNumberFactory(street=street)
+    uri = url('street-resource', identifier=street.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_409
+    assert cmodels.Street.get(cmodels.Street.id == street.id)
 
 
 def test_get_municipality(get, url):
@@ -779,6 +886,84 @@ def test_patch_municipality_with_postcodes(client, url):
     assert postcode in municipality.postcodes
 
 
+@authorize
+def test_create_municipality_with_one_alias(client, url):
+    data = {
+        "name": "Orvane",
+        "insee": "12345",
+        "siren": '123456789',
+        "alias": 'Moret-sur-Loing'
+    }
+    resp = client.post(url('municipality'), data)
+    assert resp.status == falcon.HTTP_201
+    municipality = cmodels.Municipality.first()
+    assert 'Moret-sur-Loing' in municipality.alias
+
+
+@authorize
+def test_create_municipality_with_list_of_aliases(client, url):
+    data = {
+        "name": "Orvane",
+        "insee": "12345",
+        "siren": '123456789',
+        "alias": ['Moret-sur-Loing', 'Another-Name']
+    }
+    headers = {'Content-Type': 'application/json'}
+    resp = client.post(url('municipality'), json.dumps(data), headers=headers)
+    assert resp.status == falcon.HTTP_201
+    municipality = cmodels.Municipality.first()
+    assert 'Moret-sur-Loing' in municipality.alias
+    assert 'Another-Name' in municipality.alias
+
+
+@authorize
+def test_patch_municipality_with_alias(client, url):
+    municipality = MunicipalityFactory()
+    data = {
+        "version": 2,
+        "alias": ['Moret-sur-Loing']
+    }
+    uri = url('municipality-resource', identifier=municipality.id)
+    resp = client.patch(uri, json.dumps(data))
+    assert resp.status == falcon.HTTP_200
+    municipality = cmodels.Municipality.first()
+    assert 'Moret-sur-Loing' in municipality.alias
+
+
+@authorize
+def test_delete_municipality(client, url):
+    municipality = MunicipalityFactory()
+    uri = url('municipality-resource', identifier=municipality.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_204
+    assert not cmodels.Municipality.select().count()
+
+
+def test_cannot_delete_municipality_if_not_authorized(client, url):
+    municipality = MunicipalityFactory()
+    uri = url('municipality-resource', identifier=municipality.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_401
+    assert cmodels.Municipality.get(cmodels.Municipality.id == municipality.id)
+
+
+@authorize
+def test_cannot_delete_municipality_if_linked_to_street(client, url):
+    municipality = MunicipalityFactory()
+    StreetFactory(municipality=municipality)
+    uri = url('municipality-resource', identifier=municipality.id)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_409
+    assert cmodels.Municipality.get(cmodels.Municipality.id == municipality.id)
+
+
+@authorize
+def test_delete_unknown_municipality_should_return_not_found(client, url):
+    uri = url('municipality-resource', identifier=11)
+    resp = client.delete(uri)
+    assert resp.status == falcon.HTTP_404
+
+
 def test_get_district(get, url):
     district = DistrictFactory(name="Lhomme")
     resp = get(url('district-resource', identifier=district.id))
@@ -808,6 +993,20 @@ def test_create_district(client, url):
     uri = "https://falconframework.org{}".format(url('district-resource',
                                                  identifier=resp.json['id']))
     assert resp.headers['Location'] == uri
+
+
+@authorize
+def test_create_district_with_json_string_as_attribute(client, url):
+    assert not cmodels.District.select().count()
+    municipality = MunicipalityFactory()
+    data = {
+        "name": "Lhomme",
+        "attributes": json.dumps({"key": "value"}),
+        "municipality": municipality.id
+    }
+    resp = client.post(url('district'), data)
+    assert resp.status == falcon.HTTP_201
+    assert resp.json['attributes'] == {"key": "value"}
 
 
 def test_get_postcode(get, url):

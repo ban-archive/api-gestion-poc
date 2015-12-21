@@ -21,6 +21,7 @@ cache:
 
 install:
 - pip install cython
+- pip install codecov pytest-cov
 - pip install -r requirements-dev.txt
 - python setup.py develop
 
@@ -29,7 +30,10 @@ before_script:
 - psql -U postgres -c "create extension postgis" -d test_ban
 - psql -U postgres -c "create extension hstore" -d test_ban
 
-script: py.test
+after_success:
+  - codecov
+
+script: py.test --cov=ban/
 
 notifications:
   irc:

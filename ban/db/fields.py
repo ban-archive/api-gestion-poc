@@ -121,6 +121,11 @@ class UUIDField(peewee.UUIDField):
 class ArrayField(postgres_ext.ArrayField):
     schema_type = 'list'
 
+    def coerce(self, value):
+        if value and not isinstance(value, (list, tuple)):
+            value = [value]
+        return value
+
 
 class DateTimeField(peewee.DateTimeField):
     pass

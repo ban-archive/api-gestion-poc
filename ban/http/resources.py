@@ -136,6 +136,18 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
             resp.status = falcon.HTTP_UNPROCESSABLE_ENTITY
             resp.json(errors=validator.errors)
 
+    @auth.protect
+    @app.endpoint(path='/{identifier}')
+    def on_delete_resource(self, req, resp, *args, **params):
+        """Delete {resource}."""
+        instance = self.get_object(**params)
+        try:
+            instance.delete_instance()
+        except:
+            resp.status = falcon.HTTP_CONFLICT
+        else:
+            resp.status = falcon.HTTP_NO_CONTENT
+
 
 class VersionnedResource(BaseCRUD):
 
