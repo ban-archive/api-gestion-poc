@@ -995,6 +995,20 @@ def test_create_district(client, url):
     assert resp.headers['Location'] == uri
 
 
+@authorize
+def test_create_district_with_json_string_as_attribute(client, url):
+    assert not cmodels.District.select().count()
+    municipality = MunicipalityFactory()
+    data = {
+        "name": "Lhomme",
+        "attributes": json.dumps({"key": "value"}),
+        "municipality": municipality.id
+    }
+    resp = client.post(url('district'), data)
+    assert resp.status == falcon.HTTP_201
+    assert resp.json['attributes'] == {"key": "value"}
+
+
 def test_get_postcode(get, url):
     postcode = PostCodeFactory(code="09350")
     resp = get(url('postcode-resource', identifier=postcode.id))
