@@ -2,6 +2,7 @@ from datetime import datetime
 import pickle
 
 import peewee
+from playhouse.fields import ManyToManyQuery
 
 from ban import db
 from ban.auth.models import Session
@@ -50,15 +51,17 @@ class Versioned(db.Model, metaclass=BaseVersioned):
 
     def _serialize(self, fields):
         data = {}
-        for field in fields:
+        for name, field in fields.items():
             value = getattr(self, field.name)
             if isinstance(value, peewee.Model):
                 value = value.id
+            elif isinstance(value, ManyToManyQuery):
+                value = [o.id for o in value]
             data[field.name] = value
         return data
 
     def serialize(self, fields=None):
-        return pickle.dumps(self._serialize(self._meta.get_fields()))
+        return pickle.dumps(self._serialize(self._meta.fields))
 
     def store_version(self):
         old = None
