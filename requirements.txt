@@ -6,4 +6,4 @@ git+https://github.com/coleifer/peewee
 progressbar2==3.6.0
 psycopg2==2.6.1
 git+https://github.com/yohanboniface/falcon-oauth
-psycopg-postgis==0.1.0
+psycopg-postgis==0.1.1
