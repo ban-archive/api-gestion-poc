@@ -13,10 +13,13 @@ parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(title='Available commands', metavar='')
 
 
-def report(name, item):
+def report(name, item, level=1):
     if not Command.current:
         return
-    Command.current.report(name, item)
+    Command.current.report(name, item, level=level)
+report.ERROR = 1  # Shown when using --verbose or -v.
+report.WARNING = 2  # Only shown when using -vv.
+report.NOTICE = 3  # Only shown when using -vvv.
 
 
 class Command:
@@ -30,8 +33,7 @@ class Command:
         'db_name': None,
         'session_user': None,
         'workers': os.cpu_count(),
-        'verbose': False,
-        'filter': False,
+        'verbose': {'action': 'count', 'default': None},
     }
 
     def __init__(self, command):
@@ -78,8 +80,10 @@ class Command:
         self._on_after_call.append(func)
 
     def set_globals(self):
-        for name, default in self._globals.items():
-            self.add_argument(name, default)
+        for name, kwargs in self._globals.items():
+            if not isinstance(kwargs, dict):
+                kwargs = {'default': kwargs}
+            self.add_argument(name, **kwargs)
 
     def parse_globals(self, parsed, **kwargs):
         for name in self._globals.keys():
@@ -120,16 +124,20 @@ class Command:
             return ''
 
     def init_parser(self):
-        self.parser = subparsers.add_parser(self.name, help=self.short_help)
+        self.parser = subparsers.add_parser(self.name, help=self.short_help,
+                                            conflict_handler='resolve')
         self.parser.set_defaults(func=self.invoke)
         for name, default in self.spec:
             self.add_argument(name, default)
 
-    def add_argument(self, name, default, **kwargs):
+    def add_argument(self, name, default=NO_DEFAULT, **kwargs):
             kwargs['help'] = self.parse_parameter_help(name)
+            args = [name]
             if default != NO_DEFAULT:
                 kwargs['dest'] = name
-                name = '--{}'.format(name.replace('_', '-'))
+                if '_' not in name:
+                    args.append('-{}'.format(name[0]))
+                args[0] = '--{}'.format(name.replace('_', '-'))
                 kwargs['default'] = default
                 type_ = type(default)
                 if type_ == bool:
@@ -142,25 +150,26 @@ class Command:
                 elif callable(default):
                     kwargs['type'] = type_
                     kwargs['default'] = ''
-            args = [name]
             self.parser.add_argument(*args, **kwargs)
 
     def set_defaults(self, **kwargs):
         self.parser.set_defaults(**kwargs)
 
-    def report(self, name, item):
+    def report(self, name, item, level):
         if name not in self._reports:
             self._reports[name] = []
-        self._reports[name].append(item)
+        self._reports[name].append((item, level))
 
     def reporting(self):
         if self._reports:
             sys.stdout.write('\n# Reports:')
             for name, items in self._reports.items():
                 sys.stdout.write('\n- {}: {}'.format(name, len(items)))
-                if config.get('VERBOSE'):
-                    for item in items:
-                        sys.stdout.write('\n  . {}'.format(item))
+                verbosity = config.get('VERBOSE')
+                if verbosity:
+                    for item, level in items:
+                        if verbosity >= level:
+                            sys.stdout.write('\n  . {}'.format(item))
         sys.stdout.write('\n')
 
 

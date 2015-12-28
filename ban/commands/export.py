@@ -19,4 +19,4 @@ def resources(path, **kwargs):
             for data in resource.select().as_resource_list():
                 f.write(dumps(data) + '\n')
                 # Memory consumption when exporting all France housenumbers?
-                report(resource.__name__, data)
+                report(resource.__name__, data, report.NOTICE)

@@ -1,5 +1,5 @@
 -r requirements.txt
 pytest==2.8.2
-git+https://github.com/yohanboniface/pytest-falcon
+pytest-falcon
 factory-boy==2.6.0
 factory-boy-peewee==0.0.3

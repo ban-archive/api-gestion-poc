@@ -99,15 +99,15 @@ class Street(BaseFantoirModel):
 
 class HouseNumber(Model):
     identifiers = ['cia']
-    resource_fields = ['number', 'ordinal', 'street', 'cia', 'cea',
-                       'districts', 'center']
+    resource_fields = ['number', 'ordinal', 'street', 'cia', 'laposte',
+                       'districts', 'center', 'locality']
 
     number = db.CharField(max_length=16)
     ordinal = db.CharField(max_length=16, null=True)
     street = db.ForeignKeyField(Street, null=True)
     locality = db.ForeignKeyField(Locality, null=True)
     cia = db.CharField(max_length=100)
-    cea = db.CharField(max_length=10, null=True)
+    laposte = db.CharField(max_length=10, null=True)
     postcode = db.ForeignKeyField(PostCode, null=True)
     districts = db.ManyToManyField(District, related_name='housenumbers')
 

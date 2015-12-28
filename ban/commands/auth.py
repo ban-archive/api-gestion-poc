@@ -1,7 +1,5 @@
-import sys
-
 from ban.auth.models import Token, User
-from ban.commands import command
+from ban.commands import command, report
 from ban.core import context
 
 from . import helpers
@@ -14,7 +12,7 @@ def dummytoken(**kwargs):
     session = context.get('session')
     Token.delete().where(Token.access_token == 'token').execute()
     Token.create(session=session.id, access_token="token", expires_in=3600*24)
-    sys.stdout.write('Created token "token"')
+    report('Created token', 'token', report.NOTICE)
 
 
 @command
@@ -27,7 +25,7 @@ def createuser(username=None, email=None, is_staff=False, **kwargs):
         username = helpers.prompt('Username')
     if not email:
         email = helpers.prompt('Email')
-    password = helpers.prompt('Password', confirmation=True)
+    password = helpers.prompt('Password', confirmation=True, hidden=True)
     validator = User.validator(username=username, email=email)
     if not validator.errors:
         user = validator.save()
@@ -35,6 +33,6 @@ def createuser(username=None, email=None, is_staff=False, **kwargs):
         if is_staff:
             user.is_staff = True
             user.save()
+        report('Created', user, report.NOTICE)
     else:
-        for field, error in validator.errors.items():
-            sys.stderr.write('{}: {}\n'.format(field, error))
+        report('Errored', validator.errors, report.ERROR)

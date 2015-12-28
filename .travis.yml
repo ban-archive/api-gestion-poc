@@ -20,6 +20,7 @@ cache:
   - $HOME/.cache/pip
 
 install:
+- pip install --upgrade pip
 - pip install cython
 - pip install codecov pytest-cov
 - pip install -r requirements-dev.txt
