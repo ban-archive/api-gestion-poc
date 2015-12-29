@@ -188,6 +188,13 @@ def test_get_housenumber_with_position(get, url):
     assert resp.json['center'] == {'coordinates': [1, 1], 'type': 'Point'}
 
 
+def test_get_housenumber_with_postcode(get, url):
+    postcode = PostCodeFactory(code="12345")
+    housenumber = HouseNumberFactory(postcode=postcode)
+    resp = get(url('housenumber-resource', identifier=housenumber.id))
+    assert resp.json['postcode'] == "12345"
+
+
 def test_get_housenumber_positions(get, url):
     housenumber = HouseNumberFactory()
     pos1 = PositionFactory(housenumber=housenumber, center=(1, 1))
@@ -283,6 +290,36 @@ def test_create_housenumber_does_not_honour_version_field(client):
 
 
 @authorize
+def test_create_housenumber_with_postcode_id(client):
+    postcode = PostCodeFactory(code="12345")
+    street = StreetFactory(name="Rue de Bonbons")
+    data = {
+        "number": 20,
+        "street": 'fantoir:{}'.format(street.fantoir),
+        "postcode": postcode.id
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status == falcon.HTTP_201
+    assert cmodels.HouseNumber.select().count() == 1
+    assert cmodels.HouseNumber.first().postcode == postcode
+
+
+@authorize
+def test_create_housenumber_with_postcode_code(client):
+    postcode = PostCodeFactory(code="12345")
+    street = StreetFactory(name="Rue de Bonbons")
+    data = {
+        "number": 20,
+        "street": 'fantoir:{}'.format(street.fantoir),
+        "postcode": 'code:12345',
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status == falcon.HTTP_201
+    assert cmodels.HouseNumber.select().count() == 1
+    assert cmodels.HouseNumber.first().postcode == postcode
+
+
+@authorize
 def test_replace_housenumber(client, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     assert cmodels.HouseNumber.select().count() == 1
@@ -332,6 +369,21 @@ def test_patch_housenumber_with_districts(client, url):
     assert resp.status == falcon.HTTP_200
     hn = cmodels.HouseNumber.get(cmodels.HouseNumber.id == housenumber.id)
     assert district in hn.districts
+
+
+@authorize
+def test_patch_housenumber_with_postcode(client, url):
+    postcode = PostCodeFactory(code="12345")
+    housenumber = HouseNumberFactory()
+    data = {
+        "version": 2,
+        "postcode": postcode.id,
+    }
+    uri = url('housenumber-resource', identifier=housenumber.id)
+    resp = client.patch(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_200
+    hn = cmodels.HouseNumber.get(cmodels.HouseNumber.id == housenumber.id)
+    assert hn.postcode == postcode
 
 
 @authorize
