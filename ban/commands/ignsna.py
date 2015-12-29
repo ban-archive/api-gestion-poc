@@ -1,8 +1,11 @@
 import glob
 import os
+
+from peewee import IntegrityError
+
 from ban.commands import command, report
 from ban.core.models import (HouseNumber, Locality, Municipality, Position,
-                             Street, ZipCode)
+                             Street, PostCode)
 from .helpers import iter_file, session, batch
 
 __namespace__ = 'import'
@@ -42,15 +45,15 @@ def process_municipality_file(line):
         # old_insee = line[126:131]
         # old_insee = old_insee.strip()
 
-        zip_code_bean = ZipCode.create_or_get(code=zip_code, version='1')
+        zip_code_bean = PostCode.create_or_get(code=zip_code, version='1')
         try:
             municipality = Municipality.get(Municipality.insee == insee)
-            code = municipality.zipcodes
+            code = municipality.postcodes
             if not (zip_code_bean[0]) in code:
                 if zip_code_bean[0]:
                     try:
-                        municipality.zipcodes.add(zip_code_bean[0])
-                    except municipality.IntegrityError:
+                        municipality.postcodes.add(zip_code_bean[0])
+                    except IntegrityError:
                         pass
         except Municipality.DoesNotExist:
             pass
