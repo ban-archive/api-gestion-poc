@@ -9,4 +9,4 @@ def test_user_password_is_hashed():
     # Reload from db.
     user = models.User.get(models.User.id == user.id)
     assert user.password != password
-    assert user.password.check_password(password)
+    assert user.check_password(password)
