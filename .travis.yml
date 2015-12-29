@@ -22,7 +22,8 @@ cache:
 install:
 - pip install --upgrade pip
 - pip install cython
-- pip install codecov pytest-cov
+- pip install python-coveralls
+- pip install pytest-cov
 - pip install -r requirements-dev.txt
 - python setup.py develop
 
@@ -32,7 +33,7 @@ before_script:
 - psql -U postgres -c "create extension hstore" -d test_ban
 
 after_success:
-  - codecov
+  - coveralls
 
 script: py.test --cov=ban/
 
