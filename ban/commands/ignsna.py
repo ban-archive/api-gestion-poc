@@ -1,12 +1,13 @@
 import os
 from ban.commands import command, report
 from ban.core.models import (Municipality, PostCode)
-from .helpers import session, batch
+from .helpers import session, batch, nodiff
 
 __namespace__ = 'import'
 
 
 @command
+@nodiff
 def ignsna(path, **kwargs):
     """Import from IGN/Laposte BDUNI
     :param path: directory location of the files hsp7aaaa.ai, hsv7aaaa.ai and hsw4aaaa.ai"""
