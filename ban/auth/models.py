@@ -15,12 +15,12 @@ class User(ResourceModel):
     identifiers = ['email']
     resource_fields = ['username', 'email', 'company']
 
-    username = db.CharField(verbose_name=_('username'), max_length=100)
-    email = db.CharField(verbose_name=_('email'), max_length=100,
-                         unique=True)
-    company = db.CharField(verbose_name=_('company'), max_length=100,
-                           null=True)
-    password = db.CharField(verbose_name=_('password'), max_length=255)
+    username = db.CharField(max_length=100)
+    email = db.CharField(max_length=100, unique=True)
+    company = db.CharField(max_length=100, null=True)
+    # Allow null, because password is not a resource field, and thus cannot be
+    # passed to validators.
+    password = db.PasswordField(null=True)
     is_staff = db.BooleanField(default=False)
 
     class Meta:
@@ -30,12 +30,11 @@ class User(ResourceModel):
         return self.username
 
     def set_password(self, password):
-        # Waiting for https://github.com/coleifer/peewee/pull/672
         self.password = password
+        self.save()
 
     def check_password(self, password):
-        # Waiting for https://github.com/coleifer/peewee/pull/672
-        return password == 'password'
+        return self.password.check_password(password)
 
 
 class Client(ResourceModel):
