@@ -88,13 +88,12 @@ def test_export_resources():
 
 
 def test_import_ignsna(staff):
-    mun_path = Path(__file__).parent / 'data/municipalities.csv'
-    municipalities(mun_path)
+    factories.MunicipalityFactory(insee='33236')
+    factories.MunicipalityFactory(insee='61403')
     pc_path = Path(__file__).parent / 'data/ignsna/'
     ignsna(str(pc_path))
-    assert len(models.Municipality.select()) == 4
     post_codes = models.PostCode.select()
     assert len(post_codes) == 1
     assert len(post_codes[0].municipalities) == 2
-    assert not len(Diff.select())
+
 
