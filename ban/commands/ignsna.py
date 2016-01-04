@@ -1,5 +1,4 @@
 import os
-from peewee import IntegrityError
 
 from ban.commands import command, report
 from ban.core.models import (Municipality, PostCode)
@@ -33,22 +32,11 @@ def process_postcode_file(line):
         municipality = Municipality.get(Municipality.insee == insee)
     except Municipality.DoesNotExist:
         return report('Municipality Not Existing', insee, report.WARNING)
-    try:
-        postcode = PostCode.get(PostCode.code == post_code)
-    except PostCode.DoesNotExist:
-        validator = PostCode.validator(code=post_code, version=version)
-        if validator.errors:
-            return report('Error on PostCode Added', validator.errors, report.ERROR)
-        try:
-            postcode = validator.save()
-        except IntegrityError:
-            return report('Error on PostCode Added', validator.errors, report.ERROR)
+    postcode, created = PostCode.get_or_create(code=post_code, version=version)
+    if created:
         report('PostCode Added', postcode, report.NOTICE)
     if postcode:
         if municipality not in postcode.municipalities:
-            try:
-                postcode.municipalities.add(municipality)
-            except IntegrityError:
-                return report('Association Already Exist', postcode, report.WARNING)
+            postcode.municipalities.add(municipality)
             return report('Association Done', postcode, report.NOTICE)
         return report('Association Already Exist', postcode, report.WARNING)
