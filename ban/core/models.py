@@ -21,14 +21,12 @@ class BaseModel(BaseResource, BaseVersioned):
 
 class Model(ResourceModel, Versioned, metaclass=BaseModel):
 
+    resource_fields = ['version']
+
     class Meta:
         validate_backrefs = False
         # 'version' is validated by us.
         resource_schema = {'version': {'required': False}}
-
-    @classmethod
-    def get_resource_fields(cls):
-        return cls.resource_fields + ['id', 'version']
 
 
 class NamedModel(Model):

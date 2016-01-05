@@ -94,13 +94,26 @@ class SelectQuery(db.SelectQuery):
 class BaseResource(peewee.BaseModel):
 
     def __new__(mcs, name, bases, attrs, **kwargs):
+        # Inherit and extend instead of replacing.
+        resource_fields = attrs.pop('resource_fields', None)
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
+        if resource_fields is not None:
+            inherited = getattr(cls, 'resource_fields', None)
+            if inherited:
+                resource_fields.extend(inherited)
+            cls.resource_fields = resource_fields
+        cls.fields_for_resource = cls.resource_fields
+        cls.fields_for_relation = [
+            n for n in cls.fields_for_resource
+            if not isinstance(getattr(cls, n, None), db.ManyToManyField)
+            and not n == 'version']
+        cls.fields_for_list = cls.fields_for_relation + ['resource']
         cls._meta.resource_schema = cls.build_resource_schema()
         return cls
 
 
 class ResourceModel(db.Model, metaclass=BaseResource):
-    resource_fields = []
+    resource_fields = ['id']
     identifiers = []
 
     class Meta:
@@ -112,7 +125,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     def build_resource_schema(cls):
         schema = {}
         for name, field in cls._meta.fields.items():
-            if name not in cls.get_resource_fields():
+            if name not in cls.fields_for_resource:
                 continue
             if field.primary_key:
                 continue
@@ -141,38 +154,21 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         validator(data, update=update, instance=instance)
         return validator
 
-    @classmethod
-    def get_resource_fields(cls):
-        return cls.resource_fields + ['id']
-
-    @classmethod
-    def get_list_fields(cls):
-        return cls.get_resource_fields() + ['resource']
-
-    @classmethod
-    def get_relation_fields(cls):
-        return [n for n in cls.get_resource_fields()
-                if not isinstance(getattr(cls, n), db.ManyToManyField)]
-
     @property
     def resource(self):
         return self.__class__.__name__.lower()
 
     @property
     def as_resource(self):
-        return {f: self.as_resource_field(f)
-                for f in self.get_resource_fields()}
+        return {f: self.as_resource_field(f) for f in self.fields_for_resource}
 
     @property
     def as_list(self):
-        return {f: self.as_list_field(f) for f in self.get_list_fields()}
+        return {f: self.as_list_field(f) for f in self.fields_for_list}
 
     @property
     def as_relation(self):
-        fields = self.get_relation_fields()
-        if 'version' in fields:
-            fields.remove('version')
-        return {f: self.as_relation_field(f) for f in fields}
+        return {f: self.as_relation_field(f) for f in self.fields_for_relation}
 
     def as_resource_field(self, name):
         value = getattr(self, '{}_resource'.format(name), getattr(self, name))
