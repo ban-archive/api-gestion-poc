@@ -95,5 +95,3 @@ def test_import_ignsna(staff):
     post_codes = models.PostCode.select()
     assert len(post_codes) == 1
     assert len(post_codes[0].municipalities) == 2
-
-

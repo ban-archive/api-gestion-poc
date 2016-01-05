@@ -170,5 +170,7 @@ def nodiff(func, *args, **kwargs):
     return res
 
 
-def count(iterable):
-    return sum(1 for line in iterable)
+def file_len(f):
+    l = sum(1 for line in f)
+    f.seek(0)
+    return l
