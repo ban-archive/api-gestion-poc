@@ -1,11 +1,12 @@
 from datetime import datetime
-import pickle
+import json
 
 import peewee
 from playhouse.fields import ManyToManyQuery
 
 from ban import db
 from ban.auth.models import Session
+from ban.core.encoder import dumps
 
 from . import context
 
@@ -61,7 +62,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         return data
 
     def serialize(self, fields=None):
-        return pickle.dumps(self._serialize(self._meta.fields))
+        return dumps(self._serialize(self._meta.fields))
 
     def store_version(self):
         old = None
@@ -145,10 +146,10 @@ class SelectQuery(db.SelectQuery):
 
 
 class Version(db.Model):
-    model_name = peewee.CharField(max_length=64)
-    model_id = peewee.IntegerField()
-    sequential = peewee.IntegerField()
-    data = peewee.BlobField()
+    model_name = db.CharField(max_length=64)
+    model_id = db.IntegerField()
+    sequential = db.IntegerField()
+    data = db.BinaryJSONField()
 
     class Meta:
         manager = SelectQuery
@@ -159,7 +160,7 @@ class Version(db.Model):
 
     @property
     def as_resource(self):
-        return pickle.loads(self.data)
+        return json.loads(self.data)
 
     @property
     def model(self):

@@ -290,8 +290,8 @@ def test_position_is_versioned():
     assert len(position.versions) == 2
     version1 = position.versions[0].load()
     version2 = position.versions[1].load()
-    assert version1.center == (1, 2)
-    assert version2.center == (3, 4)
+    assert version1.center == [1, 2]  # json only knows about lists.
+    assert version2.center == [3, 4]
     assert version2.housenumber == housenumber
 
 
