@@ -149,6 +149,11 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     def get_list_fields(cls):
         return cls.get_resource_fields() + ['resource']
 
+    @classmethod
+    def get_relation_fields(cls):
+        return [n for n in cls.get_resource_fields()
+                if not isinstance(getattr(cls, n), db.ManyToManyField)]
+
     @property
     def resource(self):
         return self.__class__.__name__.lower()
@@ -164,7 +169,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     @property
     def as_relation(self):
-        fields = self.get_resource_fields()
+        fields = self.get_relation_fields()
         if 'version' in fields:
             fields.remove('version')
         return {f: self.as_relation_field(f) for f in fields}

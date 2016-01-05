@@ -132,7 +132,8 @@ class HouseNumber(Model):
 
     def clean(self):
         if not self.street and not self.locality:
-            raise ValueError('A housenumber number needs to be linked to either a street or a locality.')  # noqa
+            raise ValueError('A housenumber number needs to be linked to '
+                             'either a street or a locality.')
         qs = HouseNumber.select().where(HouseNumber.number == self.number,
                                         HouseNumber.ordinal == self.ordinal,
                                         HouseNumber.street == self.street,
@@ -140,7 +141,8 @@ class HouseNumber(Model):
         if self.id:
             qs = qs.where(HouseNumber.id != self.id)
         if qs.exists():
-            raise ValueError('Row with same number, ordinal, street and locality already exists')  # noqa
+            raise ValueError('Row with same number, ordinal, street and '
+                             'locality already exists')
         self._clean_called = True
 
     def compute_cia(self):

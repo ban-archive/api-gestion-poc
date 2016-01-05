@@ -77,11 +77,27 @@ def test_postcode_municipalities():
 def test_municipality_as_resource():
     municipality = MunicipalityFactory(name="Montbrun-Bocage", insee="31365",
                                        siren="210100566")
+    postcode = PostCodeFactory(code="31310")
+    municipality.postcodes.add(postcode)
     assert municipality.as_resource['name'] == "Montbrun-Bocage"
     assert municipality.as_resource['insee'] == "31365"
     assert municipality.as_resource['siren'] == "210100566"
     assert municipality.as_resource['version'] == 1
     assert municipality.as_resource['id'] == municipality.id
+    assert municipality.as_resource['postcodes'] == ['31310']
+
+
+def test_municipality_as_relation():
+    municipality = MunicipalityFactory(name="Montbrun-Bocage", insee="31365",
+                                       siren="210100566")
+    postcode = PostCodeFactory(code="31310")
+    municipality.postcodes.add(postcode)
+    assert municipality.as_relation['name'] == "Montbrun-Bocage"
+    assert municipality.as_relation['insee'] == "31365"
+    assert municipality.as_relation['siren'] == "210100566"
+    assert municipality.as_relation['id'] == municipality.id
+    assert 'postcodes' not in municipality.as_relation
+    assert 'version' not in municipality.as_relation
 
 
 def test_municipality_str():
