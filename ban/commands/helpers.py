@@ -168,3 +168,7 @@ def nodiff(func, *args, **kwargs):
     res = func(*args, **kwargs)
     Diff.ACTIVE = True
     return res
+
+
+def count(iterable):
+    return sum(1 for line in iterable)

@@ -6,6 +6,7 @@ from ban.commands.auth import createuser
 from ban.commands.db import truncate
 from ban.commands.export import resources
 from ban.commands.importer import municipalities
+from ban.commands.ignsna import ignsna
 from ban.core import models
 from ban.core.versioning import Diff
 from ban.tests import factories
@@ -84,3 +85,15 @@ def test_export_resources():
         resource['center']['coordinates'] = list(resource['center']['coordinates'])  # noqa
         assert json.loads(lines[2]) == resource
     path.unlink()
+
+
+def test_import_ignsna(staff):
+    factories.MunicipalityFactory(insee='33236')
+    factories.MunicipalityFactory(insee='61403')
+    pc_path = Path(__file__).parent / 'data/ignsna/'
+    ignsna(str(pc_path))
+    post_codes = models.PostCode.select()
+    assert len(post_codes) == 1
+    assert len(post_codes[0].municipalities) == 2
+
+
