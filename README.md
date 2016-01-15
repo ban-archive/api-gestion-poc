@@ -10,7 +10,7 @@ This is a POC of API for managing the future "Base adresses nationale".
 Install system dependencies
 
     sudo apt-get build-dep python-psycopg2
-    sudo apt-get install python3.4 python3.4-dev python-virtualenv postgresql-9.4 postgis
+    sudo apt-get install python3.4 python3.4-dev python-virtualenv postgresql-9.4 postgis build-essential libffi-dev
 
 Create a virtualenv (but you'd better use virtualenvwrapper or pew):
 
