@@ -1,6 +1,7 @@
 import json
 
 import falcon
+import pytest
 from ban.core import models
 
 from ..factories import (DistrictFactory, HouseNumberFactory,
@@ -15,7 +16,7 @@ def test_get_housenumber(get, url):
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
-    assert resp.json['street']['name'] == housenumber.street.name
+    assert resp.json['parent']['name'] == housenumber.parent.name
 
 
 def test_get_housenumber_without_explicit_identifier(get, url):
@@ -24,7 +25,7 @@ def test_get_housenumber_without_explicit_identifier(get, url):
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
-    assert resp.json['street']['name'] == housenumber.street.name
+    assert resp.json['parent']['name'] == housenumber.parent.name
 
 
 def test_get_housenumber_with_unknown_id_is_404(get, url):
@@ -42,14 +43,14 @@ def test_get_housenumber_with_cia(get, url):
 def test_get_housenumber_with_districts(get, url):
     municipality = MunicipalityFactory()
     district = DistrictFactory(municipality=municipality)
-    housenumber = HouseNumberFactory(districts=[district],
+    housenumber = HouseNumberFactory(ancestors=[district],
                                      municipality=municipality)
     resp = get(url('housenumber-resource', identifier=housenumber.id))
     assert resp.status == falcon.HTTP_200
-    assert 'districts' in resp.json
-    assert resp.json['districts'][0]['id'] == district.id
-    assert resp.json['districts'][0]['name'] == district.name
-    assert 'version' not in resp.json['districts'][0]
+    assert 'ancestors' in resp.json
+    assert resp.json['ancestors'][0]['id'] == district.id
+    assert resp.json['ancestors'][0]['name'] == district.name
+    assert 'version' not in resp.json['ancestors'][0]
 
 
 def test_get_housenumber_collection(get, url):
@@ -129,9 +130,9 @@ def test_get_housenumber_with_position(get, url):
 
 def test_get_housenumber_with_postcode(get, url):
     postcode = PostCodeFactory(code="12345")
-    housenumber = HouseNumberFactory(postcode=postcode)
+    housenumber = HouseNumberFactory(ancestors=[postcode])
     resp = get(url('housenumber-resource', identifier=housenumber.id))
-    assert resp.json['postcode'] == "12345"
+    assert postcode.as_relation in resp.json['ancestors']
 
 
 def test_get_housenumber_positions(get, url):
@@ -160,24 +161,25 @@ def test_create_housenumber(client):
     assert not models.HouseNumber.select().count()
     data = {
         "number": 20,
-        "street": street.id,
+        "parent": street.id,
     }
     resp = client.post('/housenumber', data)
     assert resp.status == falcon.HTTP_201
     assert resp.json['id']
     assert resp.json['number'] == '20'
     assert resp.json['ordinal'] == ''
-    assert resp.json['street']['id'] == street.id
+    assert resp.json['parent']['id'] == street.id
     assert models.HouseNumber.select().count() == 1
 
 
+@pytest.mark.xfail(reason='Not possible anymore with Proxy relation')
 @authorize
 def test_create_housenumber_with_street_fantoir(client):
     street = StreetFactory(name="Rue de Bonbons")
     assert not models.HouseNumber.select().count()
     data = {
         "number": 20,
-        "street": 'fantoir:{}'.format(street.fantoir),
+        "parent": 'fantoir:{}'.format(street.fantoir),
     }
     resp = client.post('/housenumber', data)
     assert resp.status == falcon.HTTP_201
@@ -190,7 +192,7 @@ def test_create_housenumber_does_not_honour_version_field(client):
     data = {
         "version": 3,
         "number": 20,
-        "street": street.id,
+        "parent": street.id,
     }
     resp = client.post('/housenumber', data=data)
     assert resp.status == falcon.HTTP_201
@@ -204,15 +206,17 @@ def test_create_housenumber_with_postcode_id(client):
     street = StreetFactory(name="Rue de Bonbons")
     data = {
         "number": 20,
-        "street": 'fantoir:{}'.format(street.fantoir),
-        "postcode": postcode.id
+        "parent": street.id,
+        "ancestors": [postcode.id]
     }
-    resp = client.post('/housenumber', data)
+    headers = {'Content-Type': 'application/json'}
+    resp = client.post('/housenumber', data, headers=headers)
     assert resp.status == falcon.HTTP_201
     assert models.HouseNumber.select().count() == 1
-    assert models.HouseNumber.first().postcode == postcode
+    assert postcode in models.HouseNumber.first().ancestors
 
 
+@pytest.mark.xfail(reason='Not possible anymore with Proxy relation')
 @authorize
 def test_create_housenumber_with_postcode_code(client):
     postcode = PostCodeFactory(code="12345")
@@ -237,7 +241,7 @@ def test_replace_housenumber(client, url):
         "version": 2,
         "number": housenumber.number,
         "ordinal": 'bis',
-        "street": housenumber.street.id,
+        "parent": housenumber.parent.id,
     }
     resp = client.put(uri, body=json.dumps(data))
     assert resp.status == falcon.HTTP_200
@@ -245,7 +249,7 @@ def test_replace_housenumber(client, url):
     assert resp.json['version'] == 2
     assert resp.json['number'] == '22'
     assert resp.json['ordinal'] == 'bis'
-    assert resp.json['street']['id'] == housenumber.street.id
+    assert resp.json['parent']['id'] == housenumber.parent.id
     assert models.HouseNumber.select().count() == 1
 
 
@@ -257,7 +261,7 @@ def test_replace_housenumber_with_missing_field_fails(client, url):
     data = {
         "version": 2,
         "ordinal": 'bis',
-        "street": housenumber.street.id,
+        "street": housenumber.parent.id,
     }
     resp = client.put(uri, body=json.dumps(data))
     assert resp.status == falcon.HTTP_422
@@ -271,13 +275,13 @@ def test_patch_housenumber_with_districts(client, url):
     district = DistrictFactory(municipality=housenumber.parent.municipality)
     data = {
         "version": 2,
-        "districts": [district.id],
+        "ancestors": [district.id],
     }
     uri = url('housenumber-resource', identifier=housenumber.id)
     resp = client.patch(uri, body=json.dumps(data))
     assert resp.status == falcon.HTTP_200
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
-    assert district in hn.districts
+    assert district in hn.ancestors
 
 
 @authorize
@@ -286,13 +290,13 @@ def test_patch_housenumber_with_postcode(client, url):
     housenumber = HouseNumberFactory()
     data = {
         "version": 2,
-        "postcode": postcode.id,
+        "ancestors": [postcode.id],
     }
     uri = url('housenumber-resource', identifier=housenumber.id)
     resp = client.patch(uri, body=json.dumps(data))
     assert resp.status == falcon.HTTP_200
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
-    assert hn.postcode == postcode
+    assert postcode in hn.ancestors
 
 
 @authorize

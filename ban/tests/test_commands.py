@@ -71,7 +71,7 @@ def test_truncate_should_not_ask_for_confirm_in_force_mode(monkeypatch):
 def test_export_resources():
     mun = factories.MunicipalityFactory()
     street = factories.StreetFactory(municipality=mun)
-    hn = factories.HouseNumberFactory(street=street)
+    hn = factories.HouseNumberFactory(parent=street)
     factories.PositionFactory(housenumber=hn)
     path = Path(__file__).parent / 'data/export.sjson'
     resources(path)
@@ -92,6 +92,5 @@ def test_import_ignsna(staff):
     factories.MunicipalityFactory(insee='61403')
     pc_path = Path(__file__).parent / 'data/ignsna/'
     ignsna(str(pc_path))
-    post_codes = models.PostCode.select()
-    assert len(post_codes) == 1
-    assert len(post_codes[0].municipalities) == 2
+    postcodes = models.PostCode.select()
+    assert len(postcodes) == 2

@@ -13,7 +13,7 @@ def test_street_as_resource():
     assert list(models.Street.select().as_resource()) == [street.as_resource]
 
 
-def test_municipality_street_as_resource():
+def test_municipality_streets_as_resource():
     municipality = MunicipalityFactory()
     street = StreetFactory(municipality=municipality)
-    assert list(municipality.street_set.as_resource()) == [street.as_resource]
+    assert list(municipality.streets.as_resource()) == [street.as_resource]

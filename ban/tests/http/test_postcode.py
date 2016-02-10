@@ -1,7 +1,7 @@
 import falcon
 from ban.core import models
 
-from ..factories import PostCodeFactory
+from ..factories import PostCodeFactory, MunicipalityFactory
 from .utils import authorize
 
 
@@ -23,9 +23,11 @@ def test_get_postcode_with_code(get, url):
 
 @authorize
 def test_create_postcode(client, url):
+    municipality = MunicipalityFactory()
     assert not models.PostCode.select().count()
     data = {
-        "code": "09350"
+        "code": "09350",
+        "municipality": municipality.id
     }
     resp = client.post(url('postcode'), data)
     assert resp.status == falcon.HTTP_201

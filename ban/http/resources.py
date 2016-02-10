@@ -30,7 +30,7 @@ class BaseCollection:
         limit = self.get_limit(req)
         offset = self.get_offset(req)
         end = offset + limit
-        count = queryset.count()
+        count = len(queryset)
         kwargs = {
             'collection': list(queryset[offset:end]),
             'total': count,
@@ -119,7 +119,7 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
         if not validator.errors:
             try:
                 instance = validator.save()
-            except instance.ForcedVersionError:
+            except models.Model.ForcedVersionError:
                 status = falcon.HTTP_CONFLICT
                 # Return original object.
                 instance = self.get_object(**kwargs)
@@ -203,25 +203,33 @@ class Housenumber(VersionnedResource):
         self.collection(req, resp, qs)
 
 
-class Locality(VersionnedResource):
-    model = models.Locality
+class WithHousenumbers(VersionnedResource):
 
     @app.endpoint('/{identifier}/housenumbers')
     def on_get_housenumbers(self, req, resp, *args, **kwargs):
         """Retrieve {resource} housenumbers."""
         instance = self.get_object(**kwargs)
-        self.collection(req, resp, instance.housenumber_set.as_resource_list())
+        # We evaluate the qs ourselves here, because it's a CompoundSelect
+        # that does not know about our SelectQuery custom methods (like
+        # `as_resource_list`), and CompoundSelect is hardcoded in peewee
+        # SelectQuery, and we'd need to copy-paste code to be able to use
+        # a custom CompoundQuery class instead.
+        self.collection(req, resp, [h.as_list for h in instance.housenumbers])
 
 
-class Street(Locality):
+class Locality(WithHousenumbers):
+    model = models.Locality
+
+
+class Street(WithHousenumbers):
     model = models.Street
 
 
-class District(VersionnedResource):
+class District(WithHousenumbers):
     model = models.District
 
 
-class Postcode(VersionnedResource):
+class Postcode(WithHousenumbers):
     model = models.PostCode
 
 
@@ -232,13 +240,13 @@ class Municipality(VersionnedResource):
     def on_get_streets(self, req, resp, *args, **kwargs):
         """Retrieve {resource} streets."""
         instance = self.get_object(**kwargs)
-        self.collection(req, resp, instance.street_set.as_resource_list())
+        self.collection(req, resp, instance.streets.as_resource_list())
 
     @app.endpoint('/{identifier}/localities')
     def on_get_localities(self, req, resp, *args, **kwargs):
         """Retrieve {resource} localities."""
         instance = self.get_object(**kwargs)
-        self.collection(req, resp, instance.locality_set.as_resource_list())
+        self.collection(req, resp, instance.localitys.as_resource_list())
 
 
 class User(BaseCRUD):

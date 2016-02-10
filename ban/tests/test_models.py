@@ -53,32 +53,19 @@ def test_municipality_diff_contain_only_changed_data():
 
 
 def test_municipality_postcodes():
-    postcode1 = PostCodeFactory(code="75010")
-    postcode2 = PostCodeFactory(code="75011")
     municipality = MunicipalityFactory(name="Paris")
-    municipality.postcodes.add(postcode1)
-    municipality.postcodes.add(postcode2)
+    postcode1 = PostCodeFactory(code="75010", municipality=municipality)
+    postcode2 = PostCodeFactory(code="75011", municipality=municipality)
     postcodes = municipality.postcodes
     assert len(postcodes) == 2
     assert postcode1 in postcodes
     assert postcode2 in postcodes
 
 
-def test_postcode_municipalities():
-    postcode = PostCodeFactory(code="31310")
-    municipality1 = MunicipalityFactory(name="Montbrun-Bocage")
-    municipality2 = MunicipalityFactory(name="Montesquieu-Volvestre")
-    municipality1.postcodes.add(postcode)
-    municipality2.postcodes.add(postcode)
-    assert municipality1 in postcode.municipalities
-    assert municipality2 in postcode.municipalities
-
-
 def test_municipality_as_resource():
     municipality = MunicipalityFactory(name="Montbrun-Bocage", insee="31365",
                                        siren="210100566")
-    postcode = PostCodeFactory(code="31310")
-    municipality.postcodes.add(postcode)
+    PostCodeFactory(code="31310", municipality=municipality)
     assert municipality.as_resource['name'] == "Montbrun-Bocage"
     assert municipality.as_resource['insee'] == "31365"
     assert municipality.as_resource['siren'] == "210100566"
@@ -90,8 +77,7 @@ def test_municipality_as_resource():
 def test_municipality_as_relation():
     municipality = MunicipalityFactory(name="Montbrun-Bocage", insee="31365",
                                        siren="210100566")
-    postcode = PostCodeFactory(code="31310")
-    municipality.postcodes.add(postcode)
+    PostCodeFactory(code="31310", municipality=municipality)
     assert municipality.as_relation['name'] == "Montbrun-Bocage"
     assert municipality.as_relation['insee'] == "31365"
     assert municipality.as_relation['siren'] == "210100566"
@@ -156,7 +142,7 @@ def test_should_allow_deleting_street_not_linked():
 
 def test_should_not_allow_deleting_street_linked_to_housenumber():
     street = StreetFactory()
-    HouseNumberFactory(street=street)
+    HouseNumberFactory(parent=street)
     with pytest.raises(peewee.IntegrityError):
         street.delete_instance()
     assert models.Street.get(models.Street.id == street.id)
@@ -172,34 +158,35 @@ def test_tmp_fantoir_should_use_name():
 def test_compute_cia_should_consider_insee_fantoir_number_and_ordinal():
     municipality = MunicipalityFactory(insee='93031')
     street = StreetFactory(municipality=municipality, fantoir='1491H')
-    hn = HouseNumberFactory(street=street, number="84", ordinal="bis")
-    assert hn.compute_cia() == '93031_1491H__84_BIS'
+    hn = HouseNumberFactory(parent=street, number="84", ordinal="bis")
+    hn = models.HouseNumber.get(models.HouseNumber.id == hn.id)
+    assert hn.compute_cia() == '93031_1491H_84_BIS'
 
 
 def test_compute_cia_should_let_ordinal_empty_if_not_set():
     municipality = MunicipalityFactory(insee='93031')
     street = StreetFactory(municipality=municipality, fantoir='1491H')
-    hn = HouseNumberFactory(street=street, number="84", ordinal="")
-    assert hn.compute_cia() == '93031_1491H__84_'
+    hn = HouseNumberFactory(parent=street, number="84", ordinal="")
+    assert hn.compute_cia() == '93031_1491H_84_'
 
 
 def test_compute_cia_should_use_locality_if_no_street():
     municipality = MunicipalityFactory(insee='93031')
     street = StreetFactory(municipality=municipality, fantoir='1491H')
-    hn = HouseNumberFactory(street=street, number="84", ordinal="")
-    assert hn.compute_cia() == '93031_1491H__84_'
+    hn = HouseNumberFactory(parent=street, number="84", ordinal="")
+    assert hn.compute_cia() == '93031_1491H_84_'
 
 
 def test_housenumber_should_create_cia_on_save():
     municipality = MunicipalityFactory(insee='93031')
     street = StreetFactory(municipality=municipality, fantoir='1491H')
-    hn = HouseNumberFactory(street=street, number="84", ordinal="bis")
-    assert hn.cia == '93031_1491H__84_BIS'
+    hn = HouseNumberFactory(parent=street, number="84", ordinal="bis")
+    assert hn.cia == '93031_1491H_84_BIS'
 
 
 def test_housenumber_is_versioned():
     street = StreetFactory()
-    hn = HouseNumberFactory(street=street, ordinal="b")
+    hn = HouseNumberFactory(parent=street, ordinal="b")
     assert hn.version == 1
     hn.ordinal = "bis"
     hn.increment_version()
@@ -210,19 +197,19 @@ def test_housenumber_is_versioned():
     version2 = hn.versions[1].load()
     assert version1.ordinal == "b"
     assert version2.ordinal == "bis"
-    assert version2.street == street
+    assert version2.parent == street
 
 
 def test_cannot_duplicate_housenumber_on_same_street():
     street = StreetFactory()
-    HouseNumberFactory(street=street, ordinal="b", number="10")
-    with pytest.raises(ValueError):
-        HouseNumberFactory(street=street, ordinal="b", number="10")
+    HouseNumberFactory(parent=street, ordinal="b", number="10")
+    with pytest.raises(peewee.IntegrityError):
+        HouseNumberFactory(parent=street, ordinal="b", number="10")
 
 
-def test_cannot_create_housenumber_without_street_and_locality():
-    with pytest.raises(ValueError):
-        HouseNumberFactory(street=None, locality=None)
+def test_cannot_create_housenumber_without_parent():
+    with pytest.raises(peewee.DoesNotExist):
+        HouseNumberFactory(parent=None)
 
 
 def test_housenumber_str():
@@ -233,8 +220,8 @@ def test_housenumber_str():
 def test_can_create_two_housenumbers_with_same_number_but_different_streets():
     street = StreetFactory()
     street2 = StreetFactory()
-    HouseNumberFactory(street=street, ordinal="b", number="10")
-    HouseNumberFactory(street=street2, ordinal="b", number="10")
+    HouseNumberFactory(parent=street, ordinal="b", number="10")
+    HouseNumberFactory(parent=street2, ordinal="b", number="10")
 
 
 def test_housenumber_center():
@@ -251,18 +238,28 @@ def test_housenumber_center_without_position():
 def test_create_housenumber_with_district():
     municipality = MunicipalityFactory()
     district = DistrictFactory(municipality=municipality)
-    housenumber = HouseNumberFactory(districts=[district],
+    housenumber = HouseNumberFactory(ancestors=[district],
                                      street__municipality=municipality)
-    assert district in housenumber.districts
+    assert district in housenumber.ancestors
     assert housenumber in district.housenumbers
 
 
 def test_add_district_to_housenumber():
     housenumber = HouseNumberFactory()
     district = DistrictFactory(municipality=housenumber.parent.municipality)
-    housenumber.districts.add(district)
-    assert district in housenumber.districts
+    housenumber.ancestors.add(district)
+    assert district in housenumber.ancestors
     assert housenumber in district.housenumbers
+
+
+def test_remove_housenumber_ancestors():
+    municipality = MunicipalityFactory()
+    district = DistrictFactory(municipality=municipality)
+    housenumber = HouseNumberFactory(ancestors=[district],
+                                     street__municipality=municipality)
+    assert district in housenumber.ancestors
+    housenumber.ancestors.remove(district)
+    assert district not in housenumber.ancestors
 
 
 def test_should_allow_deleting_housenumber_not_linked():
@@ -290,8 +287,8 @@ def test_position_is_versioned():
     assert len(position.versions) == 2
     version1 = position.versions[0].load()
     version2 = position.versions[1].load()
-    assert version1.center == [1, 2]  # json only knows about lists.
-    assert version2.center == [3, 4]
+    assert version1.center == {'type': 'Point', 'coordinates': [1, 2]}
+    assert version2.center == {'type': 'Point', 'coordinates': [3, 4]}
     assert version2.housenumber == housenumber
 
 

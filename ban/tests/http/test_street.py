@@ -25,9 +25,9 @@ def test_get_street_with_fantoir(get, url):
 
 def test_get_street_housenumbers(get, url):
     street = StreetFactory()
-    hn1 = HouseNumberFactory(number="1", street=street)
-    hn2 = HouseNumberFactory(number="2", street=street)
-    hn3 = HouseNumberFactory(number="3", street=street)
+    hn1 = HouseNumberFactory(number="1", parent=street)
+    hn2 = HouseNumberFactory(number="2", parent=street)
+    hn3 = HouseNumberFactory(number="3", parent=street)
     resp = get(url('street-housenumbers', identifier=street.id))
     assert resp.json['total'] == 3
     assert resp.json['collection'][0] == hn1.as_list
@@ -172,7 +172,7 @@ def test_cannot_delete_street_if_not_authorized(client, url):
 @authorize
 def test_cannot_delete_street_if_linked_to_housenumber(client, url):
     street = StreetFactory()
-    HouseNumberFactory(street=street)
+    HouseNumberFactory(parent=street)
     uri = url('street-resource', identifier=street.id)
     resp = client.delete(uri)
     assert resp.status == falcon.HTTP_409

@@ -46,23 +46,26 @@ class ResourceValidator(Validator):
     def save(self):
         if self.errors:
             raise ValidationError('Invalid document')
+        database = self.model._meta.database
         if self.instance:
-            for key, value in self.document.items():
-                setattr(self.instance, key, value)
-            self.instance.save()
+            with database.atomic():
+                for key, value in self.document.items():
+                    setattr(self.instance, key, value)
+                self.instance.save()
         else:
-            m2m = {}
-            data = {}
-            for key, value in self.document.items():
-                field = getattr(self.model, key)
-                if isinstance(field, db.ManyToManyField):
-                    m2m[key] = value
-                else:
-                    data[key] = value
-            self.instance = self.model.create(**data)
-            # m2m need the instance to be saved.
-            for key, value in m2m.items():
-                setattr(self.instance, key, value)
+            with database.atomic():
+                m2m = {}
+                data = {}
+                for key, value in self.document.items():
+                    field = getattr(self.model, key)
+                    if isinstance(field, db.ManyToManyField):
+                        m2m[key] = value
+                    else:
+                        data[key] = value
+                self.instance = self.model.create(**data)
+                # m2m need the instance to be saved.
+                for key, value in m2m.items():
+                    setattr(self.instance, key, value)
         return self.instance
 
 
@@ -93,6 +96,16 @@ class SelectQuery(db.SelectQuery):
 
 class BaseResource(peewee.BaseModel):
 
+    def include_field_for_relation(cls, name):
+        if name == "version":
+            return False
+        attr = getattr(cls, name, None)
+        exclude = (db.ManyToManyField, peewee.ReverseRelationDescriptor,
+                   peewee.SelectQuery)
+        if not attr or isinstance(attr, exclude):
+            return False
+        return True
+
     def __new__(mcs, name, bases, attrs, **kwargs):
         # Inherit and extend instead of replacing.
         resource_fields = attrs.pop('resource_fields', None)
@@ -105,8 +118,7 @@ class BaseResource(peewee.BaseModel):
         cls.fields_for_resource = cls.resource_fields
         cls.fields_for_relation = [
             n for n in cls.fields_for_resource
-            if not isinstance(getattr(cls, n, None), db.ManyToManyField)
-            and not n == 'version']
+            if mcs.include_field_for_relation(cls, n)]
         cls.fields_for_list = cls.fields_for_relation + ['resource']
         cls._meta.resource_schema = cls.build_resource_schema()
         return cls

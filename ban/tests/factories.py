@@ -73,13 +73,6 @@ class BaseFactory(BaseTestModel):
         abstract = True
 
 
-class PostCodeFactory(BaseFactory):
-    code = FuzzyInteger(10000, 97000)
-
-    class Meta:
-        model = models.PostCode
-
-
 class MunicipalityFactory(BaseFactory):
     name = "Montbrun-Bocage"
     insee = FuzzyAttribute(lambda: str(Random().randint(10000, 97000)))
@@ -87,6 +80,14 @@ class MunicipalityFactory(BaseFactory):
 
     class Meta:
         model = models.Municipality
+
+
+class PostCodeFactory(BaseFactory):
+    code = FuzzyInteger(10000, 97000)
+    municipality = factory.SubFactory(MunicipalityFactory)
+
+    class Meta:
+        model = models.PostCode
 
 
 class DistrictFactory(BaseFactory):
@@ -118,15 +119,14 @@ class StreetFactory(BaseFactory):
 class HouseNumberFactory(BaseFactory):
     number = "18"
     ordinal = "bis"
-    street = factory.SubFactory(StreetFactory)
+    parent = factory.SubFactory(StreetFactory)
 
     @factory.post_generation
-    def districts(self, create, extracted, **kwargs):
+    def ancestors(self, create, extracted, **kwargs):
         if not create:
             return
-
         if extracted:
-            self.districts.add(extracted)
+            self.ancestors.add(extracted)
 
     class Meta:
         model = models.HouseNumber

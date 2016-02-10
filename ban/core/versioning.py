@@ -54,10 +54,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         data = {}
         for name, field in fields.items():
             value = getattr(self, field.name)
-            if isinstance(value, peewee.Model):
-                value = value.id
-            elif isinstance(value, ManyToManyQuery):
-                value = [o.id for o in value]
+            value = field.db_value(value)
             data[field.name] = value
         return data
 

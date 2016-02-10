@@ -110,29 +110,39 @@ def test_invalid_point_should_raise_an_error(session):
 
 
 def test_can_create_postcode(session):
-    validator = models.PostCode.validator(code="31310")
+    municipality = MunicipalityFactory(insee='12345')
+    validator = models.PostCode.validator(code="31310",
+                                          municipality=municipality)
     postcode = validator.save()
     assert postcode.code == "31310"
 
 
 def test_can_create_postcode_with_integer(session):
-    validator = models.PostCode.validator(code=31310)
+    municipality = MunicipalityFactory(insee='12345')
+    validator = models.PostCode.validator(code=31310,
+                                          municipality=municipality)
     postcode = validator.save()
     assert postcode.code == "31310"
 
 
 def test_cannot_create_postcode_with_code_shorter_than_5_chars(session):
-    validator = models.PostCode.validator(code="3131")
+    municipality = MunicipalityFactory(insee='12345')
+    validator = models.PostCode.validator(code="3131",
+                                          municipality=municipality)
     assert 'code' in validator.errors
 
 
 def test_cannot_create_postcode_with_code_bigger_than_5_chars(session):
-    validator = models.PostCode.validator(code="313100")
+    municipality = MunicipalityFactory(insee='12345')
+    validator = models.PostCode.validator(code="313100",
+                                          municipality=municipality)
     assert 'code' in validator.errors
 
 
 def test_cannot_create_postcode_with_code_non_digit(session):
-    validator = models.PostCode.validator(code="2A000")
+    municipality = MunicipalityFactory(insee='12345')
+    validator = models.PostCode.validator(code="2A000",
+                                          municipality=municipality)
     assert 'code' in validator.errors
 
 
@@ -179,7 +189,7 @@ def test_can_create_street_with_municipality_old_insee(session):
 
 def test_can_create_housenumber(session):
     street = StreetFactory()
-    validator = models.HouseNumber.validator(street=street, number='11')
+    validator = models.HouseNumber.validator(parent=street, number='11')
     assert not validator.errors
     housenumber = validator.save()
     assert housenumber.number == '11'
@@ -188,21 +198,21 @@ def test_can_create_housenumber(session):
 def test_can_create_housenumber_with_district(session):
     district = DistrictFactory()
     street = StreetFactory()
-    validator = models.HouseNumber.validator(street=street, number='11',
-                                             districts=[district])
+    validator = models.HouseNumber.validator(parent=street, number='11',
+                                             ancestors=[district])
     assert not validator.errors
     housenumber = validator.save()
-    assert district in housenumber.districts
+    assert district in housenumber.ancestors
 
 
 def test_can_create_housenumber_with_district_ids(session):
     district = DistrictFactory()
     street = StreetFactory()
-    validator = models.HouseNumber.validator(street=street, number='11',
-                                             districts=[district.id])
+    validator = models.HouseNumber.validator(parent=street, number='11',
+                                             ancestors=[district.id])
     assert not validator.errors
     housenumber = validator.save()
-    assert district in housenumber.districts
+    assert district in housenumber.ancestors
 
 
 def test_can_update_housenumber_district(session):
@@ -211,7 +221,7 @@ def test_can_update_housenumber_district(session):
     validator = models.HouseNumber.validator(instance=housenumber,
                                              update=True,
                                              version=2,
-                                             districts=[district])
+                                             ancestors=[district])
     assert not validator.errors
     housenumber = validator.save()
-    assert district in housenumber.districts
+    assert district in housenumber.ancestors

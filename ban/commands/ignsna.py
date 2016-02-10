@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import peewee
-
 from ban.commands import command, report
 from ban.core.models import Municipality, PostCode
 from .helpers import session, batch, nodiff, file_len
@@ -31,12 +29,8 @@ def process_postcode(line):
         municipality = Municipality.get(Municipality.insee == insee)
     except Municipality.DoesNotExist:
         return report('Municipality Not Existing', insee, report.WARNING)
-    postcode, created = PostCode.get_or_create(code=code, version=1)
+    postcode, created = PostCode.get_or_create(code=code,
+                                               municipality=municipality,
+                                               defaults={'version': 1})
     if created:
         report('PostCode Added', postcode, report.NOTICE)
-    try:
-        postcode.municipalities.add(municipality)
-    except peewee.IntegrityError:
-        report('Association Already Exists', postcode, report.WARNING)
-    else:
-        report('Association Added', postcode, report.NOTICE)

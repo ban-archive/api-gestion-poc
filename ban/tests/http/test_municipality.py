@@ -17,9 +17,8 @@ def test_get_municipality(get, url):
 
 
 def test_get_municipality_with_postcodes(get, url):
-    postcode = PostCodeFactory(code="33000")
     municipality = MunicipalityFactory(name="Cabour")
-    municipality.postcodes.add(postcode)
+    PostCodeFactory(code="33000", municipality=municipality)
     uri = url('municipality-resource', identifier=municipality.id)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
@@ -144,36 +143,6 @@ def test_cannot_duplicate_municipality(client, url):
     assert resp.status == falcon.HTTP_422
     assert resp.json['errors']['insee']
     assert '12345' in resp.json['errors']['insee']
-
-
-@authorize
-def test_create_municipality_with_postcodes(client, url):
-    postcode = PostCodeFactory(code="09350")
-    data = {
-        "name": "Fornex",
-        "insee": "12345",
-        "siren": '123456789',
-        "postcodes": postcode.id
-    }
-    resp = client.post(url('municipality'), data)
-    assert resp.status == falcon.HTTP_201
-    municipality = models.Municipality.first()
-    assert postcode in municipality.postcodes
-
-
-@authorize
-def test_patch_municipality_with_postcodes(client, url):
-    postcode = PostCodeFactory(code="09350")
-    municipality = MunicipalityFactory()
-    data = {
-        "version": 2,
-        "postcodes": postcode.id
-    }
-    uri = url('municipality-resource', identifier=municipality.id)
-    resp = client.post(uri, data)
-    assert resp.status == falcon.HTTP_200
-    municipality = models.Municipality.first()
-    assert postcode in municipality.postcodes
 
 
 @authorize

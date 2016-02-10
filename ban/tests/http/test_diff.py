@@ -14,7 +14,7 @@ def test_diff_endpoint(client):
     housenumber.ordinal = "ter"
     housenumber.increment_version()
     housenumber.save()
-    street = housenumber.street
+    street = housenumber.parent
     old_street_name = street.name
     street.name = "Rue des Musiciens"
     street.increment_version()

@@ -41,10 +41,16 @@ class NamedModel(Model):
         ordering = ('name', )
 
 
-class PostCode(Model):
-    identifiers = ['code']
-    resource_fields = ['code', 'municipalities']
-    code = db.PostCodeField()
+class Proxy(db.Model):
+    kind = db.CharField(max_length=50, null=False)
+
+    @property
+    def real(self):
+        # Make dynamic.
+        mapping = {class_.__name__.lower(): class_
+                   for class_ in [Street, Locality, PostCode, District]}
+        class_ = mapping[self.kind]
+        return class_.get(class_.proxy == self)
 
 
 class Municipality(NamedModel):
@@ -53,27 +59,61 @@ class Municipality(NamedModel):
 
     insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9, unique=True)
-    postcodes = db.ManyToManyField(PostCode, related_name='municipalities')
 
     @property
     def postcodes_resource(self):
         return [p.code for p in self.postcodes]
 
 
-class District(NamedModel):
+class ProxyableModel(Model):
+    proxy = db.ForeignKeyField(Proxy, unique=True)
+    municipality = db.ForeignKeyField(Municipality, related_name='%ss')
+    attributes = db.HStoreField(null=True)
+
+    class Meta:
+        auto_increment = False
+
+    @property
+    def housenumbers(self):
+        qs = (self.proxy.housenumbers | self.proxy.housenumber_set)
+        return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            proxy = Proxy(kind=self.resource)
+            proxy.save()
+            self.proxy = proxy.id
+            self.id = proxy.id
+            kwargs['force_insert'] = True
+        return super().save(*args, **kwargs)
+
+    def delete_instance(self, recursive=False, delete_nullable=False):
+        with self._meta.database.atomic():
+            super().delete_instance(recursive, delete_nullable)
+            self.proxy.delete_instance()
+
+
+class PostCode(ProxyableModel):
+    identifiers = ['code']
+    resource_fields = ['code', 'municipality']
+    code = db.PostCodeField()
+
+    class Meta:
+        indexes = (
+            (('code', 'municipality'), True),
+        )
+
+
+class District(ProxyableModel, NamedModel):
     """Submunicipal non administrative area."""
     resource_fields = ['name', 'alias', 'attributes', 'municipality']
 
-    attributes = db.HStoreField(null=True)
-    municipality = db.ForeignKeyField(Municipality)
 
-
-class BaseFantoirModel(NamedModel):
+class BaseFantoirModel(ProxyableModel, NamedModel):
     identifiers = ['fantoir']
     resource_fields = ['name', 'alias', 'fantoir', 'municipality']
 
     fantoir = db.CharField(max_length=9, null=True)
-    municipality = db.ForeignKeyField(Municipality)
 
     class Meta:
         abstract = True
@@ -97,33 +137,30 @@ class Street(BaseFantoirModel):
 
 class HouseNumber(Model):
     identifiers = ['cia']
-    resource_fields = ['number', 'ordinal', 'street', 'cia', 'laposte',
-                       'districts', 'center', 'locality', 'postcode']
+    resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
+                       'ancestors', 'center']
 
     number = db.CharField(max_length=16)
     ordinal = db.CharField(max_length=16, null=True)
-    street = db.ForeignKeyField(Street, null=True)
-    locality = db.ForeignKeyField(Locality, null=True)
-    cia = db.CharField(max_length=100)
+    parent = db.ProxyField(Proxy)
+    cia = db.CharField(max_length=100, null=True)
     laposte = db.CharField(max_length=10, null=True)
-    postcode = db.ForeignKeyField(PostCode, null=True)
-    districts = db.ManyToManyField(District, related_name='housenumbers')
+    ancestors = db.ProxiesField(Proxy, related_name='housenumbers')
 
     class Meta:
         resource_schema = {'cia': {'required': False},
                            'version': {'required': False}}
         order_by = ('number', 'ordinal')
+        indexes = (
+            (('parent', 'number', 'ordinal'), True),
+        )
 
     def __str__(self):
         return ' '.join([self.number, self.ordinal])
 
-    @property
-    def parent(self):
-        return self.street or self.locality
-
     def save(self, *args, **kwargs):
-        if not getattr(self, '_clean_called', False):
-            self.clean()
+        # if not getattr(self, '_clean_called', False):
+        #     self.clean()
         self.cia = self.compute_cia()
         super().save(*args, **kwargs)
         self._clean_called = False
@@ -144,10 +181,12 @@ class HouseNumber(Model):
         self._clean_called = True
 
     def compute_cia(self):
+        get_fantoir = getattr(self.parent, 'get_fantoir', None)
+        if not get_fantoir:
+            return None
         return '_'.join([
             str(self.parent.municipality.insee),
-            self.street.get_fantoir() if self.street else '',
-            self.locality.get_fantoir() if self.locality else '',
+            get_fantoir(),
             self.number.upper(),
             self.ordinal.upper()
         ])
@@ -158,12 +197,8 @@ class HouseNumber(Model):
         return position.center.geojson if position else None
 
     @property
-    def districts_resource(self):
-        return [d.as_relation for d in self.districts]
-
-    @property
-    def postcode_resource(self):
-        return self.postcode.code if self.postcode else None
+    def ancestors_resource(self):
+        return [d.as_relation for d in self.ancestors]
 
 
 class Position(Model):
