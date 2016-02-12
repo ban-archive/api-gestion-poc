@@ -292,6 +292,13 @@ def test_position_is_versioned():
     assert version2.housenumber == housenumber
 
 
+def test_position_children():
+    housenumber = HouseNumberFactory()
+    parent = PositionFactory(housenumber=housenumber)
+    child = PositionFactory(housenumber=housenumber, parent=parent)
+    assert child in parent.children
+
+
 def test_position_attributes():
     position = PositionFactory(attributes={'foo': 'bar'})
     assert position.attributes['foo'] == 'bar'

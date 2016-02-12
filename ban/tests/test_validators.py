@@ -102,6 +102,16 @@ def test_can_update_position(session):
     assert position.version == 2
 
 
+def test_can_create_position_with_parent(session):
+    housenumber = HouseNumberFactory()
+    parent = PositionFactory(housenumber=housenumber)
+    validator = models.Position.validator(housenumber=housenumber,
+                                          parent=parent, center=(1, 2))
+    assert not validator.errors
+    position = validator.save()
+    assert position.parent == parent
+
+
 def test_invalid_point_should_raise_an_error(session):
     housenumber = HouseNumberFactory()
     validator = models.Position.validator(housenumber=housenumber,

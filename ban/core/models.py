@@ -67,7 +67,8 @@ class Municipality(NamedModel):
 
 class ProxyableModel(Model):
     proxy = db.ForeignKeyField(Proxy, unique=True)
-    municipality = db.ForeignKeyField(Municipality, related_name='%ss')
+    municipality = db.ForeignKeyField(Municipality,
+                                      related_name='{classname}s')
     attributes = db.HStoreField(null=True)
 
     class Meta:
@@ -203,10 +204,11 @@ class HouseNumber(Model):
 
 class Position(Model):
     resource_fields = ['center', 'source', 'housenumber', 'attributes',
-                       'kind', 'comment']
+                       'kind', 'comment', 'parent']
 
     center = db.PointField(verbose_name=_("center"))
     housenumber = db.ForeignKeyField(HouseNumber)
+    parent = db.ForeignKeyField('self', related_name='children', null=True)
     source = db.CharField(max_length=64, null=True)
     kind = db.CharField(max_length=64, null=True)
     attributes = db.HStoreField(null=True)
