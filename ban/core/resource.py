@@ -156,6 +156,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 row['maxlength'] = max_length
             if not field.null:
                 row['empty'] = False
+            if getattr(field, 'choices', None):
+                row['allowed'] = [v for v, l in field.choices]
             row.update(cls._meta.resource_schema.get(name, {}))
             schema[name] = row
         return schema

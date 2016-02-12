@@ -135,6 +135,7 @@ class HouseNumberFactory(BaseFactory):
 class PositionFactory(BaseFactory):
     center = (-1.1111, 48.8888)
     housenumber = factory.SubFactory(HouseNumberFactory)
+    kind = models.Position.ENTRANCE
 
     class Meta:
         model = models.Position

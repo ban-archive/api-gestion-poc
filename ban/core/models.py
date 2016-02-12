@@ -203,6 +203,26 @@ class HouseNumber(Model):
 
 
 class Position(Model):
+
+    POSTAL = 'postal'
+    ENTRANCE = 'entrance'
+    BUILDING = 'building'
+    STAIRCASE = 'staircase'
+    UNIT = 'unit'
+    PARCEL = 'parcel'
+    SEGMENT = 'segment'
+    UTILITY = 'utility'
+    KIND = (
+        (POSTAL, _('postal delivery')),
+        (ENTRANCE, _('entrance')),
+        (BUILDING, _('building')),
+        (STAIRCASE, _('staircase identifier')),
+        (UNIT, _('unit identifier')),
+        (PARCEL, _('parcel')),
+        (SEGMENT, _('road segment')),
+        (UTILITY, _('utility service')),
+    )
+
     resource_fields = ['center', 'source', 'housenumber', 'attributes',
                        'kind', 'comment', 'parent']
 
@@ -210,7 +230,7 @@ class Position(Model):
     housenumber = db.ForeignKeyField(HouseNumber)
     parent = db.ForeignKeyField('self', related_name='children', null=True)
     source = db.CharField(max_length=64, null=True)
-    kind = db.CharField(max_length=64, null=True)
+    kind = db.CharField(max_length=64, choices=KIND)
     attributes = db.HStoreField(null=True)
     comment = peewee.TextField(null=True)
 

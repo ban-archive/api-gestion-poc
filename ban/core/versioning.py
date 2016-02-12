@@ -2,7 +2,6 @@ from datetime import datetime
 import json
 
 import peewee
-from playhouse.fields import ManyToManyQuery
 
 from ban import db
 from ban.auth.models import Session
@@ -186,7 +185,7 @@ class Diff(db.Model):
     class Meta:
         validate_backrefs = False
         manager = SelectQuery
-        ordering = ('id', )
+        order_by = ('id', )
 
     def save(self, *args, **kwargs):
         if not self.diff:

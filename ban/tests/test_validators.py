@@ -83,6 +83,7 @@ def test_can_create_municipality_with_alias(session):
 def test_can_create_position(session):
     housenumber = HouseNumberFactory()
     validator = models.Position.validator(housenumber=housenumber,
+                                          kind=models.Position.ENTRANCE,
                                           center=(1, 2))
     assert not validator.errors
     position = validator.save()
@@ -92,7 +93,7 @@ def test_can_create_position(session):
 
 def test_can_update_position(session):
     position = PositionFactory(center=(1, 2))
-    validator = models.Position.validator(instance=position,
+    validator = models.Position.validator(instance=position, update=True,
                                           housenumber=position.housenumber,
                                           center=(3, 4), version=2)
     assert not validator.errors
@@ -106,10 +107,18 @@ def test_can_create_position_with_parent(session):
     housenumber = HouseNumberFactory()
     parent = PositionFactory(housenumber=housenumber)
     validator = models.Position.validator(housenumber=housenumber,
+                                          kind=models.Position.ENTRANCE,
                                           parent=parent, center=(1, 2))
     assert not validator.errors
     position = validator.save()
     assert position.parent == parent
+
+
+def test_cannot_create_position_without_kind(session):
+    housenumber = HouseNumberFactory()
+    validator = models.Position.validator(housenumber=housenumber,
+                                          center=(1, 2))
+    assert validator.errors
 
 
 def test_invalid_point_should_raise_an_error(session):
