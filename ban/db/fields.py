@@ -80,6 +80,11 @@ class ForeignKeyField(peewee.ForeignKeyField):
             value = self.rel_model.coerce(value).id
         return super().coerce(value)
 
+    def _get_related_name(self):
+        # cf https://github.com/coleifer/peewee/pull/844
+        return (self._related_name or '{classname}_set').format(
+                                        classname=self.model_class._meta.name)
+
 
 class CharField(peewee.CharField):
     schema_type = 'string'
