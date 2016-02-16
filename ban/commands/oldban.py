@@ -62,8 +62,7 @@ def add_housenumber(parent, id, metadata):
     number, *ordinal = id.split(' ')
     ordinal = ordinal[0] if ordinal else ''
     center = [metadata['lon'], metadata['lat']]
-    data = dict(number=number, ordinal=ordinal, version=1)
-    data[parent.__class__.__name__.lower()] = parent.id
+    data = dict(number=number, ordinal=ordinal, version=1, parent=parent.id)
     validator = HouseNumber.validator(**data)
 
     if not validator.errors:
