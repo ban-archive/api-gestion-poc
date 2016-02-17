@@ -16,7 +16,7 @@ def ignsna(path, **kwargs):
             hsw4aaaa.ai)"""
 
     with Path(path).joinpath('hsp7aaaa.ai').open() as f:
-        batch(process_postcode, f, max_value=file_len(f))
+        batch(process_postcode, f, total=file_len(f))
 
 
 @session
