@@ -21,7 +21,7 @@ def municipalities(path, update=False, departement=None, **kwargs):
     else:
         # We can't read it twice (for counting the len), let's load it for now.
         rows = list(rows)
-    helpers.batch(add_municipality, rows, max_value=len(rows))
+    helpers.batch(add_municipality, rows, total=len(rows))
 
 
 @helpers.session

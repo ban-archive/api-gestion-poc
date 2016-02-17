@@ -2,13 +2,13 @@ import csv
 import getpass
 import os
 import pkgutil
+import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from importlib import import_module
 from pathlib import Path
 
 import decorator
-import progressbar
 
 from ban.auth.models import Session, User
 from ban.core import context, config
@@ -54,31 +54,65 @@ def abort(msg):
     sys.exit(1)
 
 
-class Bar(progressbar.ProgressBar):
+class Bar:
+    # TODO: release as light separate module.
 
-    def __init__(self, *args, **kwargs):
-        kwargs['redirect_stdout'] = True
-        super().__init__(*args, **kwargs)
+    def __init__(self, total=None, prefix='Progress'):
+        self.columns = self.compute_columns()
+        self.total = total or 1000
+        self.template = '\r{prefix}: {progress} {percent}%'
+        self.done = 0
+        self.prefix = prefix
+        self.fill = '█'
 
-    def default_widgets(self):
-        widgets = super().default_widgets()
-        if self.max_value:
-            # Simpler option to override the bar fill char…
-            widgets[5] = progressbar.widgets.Bar('█')
-        return widgets
+    def compute_columns(self):
+        return shutil.get_terminal_size((80, 20)).columns
+
+    def __call__(self, step=1, done=None):
+        if done is not None:
+            self.done = done
+        else:
+            self.done += step
+
+        percent = self.done / self.total
+
+        if percent > 1.0:
+            percent = 1.0
+
+        percent_str = str(int(percent * 1000) / 10)
+        length = self.columns - len(self.prefix) - 4 - len(percent_str)
+        done_chars = int(percent * length)
+        remain_chars = length - done_chars
+        progress = self.fill * done_chars + " " * remain_chars
+
+        p = self.template.format(prefix=self.prefix, progress=progress,
+                                 percent=percent_str)
+        sys.stdout.write(p)
+
+        if percent == 100.0:
+            sys.stdout.write('\n')
+
+        sys.stdout.flush()
 
 
-def bar(iterable, *args, **kwargs):
-    return Bar(*args, **kwargs)(iterable)
-
-
-def batch(func, iterable, chunksize=1000, max_value=None):
-    bar = Bar(max_value=max_value).start()
+def batch(func, iterable, chunksize=1000, total=None):
+    bar = Bar(total=total)
     workers = int(config.get('WORKERS', os.cpu_count()))
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        for i, res in enumerate(executor.map(func, iterable)):
-            bar.update(i)
-        bar.finish()
+        count = 0
+        chunk = []
+        for item in iterable:
+            if not item:
+                continue
+            chunk.append(item)
+            count += 1
+            if count % 10000 == 0:
+                for r in executor.map(func, chunk):
+                    bar()
+                chunk = []
+        if chunk:
+            for r in executor.map(func, chunk):
+                bar()
 
 
 def prompt(text, default=None, confirmation=False, coerce=None, hidden=False):

@@ -14,9 +14,10 @@ __namespace__ = 'import'
 def oldban(path, **kwargs):
     """Import from BAN json stream files from
     http://bano.openstreetmap.fr/BAN_odbl/"""
-    max_value = sum(1 for line in iter_file(path))
+    total = sum(1 for line in iter_file(path))
+    print('Done computing file size')
     rows = iter_file(path, formatter=json.loads)
-    batch(process_row, rows, chunksize=100, max_value=max_value)
+    batch(process_row, rows, chunksize=100, total=total)
 
 
 @session
