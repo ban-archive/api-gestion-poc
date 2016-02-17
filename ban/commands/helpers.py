@@ -97,25 +97,22 @@ class Bar:
 
 def batch(func, iterable, chunksize=1000, total=None):
     bar = Bar(total=total)
-
-    def distribute(chunk):
-        with ThreadPoolExecutor(max_workers=workers) as executor:
+    workers = int(config.get('WORKERS', os.cpu_count()))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        count = 0
+        chunk = []
+        for item in iterable:
+            if not item:
+                continue
+            chunk.append(item)
+            count += 1
+            if count % 10000 == 0:
+                for r in executor.map(func, chunk):
+                    bar()
+                chunk = []
+        if chunk:
             for r in executor.map(func, chunk):
                 bar()
-
-    workers = int(config.get('WORKERS', os.cpu_count()))
-    count = 0
-    chunk = []
-    for item in iterable:
-        if not item:
-            continue
-        chunk.append(item)
-        count += 1
-        if count % 10000 == 0:
-            distribute(chunk)
-            chunk = []
-    if chunk:
-        distribute(chunk)
 
 
 def prompt(text, default=None, confirmation=False, coerce=None, hidden=False):
