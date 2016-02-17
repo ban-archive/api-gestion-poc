@@ -156,16 +156,24 @@ class Command:
         self.parser.set_defaults(**kwargs)
 
     def report(self, name, item, level):
-        if name not in self._reports:
-            self._reports[name] = []
-        self._reports[name].append((item, level))
+        verbosity = config.get('VERBOSE')
+        if verbosity:
+            if name not in self._reports:
+                self._reports[name] = []
+            self._reports[name].append((item, level))
+        else:
+            # Only track totals.
+            if name not in self._reports:
+                self._reports[name] = 0
+            self._reports[name] += 1
 
     def reporting(self):
         if self._reports:
             sys.stdout.write('\n# Reports:')
             for name, items in self._reports.items():
-                sys.stdout.write('\n- {}: {}'.format(name, len(items)))
                 verbosity = config.get('VERBOSE')
+                total = len(items) if verbosity else items
+                sys.stdout.write('\n- {}: {}'.format(name, total))
                 if verbosity:
                     for item, level in items:
                         if verbosity >= level:
