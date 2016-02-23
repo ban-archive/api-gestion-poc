@@ -69,9 +69,13 @@ def add_housenumber(parent, id, metadata):
     if not validator.errors:
         housenumber = validator.save()
         validator = Position.validator(center=center, version=1,
+                                       kind=Position.ENTRANCE,
                                        housenumber=housenumber.id)
         if not validator.errors:
             validator.save()
+            report('Position', validator.instance, report.NOTICE)
+        else:
+            report('Position error', validator.errors, report.ERROR)
         report('Housenumber', housenumber, report.NOTICE)
     else:
         report('Housenumber error', validator.errors, report.ERROR)
