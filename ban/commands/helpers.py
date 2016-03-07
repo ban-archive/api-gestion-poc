@@ -2,13 +2,13 @@ import csv
 import getpass
 import os
 import pkgutil
-import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from importlib import import_module
 from pathlib import Path
 
 import decorator
+from progressist import ProgressBar
 
 from ban.auth.models import Session, User
 from ban.core import context, config
@@ -54,45 +54,9 @@ def abort(msg):
     sys.exit(1)
 
 
-class Bar:
-    # TODO: release as light separate module.
-
-    def __init__(self, total=None, prefix='Progress'):
-        self.columns = self.compute_columns()
-        self.total = total or 1000
-        self.template = '\r{prefix}: {progress} {percent}%'
-        self.done = 0
-        self.prefix = prefix
-        self.fill = '█'
-
-    def compute_columns(self):
-        return shutil.get_terminal_size((80, 20)).columns
-
-    def __call__(self, step=1, done=None):
-        if done is not None:
-            self.done = done
-        else:
-            self.done += step
-
-        percent = self.done / self.total
-
-        if percent > 1.0:
-            percent = 1.0
-
-        percent_str = str(int(percent * 1000) / 10)
-        length = self.columns - len(self.prefix) - 4 - len(percent_str)
-        done_chars = int(percent * length)
-        remain_chars = length - done_chars
-        progress = self.fill * done_chars + " " * remain_chars
-
-        p = self.template.format(prefix=self.prefix, progress=progress,
-                                 percent=percent_str)
-        sys.stdout.write(p)
-
-        if percent == 100.0:
-            sys.stdout.write('\n')
-
-        sys.stdout.flush()
+class Bar(ProgressBar):
+    template = ('Progress: |{animation}| {percent} ({done}/{total}) '
+                '| ETA: {eta} | {elapsed}')
 
 
 def batch(func, iterable, chunksize=1000, total=None):
