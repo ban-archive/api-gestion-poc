@@ -4,7 +4,7 @@ from ban.commands import command, report
 from ban.core.models import (HouseNumber, Locality, Municipality, Position,
                              Street)
 
-from .helpers import batch, iter_file, nodiff, session
+from .helpers import batch, iter_file, nodiff, session, load_csv
 
 __namespace__ = 'import'
 
@@ -44,6 +44,7 @@ def process_row(metadata):
         name=name,
         fantoir=fantoir,
         municipality=municipality.id,
+        ign=id,
         version=1,
     )
     validator = klass.validator(**data)
@@ -63,8 +64,9 @@ def add_housenumber(parent, id, metadata):
     number, *ordinal = id.split(' ')
     ordinal = ordinal[0] if ordinal else ''
     center = [metadata['lon'], metadata['lat']]
-    data = dict(number=number, ordinal=ordinal, version=1, parent=parent.id)
-    validator = HouseNumber.validator(**data)
+    ign = metadata.get('id')
+    validator = HouseNumber.validator(number=number, ordinal=ordinal,
+                                      version=1, parent=parent.id, ign=ign)
 
     if not validator.errors:
         housenumber = validator.save()
@@ -79,3 +81,25 @@ def add_housenumber(parent, id, metadata):
         report('Housenumber', housenumber, report.NOTICE)
     else:
         report('Housenumber error', validator.errors, report.ERROR)
+
+
+@command
+@nodiff
+def cea(path, **kwargs):
+    """Import CEA from IGN Adresse Premium
+    File: Lien_Adresse-Hexa_D0{xx}-ED141.csv."""
+    rows = list(load_csv(path))
+    batch(add_cea, rows, total=len(rows))
+
+
+def add_cea(row):
+    ign = row.get('ID_ADR')
+    laposte = row.get('HEXACLE_1')
+    if laposte == 'NR':
+        return report('Missing CEA', ign, report.ERROR)
+    hn = HouseNumber.where(HouseNumber.ign == ign).first()
+    if not hn:
+        return report('IGN id not found', ign, report.ERROR)
+    hn.laposte = laposte
+    hn.save()
+    report('Done', str(hn), report.NOTICE)

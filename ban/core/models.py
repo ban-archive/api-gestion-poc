@@ -112,9 +112,12 @@ class District(ProxyableModel, NamedModel):
 
 class BaseFantoirModel(ProxyableModel, NamedModel):
     identifiers = ['fantoir']
-    resource_fields = ['name', 'alias', 'fantoir', 'municipality']
+    resource_fields = ['name', 'alias', 'fantoir', 'municipality', 'laposte',
+                       'ign']
 
     fantoir = db.CharField(max_length=9, null=True)
+    laposte = db.CharField(max_length=10, null=True)
+    ign = db.CharField(max_length=24, null=True)
 
     class Meta:
         abstract = True
@@ -139,13 +142,14 @@ class Street(BaseFantoirModel):
 class HouseNumber(Model):
     identifiers = ['cia']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
-                       'ancestors', 'center']
+                       'ancestors', 'center', 'ign']
 
     number = db.CharField(max_length=16)
     ordinal = db.CharField(max_length=16, null=True)
     parent = db.ProxyField(Proxy)
     cia = db.CharField(max_length=100, null=True)
     laposte = db.CharField(max_length=10, null=True)
+    ign = db.CharField(max_length=24, null=True)
     ancestors = db.ProxiesField(Proxy, related_name='housenumbers')
 
     class Meta:
