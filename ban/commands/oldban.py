@@ -44,7 +44,6 @@ def process_row(metadata):
         name=name,
         fantoir=fantoir,
         municipality=municipality.id,
-        ign=id,
         version=1,
     )
     validator = klass.validator(**data)

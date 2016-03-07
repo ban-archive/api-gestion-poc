@@ -112,12 +112,9 @@ class District(ProxyableModel, NamedModel):
 
 class BaseFantoirModel(ProxyableModel, NamedModel):
     identifiers = ['fantoir']
-    resource_fields = ['name', 'alias', 'fantoir', 'municipality', 'laposte',
-                       'ign']
+    resource_fields = ['name', 'alias', 'fantoir', 'municipality']
 
     fantoir = db.CharField(max_length=9, null=True)
-    laposte = db.CharField(max_length=10, null=True)
-    ign = db.CharField(max_length=24, null=True)
 
     class Meta:
         abstract = True
