@@ -96,9 +96,8 @@ def add_cea(row):
     laposte = row.get('HEXACLE_1')
     if laposte == 'NR':
         return report('Missing CEA', ign, report.ERROR)
-    hn = HouseNumber.where(HouseNumber.ign == ign).first()
-    if not hn:
+    query = HouseNumber.update(laposte=laposte).where(HouseNumber.ign == ign)
+    done = query.execute()
+    if not done:
         return report('IGN id not found', ign, report.ERROR)
-    hn.laposte = laposte
-    hn.save()
-    report('Done', str(hn), report.NOTICE)
+    report('Done', ign, report.NOTICE)
