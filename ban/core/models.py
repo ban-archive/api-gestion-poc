@@ -137,7 +137,7 @@ class Street(BaseFantoirModel):
 
 
 class HouseNumber(Model):
-    identifiers = ['cia']
+    identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'center', 'ign']
 
