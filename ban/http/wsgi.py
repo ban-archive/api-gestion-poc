@@ -48,3 +48,5 @@ application = app = API(
     request_type=Request,
     router=Router(),
 )
+# Let falcon parse urlencoded forms for us.
+app.req_options.auto_parse_form_urlencoded = True
