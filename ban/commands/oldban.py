@@ -2,7 +2,7 @@ import json
 
 from ban.commands import command, report
 from ban.core.models import (HouseNumber, Locality, Municipality, Position,
-                             Street)
+                             Street, PostCode)
 
 from .helpers import batch, iter_file, nodiff, session, load_csv
 
@@ -25,6 +25,7 @@ def process_row(metadata):
     name = metadata.get('name')
     id = metadata.get('id')
     insee = metadata.get('citycode')
+    postcode = metadata.get('postcode')
     fantoir = ''.join(id.split('_')[:2])[:9]
 
     kind = metadata['type']
@@ -40,6 +41,11 @@ def process_row(metadata):
     except Municipality.DoesNotExist:
         return report('Municipality does not exist', insee, report.ERROR)
 
+    with PostCode._meta.database.atomic():
+        postcode, created = PostCode.get_or_create(code=postcode,
+                                                   municipality=municipality,
+                                                   defaults={'version': 1})
+
     data = dict(
         name=name,
         fantoir=fantoir,
@@ -54,18 +60,20 @@ def process_row(metadata):
         housenumbers = metadata.get('housenumbers')
         if housenumbers:
             for id, metadata in housenumbers.items():
-                add_housenumber(item, id, metadata)
+                add_housenumber(item, id, metadata, postcode)
     else:
         report('Street error', validator.errors, report.ERROR)
 
 
-def add_housenumber(parent, id, metadata):
+def add_housenumber(parent, id, metadata, postcode):
     number, *ordinal = id.split(' ')
     ordinal = ordinal[0] if ordinal else ''
     center = [metadata['lon'], metadata['lat']]
     ign = metadata.get('id')
+
     validator = HouseNumber.validator(number=number, ordinal=ordinal,
-                                      version=1, parent=parent.id, ign=ign)
+                                      version=1, parent=parent.id, ign=ign,
+                                      ancestors=[postcode])
 
     if not validator.errors:
         housenumber = validator.save()
