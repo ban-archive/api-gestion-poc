@@ -69,8 +69,16 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
     assert resp.json['total'] == 1
     # JSON transform internals tuples to lists.
     resource = position.housenumber.as_resource
-    resource['center']['coordinates'] = list(resource['center']['coordinates'])  # noqa
+    resource['center']['coordinates'] = list(resource['center']['coordinates'])
     assert resp.json['collection'][0] == resource
+
+
+def test_bbox_allows_floats(get, url):
+    PositionFactory(center=(1, 1))
+    PositionFactory(center=(-1, -1))
+    bbox = dict(north=2.23, south=0.12, west=0.56, east=2.34)
+    resp = get(url('housenumber', query_string=bbox))
+    assert resp.json['total'] == 1
 
 
 def test_missing_bbox_param_makes_bbox_ignored(get, url):

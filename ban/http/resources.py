@@ -177,10 +177,10 @@ class Housenumber(VersionnedResource):
 
     def get_bbox(self, req):
         bbox = {}
-        req.get_param_as_int('north', store=bbox)
-        req.get_param_as_int('south', store=bbox)
-        req.get_param_as_int('east', store=bbox)
-        req.get_param_as_int('west', store=bbox)
+        req.get_param_as_float('north', store=bbox)
+        req.get_param_as_float('south', store=bbox)
+        req.get_param_as_float('east', store=bbox)
+        req.get_param_as_float('west', store=bbox)
         if not len(bbox) == 4:
             return None
         return bbox
