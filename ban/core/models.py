@@ -94,9 +94,9 @@ class ProxyableModel(Model):
             self.proxy.delete_instance()
 
 
-class PostCode(ProxyableModel):
+class PostCode(ProxyableModel, NamedModel):
     identifiers = ['code']
-    resource_fields = ['code', 'municipality']
+    resource_fields = ['code', 'name', 'municipality']
     code = db.PostCodeField()
 
     class Meta:
@@ -200,7 +200,7 @@ class HouseNumber(Model):
 
     @property
     def ancestors_resource(self):
-        return [d.as_relation for d in self.ancestors]
+        return [d.as_list for d in self.ancestors]
 
 
 class Position(Model):

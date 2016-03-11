@@ -42,9 +42,10 @@ def process_row(metadata):
         return report('Municipality does not exist', insee, report.ERROR)
 
     with PostCode._meta.database.atomic():
-        postcode, created = PostCode.get_or_create(code=postcode,
-                                                   municipality=municipality,
-                                                   defaults={'version': 1})
+        postcode, created = PostCode.get_or_create(
+            code=postcode,
+            municipality=municipality,
+            defaults={'version': 1, 'name': municipality.name})
 
     data = dict(
         name=name,
