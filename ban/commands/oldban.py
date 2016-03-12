@@ -1,5 +1,7 @@
 import json
 
+import peewee
+
 from ban.commands import command, report
 from ban.core.models import (HouseNumber, Locality, Municipality, Position,
                              Street, PostCode)
@@ -25,7 +27,7 @@ def process_row(metadata):
     name = metadata.get('name')
     id = metadata.get('id')
     insee = metadata.get('citycode')
-    postcode = metadata.get('postcode')
+    code = metadata.get('postcode')
     fantoir = ''.join(id.split('_')[:2])[:9]
 
     kind = metadata['type']
@@ -41,11 +43,21 @@ def process_row(metadata):
     except Municipality.DoesNotExist:
         return report('Municipality does not exist', insee, report.ERROR)
 
-    with PostCode._meta.database.atomic():
-        postcode, created = PostCode.get_or_create(
-            code=postcode,
-            municipality=municipality,
-            defaults={'version': 1, 'name': municipality.name})
+    validator = PostCode.validator(code=code, version=1,
+                                   name=municipality.name,
+                                   municipality=municipality)
+    if validator.errors:
+        report('Invalid postcode', code, report.ERROR)
+        postcode = None
+    else:
+        with PostCode._meta.database.atomic():
+            try:
+                postcode = validator.save()
+            except peewee.IntegrityError:
+                # Another thread created it?
+                postcode = PostCode.get(PostCode.code == code)
+            else:
+                report('Created postcode', code, report.NOTICE)
 
     data = dict(
         name=name,
@@ -71,10 +83,12 @@ def add_housenumber(parent, id, metadata, postcode):
     ordinal = ordinal[0] if ordinal else ''
     center = [metadata['lon'], metadata['lat']]
     ign = metadata.get('id')
+    data = dict(number=number, ordinal=ordinal, version=1, parent=parent.id,
+                ign=ign)
+    if postcode:
+        data['ancestors'] = [postcode]
 
-    validator = HouseNumber.validator(number=number, ordinal=ordinal,
-                                      version=1, parent=parent.id, ign=ign,
-                                      ancestors=[postcode])
+    validator = HouseNumber.validator(**data)
 
     if not validator.errors:
         housenumber = validator.save()
