@@ -151,7 +151,7 @@ class PostCodeField(CharField):
     def coerce(self, value):
         value = str(value)
         if not len(value) == 5 or not value.isdigit():
-            raise ValueError('Invalid postcode')
+            raise ValueError('Invalid postcode "{}"'.format(value))
         return value
 
 
