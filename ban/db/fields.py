@@ -89,20 +89,6 @@ class ForeignKeyField(peewee.ForeignKeyField):
 class CharField(peewee.CharField):
     schema_type = 'string'
 
-    def __init__(self, *args, **kwargs):
-        if 'default' not in kwargs:
-            kwargs['default'] = ''
-        super().__init__(*args, **kwargs)
-
-    def coerce(self, value):
-        if value is None:
-            value = ''
-        return super().coerce(value)
-
-    def python_value(self, value):
-        value = self.coerce(value)
-        return super().python_value(value)
-
 
 class IntegerField(peewee.IntegerField):
     schema_type = 'integer'

@@ -97,7 +97,7 @@ class ProxyableModel(Model):
 class PostCode(ProxyableModel, NamedModel):
     identifiers = ['code']
     resource_fields = ['code', 'name', 'municipality']
-    code = db.PostCodeField()
+    code = db.PostCodeField(index=True)
 
     class Meta:
         indexes = (
@@ -114,7 +114,7 @@ class BaseFantoirModel(ProxyableModel, NamedModel):
     identifiers = ['fantoir']
     resource_fields = ['name', 'alias', 'fantoir', 'municipality']
 
-    fantoir = db.CharField(max_length=9, null=True)
+    fantoir = db.CharField(max_length=9, null=True, index=True)
 
     class Meta:
         abstract = True
@@ -144,9 +144,9 @@ class HouseNumber(Model):
     number = db.CharField(max_length=16)
     ordinal = db.CharField(max_length=16, null=True)
     parent = db.ProxyField(Proxy)
-    cia = db.CharField(max_length=100, null=True)
-    laposte = db.CharField(max_length=10, null=True)
-    ign = db.CharField(max_length=24, null=True)
+    cia = db.CharField(max_length=100, null=True, index=True)
+    laposte = db.CharField(max_length=10, null=True, unique=True)
+    ign = db.CharField(max_length=24, null=True, unique=True)
     ancestors = db.ProxiesField(Proxy, related_name='housenumbers')
 
     class Meta:
@@ -189,8 +189,8 @@ class HouseNumber(Model):
         return '_'.join([
             str(self.parent.municipality.insee),
             get_fantoir(),
-            self.number.upper(),
-            self.ordinal.upper()
+            (self.number or '').upper(),
+            (self.ordinal or '').upper()
         ])
 
     @property

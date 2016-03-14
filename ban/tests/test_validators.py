@@ -130,7 +130,7 @@ def test_invalid_point_should_raise_an_error(session):
 
 def test_can_create_postcode(session):
     municipality = MunicipalityFactory(insee='12345')
-    validator = models.PostCode.validator(code="31310",
+    validator = models.PostCode.validator(code="31310", name="Montbrun-Bocage",
                                           municipality=municipality)
     postcode = validator.save()
     assert postcode.code == "31310"
@@ -138,7 +138,7 @@ def test_can_create_postcode(session):
 
 def test_can_create_postcode_with_integer(session):
     municipality = MunicipalityFactory(insee='12345')
-    validator = models.PostCode.validator(code=31310,
+    validator = models.PostCode.validator(code=31310, name="Montbrun-Bocage",
                                           municipality=municipality)
     postcode = validator.save()
     assert postcode.code == "31310"
@@ -146,21 +146,21 @@ def test_can_create_postcode_with_integer(session):
 
 def test_cannot_create_postcode_with_code_shorter_than_5_chars(session):
     municipality = MunicipalityFactory(insee='12345')
-    validator = models.PostCode.validator(code="3131",
+    validator = models.PostCode.validator(code="3131", name="Montbrun-Bocage",
                                           municipality=municipality)
     assert 'code' in validator.errors
 
 
 def test_cannot_create_postcode_with_code_bigger_than_5_chars(session):
     municipality = MunicipalityFactory(insee='12345')
-    validator = models.PostCode.validator(code="313100",
+    validator = models.PostCode.validator(code="313100", name="Montbrun",
                                           municipality=municipality)
     assert 'code' in validator.errors
 
 
 def test_cannot_create_postcode_with_code_non_digit(session):
     municipality = MunicipalityFactory(insee='12345')
-    validator = models.PostCode.validator(code="2A000",
+    validator = models.PostCode.validator(code="2A000", name="Montbrun-Bocage",
                                           municipality=municipality)
     assert 'code' in validator.errors
 

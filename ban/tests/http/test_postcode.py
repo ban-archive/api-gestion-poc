@@ -27,6 +27,7 @@ def test_create_postcode(client, url):
     assert not models.PostCode.select().count()
     data = {
         "code": "09350",
+        "name": "Fornex",
         "municipality": municipality.id
     }
     resp = client.post(url('postcode'), data)

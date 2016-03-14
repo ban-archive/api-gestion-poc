@@ -140,7 +140,7 @@ def test_get_housenumber_with_postcode(get, url):
     postcode = PostCodeFactory(code="12345")
     housenumber = HouseNumberFactory(ancestors=[postcode])
     resp = get(url('housenumber-resource', identifier=housenumber.id))
-    assert postcode.as_relation in resp.json['ancestors']
+    assert postcode.as_list in resp.json['ancestors']
 
 
 def test_get_housenumber_positions(get, url):
@@ -175,7 +175,7 @@ def test_create_housenumber(client):
     assert resp.status == falcon.HTTP_201
     assert resp.json['id']
     assert resp.json['number'] == '20'
-    assert resp.json['ordinal'] == ''
+    assert resp.json['ordinal'] == None
     assert resp.json['parent']['id'] == street.id
     assert models.HouseNumber.select().count() == 1
 

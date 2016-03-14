@@ -25,11 +25,12 @@ def process_postcode(line):
         return report('Cedex postcode', line, report.WARNING)
     insee = line[6:11]
     code = line[89:94]
+    name = line[90:]
     try:
         municipality = Municipality.get(Municipality.insee == insee)
     except Municipality.DoesNotExist:
         return report('Municipality Not Existing', insee, report.WARNING)
-    postcode, created = PostCode.get_or_create(code=code,
+    postcode, created = PostCode.get_or_create(code=code, name=name,
                                                municipality=municipality,
                                                defaults={'version': 1})
     if created:

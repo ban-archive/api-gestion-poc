@@ -98,7 +98,7 @@ class Token(db.Model):
     session = db.ForeignKeyField(Session)
     token_type = db.CharField(max_length=40)
     access_token = db.CharField(max_length=255)
-    refresh_token = db.CharField(max_length=255)
+    refresh_token = db.CharField(max_length=255, null=True)
     scope = db.CharField(max_length=255)
     expires = db.DateTimeField()
 
