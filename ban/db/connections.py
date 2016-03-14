@@ -4,6 +4,16 @@ from ban.core import config
 import postgis
 
 
+class PostgresqlExtDatabase(PostgresqlExtDatabase):
+
+    postgis_registered = False
+
+    def initialize_connection(self, conn):
+        if not self.postgis_registered:
+            postgis.register(conn.cursor())
+            self.postgis_registered = True
+
+
 class DBProxy(peewee.Proxy):
 
     prefix = ''
@@ -19,7 +29,6 @@ class DBProxy(peewee.Proxy):
                 autorollback=True,
             )
             self.initialize(db)
-            postgis.register(self.obj.get_cursor())
         return getattr(self.obj, attr)
 
 
