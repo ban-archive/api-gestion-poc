@@ -224,11 +224,11 @@ def test_can_create_housenumber_with_district(session):
     assert district in housenumber.ancestors
 
 
-def test_can_create_housenumber_with_district_ids(session):
+def test_can_create_housenumber_with_district_pks(session):
     district = DistrictFactory()
     street = StreetFactory()
     validator = models.HouseNumber.validator(parent=street, number='11',
-                                             ancestors=[district.id])
+                                             ancestors=[district.pk])
     assert not validator.errors
     housenumber = validator.save()
     assert district in housenumber.ancestors

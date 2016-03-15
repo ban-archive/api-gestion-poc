@@ -20,13 +20,13 @@ class BaseModel(BaseResource, BaseVersioned):
 
 
 class Model(ResourceModel, Versioned, metaclass=BaseModel):
-
     resource_fields = ['version']
 
     class Meta:
         validate_backrefs = False
         # 'version' is validated by us.
-        resource_schema = {'version': {'required': False}}
+        resource_schema = {'version': {'required': False},
+                           'id': {'required': False}}
 
 
 class NamedModel(Model):
@@ -41,18 +41,6 @@ class NamedModel(Model):
         ordering = ('name', )
 
 
-class Proxy(db.Model):
-    kind = db.CharField(max_length=50, null=False)
-
-    @property
-    def real(self):
-        # Make dynamic.
-        mapping = {class_.__name__.lower(): class_
-                   for class_ in [Street, Locality, PostCode, District]}
-        class_ = mapping[self.kind]
-        return class_.get(class_.proxy == self)
-
-
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
     resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
@@ -65,7 +53,34 @@ class Municipality(NamedModel):
         return [p.code for p in self.postcodes]
 
 
-class ProxyableModel(Model):
+class Proxy(db.Model):
+    MAPPING = {}
+    kind = db.CharField(max_length=50, null=False)
+
+    @property
+    def real(self):
+        class_ = self.MAPPING[self.kind]
+        return class_.get(class_.proxy == self)
+
+    @classmethod
+    def from_id(self, id):
+        # Raises ValueError if id is not a BAN id.
+        _, class_name, _ = id.split('-')
+        klass = self.MAPPING.get(class_name)
+        if not klass:
+            raise ValueError
+        return klass.get(klass.id == id)
+
+
+class BaseProxyable(BaseModel):
+
+    def __new__(mcs, name, bases, attrs, **kwargs):
+        cls = super().__new__(mcs, name, bases, attrs, **kwargs)
+        Proxy.MAPPING[name.lower()] = cls
+        return cls
+
+
+class ProxyableModel(Model, metaclass=BaseProxyable):
     proxy = db.ForeignKeyField(Proxy, unique=True)
     municipality = db.ForeignKeyField(Municipality,
                                       related_name='{classname}s')
@@ -80,11 +95,11 @@ class ProxyableModel(Model):
         return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
 
     def save(self, *args, **kwargs):
-        if not self.id:
+        if not self.pk:
             proxy = Proxy(kind=self.resource)
             proxy.save()
-            self.proxy = proxy.id
-            self.id = proxy.id
+            self.proxy = proxy.pk
+            self.pk = proxy.pk
             kwargs['force_insert'] = True
         return super().save(*args, **kwargs)
 
@@ -151,7 +166,8 @@ class HouseNumber(Model):
 
     class Meta:
         resource_schema = {'cia': {'required': False},
-                           'version': {'required': False}}
+                           'version': {'required': False},
+                           'id': {'required': False}}
         order_by = ('number', 'ordinal')
         indexes = (
             (('parent', 'number', 'ordinal'), True),
@@ -175,8 +191,8 @@ class HouseNumber(Model):
                                         HouseNumber.ordinal == self.ordinal,
                                         HouseNumber.street == self.street,
                                         HouseNumber.locality == self.locality)
-        if self.id:
-            qs = qs.where(HouseNumber.id != self.id)
+        if self.pk:
+            qs = qs.where(HouseNumber.pk != self.pk)
         if qs.exists():
             raise ValueError('Row with same number, ordinal, street and '
                              'locality already exists')

@@ -191,8 +191,8 @@ class Housenumber(VersionnedResource):
         if bbox:
             qs = (qs.join(models.Position)
                     .where(models.Position.center.in_bbox(**bbox))
-                    .group_by(models.HouseNumber.id)
-                    .order_by(models.HouseNumber.id))
+                    .group_by(models.HouseNumber.pk)
+                    .order_by(models.HouseNumber.pk))
         return qs
 
     @app.endpoint('/{identifier}/positions')

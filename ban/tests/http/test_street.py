@@ -23,6 +23,12 @@ def test_get_street_with_fantoir(get, url):
     assert resp.json['name'] == "Rue des Boulets"
 
 
+def test_get_street_with_pk(get, url):
+    street = StreetFactory(name="Rue des Boulets")
+    resp = get(url('street-resource', id=street.pk, identifier="pk"))
+    assert resp.json['name'] == "Rue des Boulets"
+
+
 def test_get_street_housenumbers(get, url):
     street = StreetFactory()
     hn1 = HouseNumberFactory(number="1", parent=street)

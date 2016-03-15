@@ -75,9 +75,9 @@ class ForeignKeyField(peewee.ForeignKeyField):
 
     def coerce(self, value):
         if isinstance(value, peewee.Model):
-            value = value.id
+            value = value.pk
         elif isinstance(value, str) and hasattr(self.rel_model, 'coerce'):
-            value = self.rel_model.coerce(value).id
+            value = self.rel_model.coerce(value).pk
         return super().coerce(value)
 
     def _get_related_name(self):
@@ -162,7 +162,9 @@ class ManyToManyField(fields.ManyToManyField):
     schema_type = 'list'
 
     def __init__(self, *args, **kwargs):
-        # Try to better conform to Field API.
+        # ManyToManyField is not a real "Field", so try to better conform to
+        # Field API.
+        # https://github.com/coleifer/peewee/issues/794
         self.null = True
         self.unique = False
         self.index = False
@@ -172,7 +174,7 @@ class ManyToManyField(fields.ManyToManyField):
         if not isinstance(value, (tuple, list, peewee.SelectQuery)):
             value = [value]
         # https://github.com/coleifer/peewee/pull/795
-        value = [self.rel_model.get(self.rel_model.id == item)
+        value = [self.rel_model.get(self.rel_model.pk == item)
                  if not isinstance(item, self.rel_model)
                  else item
                  for item in value]
@@ -227,7 +229,13 @@ class ProxiesField(ManyToManyField):
 
     def coerce_one(self, value):
         if isinstance(value, int):
-            value = self.rel_model.get(self.rel_model.id == value)
+            value = self.rel_model.get(self.rel_model.pk == value)
+        if isinstance(value, str):
+            # BAN id?
+            try:
+                value = self.rel_model.from_id(value)
+            except ValueError:
+                pass
         if isinstance(value, self.rel_model):
             value = value.real
         return value
@@ -259,8 +267,16 @@ class ProxyField(ForeignKeyField):
         return ProxyRelationDescriptor(self, self.rel_model)
 
     def coerce(self, value):
+        if isinstance(value, str):
+            # BAN id?
+            try:
+                value = self.rel_model.from_id(value)
+            except ValueError:
+                pass
         if not isinstance(value, (int, str)):
+            # We received a model?
             if not isinstance(value, self.rel_model):
+                # We need to save the proxy, not the target model.
                 value = value.proxy
             value = value._get_pk_value()
         else:

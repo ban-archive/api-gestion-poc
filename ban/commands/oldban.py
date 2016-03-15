@@ -62,7 +62,7 @@ def process_row(metadata):
     data = dict(
         name=name,
         fantoir=fantoir,
-        municipality=municipality.id,
+        municipality=municipality.pk,
         version=1,
     )
     validator = klass.validator(**data)
@@ -83,7 +83,7 @@ def add_housenumber(parent, id, metadata, postcode):
     ordinal = ordinal[0] if ordinal else ''
     center = [metadata['lon'], metadata['lat']]
     ign = metadata.get('id')
-    data = dict(number=number, ordinal=ordinal, version=1, parent=parent.id,
+    data = dict(number=number, ordinal=ordinal, version=1, parent=parent.pk,
                 ign=ign)
     if postcode:
         data['ancestors'] = [postcode]
@@ -94,7 +94,7 @@ def add_housenumber(parent, id, metadata, postcode):
         housenumber = validator.save()
         validator = Position.validator(center=center, version=1,
                                        kind=Position.ENTRANCE,
-                                       housenumber=housenumber.id)
+                                       housenumber=housenumber.pk)
         if not validator.errors:
             validator.save()
             report('Position', validator.instance, report.NOTICE)
