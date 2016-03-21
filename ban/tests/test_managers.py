@@ -1,6 +1,6 @@
 from ban.core import models
 
-from .factories import MunicipalityFactory, StreetFactory
+from .factories import MunicipalityFactory, GroupFactory
 
 
 def test_municipality_as_resource():
@@ -8,12 +8,12 @@ def test_municipality_as_resource():
     assert list(models.Municipality.select().as_resource()) == [municipality.as_resource]  # noqa
 
 
-def test_street_as_resource():
-    street = StreetFactory()
-    assert list(models.Street.select().as_resource()) == [street.as_resource]
+def test_group_as_resource():
+    street = GroupFactory()
+    assert list(models.Group.select().as_resource()) == [street.as_resource]
 
 
 def test_municipality_streets_as_resource():
     municipality = MunicipalityFactory()
-    street = StreetFactory(municipality=municipality)
-    assert list(municipality.streets.as_resource()) == [street.as_resource]
+    street = GroupFactory(municipality=municipality)
+    assert list(municipality.groups.as_resource()) == [street.as_resource]

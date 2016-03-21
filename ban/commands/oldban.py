@@ -3,8 +3,8 @@ import json
 import peewee
 
 from ban.commands import command, report
-from ban.core.models import (HouseNumber, Locality, Municipality, Position,
-                             Street, PostCode)
+from ban.core.models import (HouseNumber, Group, Municipality, Position,
+                             PostCode)
 
 from .helpers import batch, iter_file, nodiff, session, load_csv
 
@@ -30,11 +30,10 @@ def process_row(metadata):
     code = metadata.get('postcode')
     fantoir = ''.join(id.split('_')[:2])[:9]
 
-    kind = metadata['type']
-    klass = Street if kind == 'street' else Locality
-    instance = klass.select().where(klass.fantoir == fantoir).first()
+    kind = 'area' if metadata['type'] == 'locality' else 'way'
+    instance = Group.select().where(Group.fantoir == fantoir).first()
     if instance:
-        return report('Existing {}'.format(klass.__name__),
+        return report('Existing {}'.format(Group.__name__),
                       {name: name, fantoir: fantoir},
                       report.WARNING)
 
@@ -59,13 +58,8 @@ def process_row(metadata):
             else:
                 report('Created postcode', code, report.NOTICE)
 
-    data = dict(
-        name=name,
-        fantoir=fantoir,
-        municipality=municipality.pk,
-        version=1,
-    )
-    validator = klass.validator(**data)
+    validator = Group.validator(name=name, fantoir=fantoir, kind=kind,
+                                municipality=municipality.pk, version=1)
 
     if not validator.errors:
         item = validator.save()
@@ -86,7 +80,7 @@ def add_housenumber(parent, id, metadata, postcode):
     data = dict(number=number, ordinal=ordinal, version=1, parent=parent.pk,
                 ign=ign)
     if postcode:
-        data['ancestors'] = [postcode]
+        data['postcodes'] = [postcode]
 
     validator = HouseNumber.validator(**data)
 
@@ -120,7 +114,11 @@ def add_cea(row):
     if laposte == 'NR':
         return report('Missing CEA', ign, report.ERROR)
     query = HouseNumber.update(laposte=laposte).where(HouseNumber.ign == ign)
-    done = query.execute()
-    if not done:
-        return report('IGN id not found', ign, report.ERROR)
-    report('Done', ign, report.NOTICE)
+    try:
+        done = query.execute()
+    except peewee.IntegrityError:
+        report('Duplicate CEA', laposte, report.ERROR)
+    else:
+        if not done:
+            return report('IGN id not found', ign, report.ERROR)
+        report('Done', ign, report.NOTICE)

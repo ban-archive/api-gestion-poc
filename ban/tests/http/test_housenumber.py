@@ -4,9 +4,8 @@ import falcon
 import pytest
 from ban.core import models
 
-from ..factories import (DistrictFactory, HouseNumberFactory,
-                         MunicipalityFactory, PositionFactory, PostCodeFactory,
-                         StreetFactory)
+from ..factories import (GroupFactory, HouseNumberFactory,
+                         MunicipalityFactory, PositionFactory, PostCodeFactory)
 from .utils import authorize
 
 
@@ -42,7 +41,7 @@ def test_get_housenumber_with_cia(get, url):
 
 def test_get_housenumber_with_districts(get, url):
     municipality = MunicipalityFactory()
-    district = DistrictFactory(municipality=municipality)
+    district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
     housenumber = HouseNumberFactory(ancestors=[district],
                                      municipality=municipality)
     resp = get(url('housenumber-resource', identifier=housenumber.id))
@@ -138,9 +137,9 @@ def test_get_housenumber_with_position(get, url):
 
 def test_get_housenumber_with_postcode(get, url):
     postcode = PostCodeFactory(code="12345")
-    housenumber = HouseNumberFactory(ancestors=[postcode])
+    housenumber = HouseNumberFactory(postcodes=[postcode])
     resp = get(url('housenumber-resource', identifier=housenumber.id))
-    assert postcode.as_list in resp.json['ancestors']
+    assert postcode.as_list in resp.json['postcodes']
 
 
 def test_get_housenumber_positions(get, url):
@@ -165,7 +164,7 @@ def test_get_housenumber_positions(get, url):
 
 @authorize
 def test_create_housenumber(client):
-    street = StreetFactory(name="Rue de Bonbons")
+    street = GroupFactory(name="Rue de Bonbons")
     assert not models.HouseNumber.select().count()
     data = {
         "number": 20,
@@ -180,10 +179,9 @@ def test_create_housenumber(client):
     assert models.HouseNumber.select().count() == 1
 
 
-@pytest.mark.xfail(reason='Not possible anymore with Proxy relation')
 @authorize
 def test_create_housenumber_with_street_fantoir(client):
-    street = StreetFactory(name="Rue de Bonbons")
+    street = GroupFactory(name="Rue de Bonbons")
     assert not models.HouseNumber.select().count()
     data = {
         "number": 20,
@@ -196,7 +194,7 @@ def test_create_housenumber_with_street_fantoir(client):
 
 @authorize
 def test_create_housenumber_does_not_honour_version_field(client):
-    street = StreetFactory(name="Rue de Bonbons")
+    street = GroupFactory(name="Rue de Bonbons")
     data = {
         "version": 3,
         "number": 20,
@@ -211,33 +209,33 @@ def test_create_housenumber_does_not_honour_version_field(client):
 @authorize
 def test_create_housenumber_with_postcode_id(client):
     postcode = PostCodeFactory(code="12345")
-    street = StreetFactory(name="Rue de Bonbons")
+    street = GroupFactory(name="Rue de Bonbons")
     data = {
         "number": 20,
         "parent": street.id,
-        "ancestors": [postcode.id]
+        "postcodes": [postcode.id]
     }
     headers = {'Content-Type': 'application/json'}
     resp = client.post('/housenumber', data, headers=headers)
     assert resp.status == falcon.HTTP_201
     assert models.HouseNumber.select().count() == 1
-    assert postcode in models.HouseNumber.first().ancestors
+    assert postcode in models.HouseNumber.first().postcodes
 
 
-@pytest.mark.xfail(reason='Not possible anymore with Proxy relation')
 @authorize
 def test_create_housenumber_with_postcode_code(client):
     postcode = PostCodeFactory(code="12345")
-    street = StreetFactory(name="Rue de Bonbons")
+    street = GroupFactory(name="Rue de Bonbons")
     data = {
         "number": 20,
-        "street": 'fantoir:{}'.format(street.fantoir),
-        "postcode": 'code:12345',
+        "parent": 'fantoir:{}'.format(street.fantoir),
+        "postcodes": ['code:12345'],
     }
-    resp = client.post('/housenumber', data)
+    headers = {'Content-Type': 'application/json'}
+    resp = client.post('/housenumber', data, headers=headers)
     assert resp.status == falcon.HTTP_201
     assert models.HouseNumber.select().count() == 1
-    assert models.HouseNumber.first().postcode == postcode
+    assert postcode in models.HouseNumber.first().postcodes
 
 
 @authorize
@@ -280,7 +278,8 @@ def test_replace_housenumber_with_missing_field_fails(client, url):
 @authorize
 def test_patch_housenumber_with_districts(client, url):
     housenumber = HouseNumberFactory()
-    district = DistrictFactory(municipality=housenumber.parent.municipality)
+    district = GroupFactory(municipality=housenumber.parent.municipality,
+                            kind=models.Group.AREA)
     data = {
         "version": 2,
         "ancestors": [district.id],
@@ -298,13 +297,14 @@ def test_patch_housenumber_with_postcode(client, url):
     housenumber = HouseNumberFactory()
     data = {
         "version": 2,
-        "ancestors": [postcode.id],
+        "postcodes": [postcode.id],
     }
+    headers = {'Content-Type': 'application/json'}
     uri = url('housenumber-resource', identifier=housenumber.id)
-    resp = client.patch(uri, body=json.dumps(data))
+    resp = client.patch(uri, body=data, headers=headers)
     assert resp.status == falcon.HTTP_200
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
-    assert postcode in hn.ancestors
+    assert postcode in hn.postcodes
 
 
 @authorize

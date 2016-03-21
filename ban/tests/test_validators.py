@@ -2,8 +2,8 @@ import pytest
 
 from ban.core import models
 
-from .factories import (DistrictFactory, HouseNumberFactory,
-                        MunicipalityFactory, PositionFactory, StreetFactory)
+from .factories import (GroupFactory, HouseNumberFactory,
+                        MunicipalityFactory, PositionFactory)
 
 
 def test_can_create_municipality(session):
@@ -167,24 +167,34 @@ def test_cannot_create_postcode_with_code_non_digit(session):
 
 def test_can_create_street(session):
     municipality = MunicipalityFactory(insee="12345")
-    validator = models.Street.validator(name='Rue des Girafes',
-                                        municipality=municipality,
-                                        fantoir='123456789')
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality=municipality,
+                                       fantoir='123456789')
     assert not validator.errors
     street = validator.save()
-    assert len(models.Street.select()) == 1
+    assert len(models.Group.select()) == 1
     assert street.fantoir == "123456789"
     assert street.version == 1
 
 
+def test_cannot_create_group_without_kind(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       municipality=municipality,
+                                       fantoir='123456789')
+    assert validator.errors
+
+
 def test_can_create_street_with_municipality_insee(session):
     municipality = MunicipalityFactory(insee="12345")
-    validator = models.Street.validator(name='Rue des Girafes',
-                                        municipality='insee:12345',
-                                        fantoir='123456789')
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality='insee:12345',
+                                       fantoir='123456789')
     assert not validator.errors
     street = validator.save()
-    assert len(models.Street.select()) == 1
+    assert len(models.Group.select()) == 1
     assert street.fantoir == "123456789"
     assert street.version == 1
     assert street.municipality == municipality
@@ -197,26 +207,27 @@ def test_can_create_street_with_municipality_old_insee(session):
     municipality.increment_version()
     municipality.save()
     # Call it with old insee.
-    validator = models.Street.validator(name='Rue des Girafes',
-                                        municipality='insee:12345',
-                                        fantoir='123456789')
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality='insee:12345',
+                                       fantoir='123456789')
     assert not validator.errors
     street = validator.save()
-    assert len(models.Street.select()) == 1
+    assert len(models.Group.select()) == 1
     assert street.municipality == municipality
 
 
 def test_can_create_housenumber(session):
-    street = StreetFactory()
+    street = GroupFactory()
     validator = models.HouseNumber.validator(parent=street, number='11')
     assert not validator.errors
     housenumber = validator.save()
     assert housenumber.number == '11'
 
 
-def test_can_create_housenumber_with_district(session):
-    district = DistrictFactory()
-    street = StreetFactory()
+def test_can_create_housenumber_with_ancestors(session):
+    district = GroupFactory(name="IIIe arrondissement", kind=models.Group.AREA)
+    street = GroupFactory()
     validator = models.HouseNumber.validator(parent=street, number='11',
                                              ancestors=[district])
     assert not validator.errors
@@ -224,18 +235,18 @@ def test_can_create_housenumber_with_district(session):
     assert district in housenumber.ancestors
 
 
-def test_can_create_housenumber_with_district_pks(session):
-    district = DistrictFactory()
-    street = StreetFactory()
+def test_can_create_housenumber_with_ancestor_ids(session):
+    district = GroupFactory(name="IIIe arrondissement", kind=models.Group.AREA)
+    street = GroupFactory()
     validator = models.HouseNumber.validator(parent=street, number='11',
-                                             ancestors=[district.pk])
+                                             ancestors=[district.id])
     assert not validator.errors
     housenumber = validator.save()
     assert district in housenumber.ancestors
 
 
-def test_can_update_housenumber_district(session):
-    district = DistrictFactory()
+def test_can_update_housenumber_ancestor(session):
+    district = GroupFactory(name="IIIe arrondissement", kind=models.Group.AREA)
     housenumber = HouseNumberFactory()
     validator = models.HouseNumber.validator(instance=housenumber,
                                              update=True,

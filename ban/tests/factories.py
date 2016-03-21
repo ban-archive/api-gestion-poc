@@ -91,36 +91,20 @@ class PostCodeFactory(BaseFactory):
         model = models.PostCode
 
 
-class DistrictFactory(BaseFactory):
-    name = "IIIe Arrondissement"
-    municipality = factory.SubFactory(MunicipalityFactory)
-
-    class Meta:
-        model = models.District
-
-
-class LocalityFactory(BaseFactory):
-    name = "L'Empereur"
-    fantoir = "0080N"
-    municipality = factory.SubFactory(MunicipalityFactory)
-
-    class Meta:
-        model = models.Locality
-
-
-class StreetFactory(BaseFactory):
+class GroupFactory(BaseFactory):
     name = "Rue des Pyrénées"
     fantoir = "0080N"
+    kind = "way"
     municipality = factory.SubFactory(MunicipalityFactory)
 
     class Meta:
-        model = models.Street
+        model = models.Group
 
 
 class HouseNumberFactory(BaseFactory):
     number = "18"
     ordinal = "bis"
-    parent = factory.SubFactory(StreetFactory)
+    parent = factory.SubFactory(GroupFactory)
 
     @factory.post_generation
     def ancestors(self, create, extracted, **kwargs):
@@ -128,6 +112,13 @@ class HouseNumberFactory(BaseFactory):
             return
         if extracted:
             self.ancestors.add(extracted)
+
+    @factory.post_generation
+    def postcodes(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            self.postcodes.add(extracted)
 
     class Meta:
         model = models.HouseNumber

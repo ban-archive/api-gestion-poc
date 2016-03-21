@@ -9,7 +9,7 @@ from .wsgi import app
 from .auth import auth
 
 
-__all__ = ['Municipality', 'Street', 'Locality', 'Housenumber', 'Position']
+__all__ = ['Municipality', 'Group', 'Postcode', 'Housenumber', 'Position']
 
 
 class BaseCollection:
@@ -217,16 +217,8 @@ class WithHousenumbers(VersionnedResource):
         self.collection(req, resp, [h.as_list for h in instance.housenumbers])
 
 
-class Locality(WithHousenumbers):
-    model = models.Locality
-
-
-class Street(WithHousenumbers):
-    model = models.Street
-
-
-class District(WithHousenumbers):
-    model = models.District
+class Group(WithHousenumbers):
+    model = models.Group
 
 
 class Postcode(WithHousenumbers):
@@ -236,17 +228,11 @@ class Postcode(WithHousenumbers):
 class Municipality(VersionnedResource):
     model = models.Municipality
 
-    @app.endpoint('/{identifier}/streets')
-    def on_get_streets(self, req, resp, *args, **kwargs):
-        """Retrieve {resource} streets."""
+    @app.endpoint('/{identifier}/groups')
+    def on_get_groups(self, req, resp, *args, **kwargs):
+        """Retrieve {resource} groups."""
         instance = self.get_object(**kwargs)
-        self.collection(req, resp, instance.streets.as_resource_list())
-
-    @app.endpoint('/{identifier}/localities')
-    def on_get_localities(self, req, resp, *args, **kwargs):
-        """Retrieve {resource} localities."""
-        instance = self.get_object(**kwargs)
-        self.collection(req, resp, instance.localitys.as_resource_list())
+        self.collection(req, resp, instance.groups.as_resource_list())
 
 
 class User(BaseCRUD):

@@ -46,20 +46,20 @@ def test_create_user_should_accept_is_staff_kwarg(monkeypatch):
 
 def test_truncate_should_truncate_all_tables_by_default(monkeypatch):
     factories.MunicipalityFactory()
-    factories.StreetFactory()
+    factories.GroupFactory()
     monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
     truncate()
     assert not models.Municipality.select().count()
-    assert not models.Street.select().count()
+    assert not models.Group.select().count()
 
 
 def test_truncate_should_only_truncate_given_names(monkeypatch):
     factories.MunicipalityFactory()
-    factories.StreetFactory()
+    factories.GroupFactory()
     monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
-    truncate(names=['street'])
+    truncate(names=['group'])
     assert models.Municipality.select().count()
-    assert not models.Street.select().count()
+    assert not models.Group.select().count()
 
 
 def test_truncate_should_not_ask_for_confirm_in_force_mode(monkeypatch):
@@ -70,7 +70,7 @@ def test_truncate_should_not_ask_for_confirm_in_force_mode(monkeypatch):
 
 def test_export_resources():
     mun = factories.MunicipalityFactory()
-    street = factories.StreetFactory(municipality=mun)
+    street = factories.GroupFactory(municipality=mun)
     hn = factories.HouseNumberFactory(parent=street)
     factories.PositionFactory(housenumber=hn)
     path = Path(__file__).parent / 'data/export.sjson'

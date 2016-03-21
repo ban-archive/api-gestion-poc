@@ -8,7 +8,7 @@ from ban import db
 from .versioning import Versioned, BaseVersioned
 from .resource import ResourceModel, BaseResource
 
-__all__ = ['Municipality', 'Street', 'HouseNumber', 'Locality',
+__all__ = ['Municipality', 'Group', 'HouseNumber', 'PostCode',
            'Position']
 
 
@@ -53,63 +53,21 @@ class Municipality(NamedModel):
         return [p.code for p in self.postcodes]
 
 
-class Proxy(db.Model):
-    MAPPING = {}
-    kind = db.CharField(max_length=50, null=False)
-
-    @property
-    def real(self):
-        class_ = self.MAPPING[self.kind]
-        return class_.get(class_.proxy == self)
-
-    @classmethod
-    def from_id(self, id):
-        # Raises ValueError if id is not a BAN id.
-        _, class_name, _ = id.split('-')
-        klass = self.MAPPING.get(class_name)
-        if not klass:
-            raise ValueError
-        return klass.get(klass.id == id)
-
-
-class BaseProxyable(BaseModel):
-
-    def __new__(mcs, name, bases, attrs, **kwargs):
-        cls = super().__new__(mcs, name, bases, attrs, **kwargs)
-        Proxy.MAPPING[name.lower()] = cls
-        return cls
-
-
-class ProxyableModel(Model, metaclass=BaseProxyable):
-    proxy = db.ForeignKeyField(Proxy, unique=True)
+class BaseGroup(NamedModel):
     municipality = db.ForeignKeyField(Municipality,
                                       related_name='{classname}s')
     attributes = db.HStoreField(null=True)
 
     class Meta:
-        auto_increment = False
+        abstract = True
 
     @property
     def housenumbers(self):
-        qs = (self.proxy.housenumbers | self.proxy.housenumber_set)
+        qs = (self._housenumbers | self.housenumber_set)
         return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
 
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            proxy = Proxy(kind=self.resource)
-            proxy.save()
-            self.proxy = proxy.pk
-            self.pk = proxy.pk
-            kwargs['force_insert'] = True
-        return super().save(*args, **kwargs)
 
-    def delete_instance(self, recursive=False, delete_nullable=False):
-        with self._meta.database.atomic():
-            super().delete_instance(recursive, delete_nullable)
-            self.proxy.delete_instance()
-
-
-class PostCode(ProxyableModel, NamedModel):
+class PostCode(BaseGroup):
     identifiers = ['code']
     resource_fields = ['code', 'name', 'municipality']
     code = db.PostCodeField(index=True)
@@ -120,19 +78,19 @@ class PostCode(ProxyableModel, NamedModel):
         )
 
 
-class District(ProxyableModel, NamedModel):
-    """Submunicipal non administrative area."""
-    resource_fields = ['name', 'alias', 'attributes', 'municipality']
-
-
-class BaseFantoirModel(ProxyableModel, NamedModel):
+class Group(BaseGroup):
+    AREA = 'area'
+    WAY = 'way'
+    KIND = (
+        (WAY, 'way'),
+        (AREA, 'area'),
+    )
     identifiers = ['fantoir']
-    resource_fields = ['name', 'alias', 'fantoir', 'municipality']
+    resource_fields = ['name', 'alias', 'fantoir', 'attributes',
+                       'municipality', 'kind']
 
+    kind = db.CharField(max_length=64, choices=KIND)
     fantoir = db.CharField(max_length=9, null=True, index=True)
-
-    class Meta:
-        abstract = True
 
     @property
     def tmp_fantoir(self):
@@ -142,27 +100,19 @@ class BaseFantoirModel(ProxyableModel, NamedModel):
         return self.fantoir or self.tmp_fantoir
 
 
-class Locality(BaseFantoirModel):
-    """Any area referenced with a Fantoir."""
-    pass
-
-
-class Street(BaseFantoirModel):
-    pass
-
-
 class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
-                       'ancestors', 'center', 'ign']
+                       'ancestors', 'center', 'ign', 'postcodes']
 
     number = db.CharField(max_length=16)
     ordinal = db.CharField(max_length=16, null=True)
-    parent = db.ProxyField(Proxy)
+    parent = db.ForeignKeyField(Group)
     cia = db.CharField(max_length=100, null=True, index=True)
     laposte = db.CharField(max_length=10, null=True, unique=True)
     ign = db.CharField(max_length=24, null=True, unique=True)
-    ancestors = db.ProxiesField(Proxy, related_name='housenumbers')
+    ancestors = db.ManyToManyField(Group, related_name='_housenumbers')
+    postcodes = db.ManyToManyField(PostCode, related_name='_housenumbers')
 
     class Meta:
         resource_schema = {'cia': {'required': False},
@@ -217,6 +167,10 @@ class HouseNumber(Model):
     @property
     def ancestors_resource(self):
         return [d.as_list for d in self.ancestors]
+
+    @property
+    def postcodes_resource(self):
+        return [d.as_list for d in self.postcodes]
 
 
 class Position(Model):

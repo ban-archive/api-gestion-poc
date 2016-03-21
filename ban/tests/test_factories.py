@@ -29,19 +29,9 @@ def test_municipality_can_be_instanciated():
     assert municipality.name
 
 
-def test_district_can_be_instanciated():
-    district = factories.DistrictFactory()
-    assert district.name
-
-
-def test_locality_can_be_instanciated():
-    locality = factories.LocalityFactory()
-    assert locality.name
-
-
-def test_street_can_be_instanciated():
-    street = factories.StreetFactory()
-    assert street.name
+def test_group_can_be_instanciated():
+    group = factories.GroupFactory()
+    assert group.name
 
 
 def test_housenumber_can_be_instanciated():

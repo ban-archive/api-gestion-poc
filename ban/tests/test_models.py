@@ -3,9 +3,8 @@ import pytest
 
 from ban.core import models
 
-from .factories import (DistrictFactory, HouseNumberFactory,
-                        MunicipalityFactory, PositionFactory, PostCodeFactory,
-                        StreetFactory)
+from .factories import (GroupFactory, HouseNumberFactory,
+                        MunicipalityFactory, PositionFactory, PostCodeFactory)
 
 
 def test_municipality_is_created_with_version_1():
@@ -109,15 +108,15 @@ def test_should_allow_deleting_municipality_not_linked():
 
 def test_should_not_allow_deleting_municipality_linked_to_street():
     municipality = MunicipalityFactory()
-    StreetFactory(municipality=municipality)
+    GroupFactory(municipality=municipality)
     with pytest.raises(peewee.IntegrityError):
         municipality.delete_instance()
     assert models.Municipality.get(models.Municipality.id == municipality.id)
 
 
-def test_street_is_versioned():
+def test_group_is_versioned():
     initial_name = "Rue des Pommes"
-    street = StreetFactory(name=initial_name)
+    street = GroupFactory(name=initial_name)
     assert street.version == 1
     street.name = "Rue des Poires"
     street.increment_version()
@@ -135,29 +134,29 @@ def test_street_is_versioned():
 
 
 def test_should_allow_deleting_street_not_linked():
-    street = StreetFactory()
+    street = GroupFactory()
     street.delete_instance()
-    assert not models.Street.select().count()
+    assert not models.Group.select().count()
 
 
 def test_should_not_allow_deleting_street_linked_to_housenumber():
-    street = StreetFactory()
+    street = GroupFactory()
     HouseNumberFactory(parent=street)
     with pytest.raises(peewee.IntegrityError):
         street.delete_instance()
-    assert models.Street.get(models.Street.id == street.id)
+    assert models.Group.get(models.Group.id == street.id)
 
 
 def test_tmp_fantoir_should_use_name():
     municipality = MunicipalityFactory(insee='93031')
-    street = StreetFactory(municipality=municipality, fantoir='',
-                           name="Rue des Pêchers")
+    street = GroupFactory(municipality=municipality, fantoir='',
+                          name="Rue des Pêchers")
     assert street.tmp_fantoir == '#RUEDESPECHERS'
 
 
 def test_compute_cia_should_consider_insee_fantoir_number_and_ordinal():
     municipality = MunicipalityFactory(insee='93031')
-    street = StreetFactory(municipality=municipality, fantoir='1491H')
+    street = GroupFactory(municipality=municipality, fantoir='1491H')
     hn = HouseNumberFactory(parent=street, number="84", ordinal="bis")
     hn = models.HouseNumber.get(models.HouseNumber.id == hn.id)
     assert hn.compute_cia() == '93031_1491H_84_BIS'
@@ -165,27 +164,27 @@ def test_compute_cia_should_consider_insee_fantoir_number_and_ordinal():
 
 def test_compute_cia_should_let_ordinal_empty_if_not_set():
     municipality = MunicipalityFactory(insee='93031')
-    street = StreetFactory(municipality=municipality, fantoir='1491H')
+    street = GroupFactory(municipality=municipality, fantoir='1491H')
     hn = HouseNumberFactory(parent=street, number="84", ordinal="")
     assert hn.compute_cia() == '93031_1491H_84_'
 
 
 def test_compute_cia_should_use_locality_if_no_street():
     municipality = MunicipalityFactory(insee='93031')
-    street = StreetFactory(municipality=municipality, fantoir='1491H')
+    street = GroupFactory(municipality=municipality, fantoir='1491H')
     hn = HouseNumberFactory(parent=street, number="84", ordinal="")
     assert hn.compute_cia() == '93031_1491H_84_'
 
 
 def test_housenumber_should_create_cia_on_save():
     municipality = MunicipalityFactory(insee='93031')
-    street = StreetFactory(municipality=municipality, fantoir='1491H')
+    street = GroupFactory(municipality=municipality, fantoir='1491H')
     hn = HouseNumberFactory(parent=street, number="84", ordinal="bis")
     assert hn.cia == '93031_1491H_84_BIS'
 
 
 def test_housenumber_is_versioned():
-    street = StreetFactory()
+    street = GroupFactory()
     hn = HouseNumberFactory(parent=street, ordinal="b")
     assert hn.version == 1
     hn.ordinal = "bis"
@@ -201,7 +200,7 @@ def test_housenumber_is_versioned():
 
 
 def test_cannot_duplicate_housenumber_on_same_street():
-    street = StreetFactory()
+    street = GroupFactory()
     HouseNumberFactory(parent=street, ordinal="b", number="10")
     with pytest.raises(peewee.IntegrityError):
         HouseNumberFactory(parent=street, ordinal="b", number="10")
@@ -218,8 +217,8 @@ def test_housenumber_str():
 
 
 def test_can_create_two_housenumbers_with_same_number_but_different_streets():
-    street = StreetFactory()
-    street2 = StreetFactory()
+    street = GroupFactory()
+    street2 = GroupFactory()
     HouseNumberFactory(parent=street, ordinal="b", number="10")
     HouseNumberFactory(parent=street2, ordinal="b", number="10")
 
@@ -237,7 +236,7 @@ def test_housenumber_center_without_position():
 
 def test_create_housenumber_with_district():
     municipality = MunicipalityFactory()
-    district = DistrictFactory(municipality=municipality)
+    district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
     housenumber = HouseNumberFactory(ancestors=[district],
                                      street__municipality=municipality)
     assert district in housenumber.ancestors
@@ -246,7 +245,8 @@ def test_create_housenumber_with_district():
 
 def test_add_district_to_housenumber():
     housenumber = HouseNumberFactory()
-    district = DistrictFactory(municipality=housenumber.parent.municipality)
+    district = GroupFactory(municipality=housenumber.parent.municipality,
+                            kind=models.Group.AREA)
     housenumber.ancestors.add(district)
     assert district in housenumber.ancestors
     assert housenumber in district.housenumbers
@@ -254,7 +254,7 @@ def test_add_district_to_housenumber():
 
 def test_remove_housenumber_ancestors():
     municipality = MunicipalityFactory()
-    district = DistrictFactory(municipality=municipality)
+    district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
     housenumber = HouseNumberFactory(ancestors=[district],
                                      street__municipality=municipality)
     assert district in housenumber.ancestors

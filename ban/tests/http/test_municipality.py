@@ -3,7 +3,7 @@ import json
 import falcon
 from ban.core import models
 
-from ..factories import MunicipalityFactory, PostCodeFactory, StreetFactory
+from ..factories import MunicipalityFactory, PostCodeFactory, GroupFactory
 from .utils import authorize
 
 
@@ -36,20 +36,20 @@ def test_get_municipality_without_explicit_identifier(get, url):
     assert resp.json['name'] == 'Cabour'
 
 
-def test_get_municipality_streets_collection(get, url):
+def test_get_municipality_groups_collection(get, url):
     municipality = MunicipalityFactory(name="Cabour")
-    street = StreetFactory(municipality=municipality, name="Rue de la Plage")
-    uri = url('municipality-streets', identifier=municipality.id)
+    street = GroupFactory(municipality=municipality, name="Rue de la Plage")
+    uri = url('municipality-groups', identifier=municipality.id)
     resp = get(uri, query_string='pouet=ah')
     assert resp.status == falcon.HTTP_200
     assert resp.json['collection'][0] == street.as_list
     assert resp.json['total'] == 1
 
 
-def test_get_municipality_streets_collection_is_paginated(get, url):
+def test_get_municipality_groups_collection_is_paginated(get, url):
     municipality = MunicipalityFactory(name="Cabour")
-    StreetFactory.create_batch(6, municipality=municipality)
-    uri = url('municipality-streets', identifier=municipality.id,
+    GroupFactory.create_batch(6, municipality=municipality)
+    uri = url('municipality-groups', identifier=municipality.id,
               query_string=dict(limit=4))
     resp = get(uri)
     page1 = resp.json
@@ -209,7 +209,7 @@ def test_cannot_delete_municipality_if_not_authorized(client, url):
 @authorize
 def test_cannot_delete_municipality_if_linked_to_street(client, url):
     municipality = MunicipalityFactory()
-    StreetFactory(municipality=municipality)
+    GroupFactory(municipality=municipality)
     uri = url('municipality-resource', identifier=municipality.id)
     resp = client.delete(uri)
     assert resp.status == falcon.HTTP_409
