@@ -241,6 +241,17 @@ def test_can_create_street_with_empty_laposte_id(session):
     assert street.laposte is None
 
 
+def test_can_create_street_with_falsy_laposte(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality=municipality,
+                                       laposte='')
+    assert not validator.errors
+    street = validator.save()
+    assert models.Group.get(models.Group.pk == street.pk).laposte is None
+
+
 def test_can_create_housenumber(session):
     street = GroupFactory()
     validator = models.HouseNumber.validator(parent=street, number='11')

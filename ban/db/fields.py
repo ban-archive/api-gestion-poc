@@ -89,6 +89,11 @@ class ForeignKeyField(peewee.ForeignKeyField):
 class CharField(peewee.CharField):
     schema_type = 'string'
 
+    def db_value(self, value):
+        if self.null and not value:
+            return None
+        return super().db_value(value)
+
 
 class IntegerField(peewee.IntegerField):
     schema_type = 'integer'
@@ -151,7 +156,8 @@ class ResourceListQueryResultWrapper(peewee.ModelQueryResultWrapper):
 class ManyToManyQuery(fields.ManyToManyQuery):
 
     def _get_result_wrapper(self):
-        return getattr(self, '_result_wrapper', None) or ResourceListQueryResultWrapper
+        return (getattr(self, '_result_wrapper', None)
+                or ResourceListQueryResultWrapper)
 
     @peewee.returns_clone
     def as_resource_list(self):
