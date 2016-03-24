@@ -15,6 +15,7 @@ def test_create_position(client):
     data = {
         "center": "(3, 4)",
         "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
         "housenumber": housenumber.id,
     }
     resp = client.post(url, data)
@@ -32,6 +33,7 @@ def test_cannot_create_position_without_kind(client):
     url = '/position'
     data = {
         "center": "(3, 4)",
+        "positioning": models.Position.IMAGERY,
         "housenumber": housenumber.id,
     }
     resp = client.post(url, data)
@@ -46,7 +48,37 @@ def test_cannot_create_position_without_invalid_kind(client):
     data = {
         "center": "(3, 4)",
         "kind": "ENTRANCE",
+        "positioning": models.Position.IMAGERY,
         "housenumber": housenumber.id,
+    }
+    resp = client.post(url, data)
+    assert resp.status == falcon.HTTP_422
+
+
+@authorize
+def test_cannot_create_position_without_positioning(client):
+    housenumber = HouseNumberFactory(number="22")
+    assert not models.Position.select().count()
+    url = '/position'
+    data = {
+        "center": "(3, 4)",
+        "housenumber": housenumber.id,
+        "kind": models.Position.ENTRANCE,
+    }
+    resp = client.post(url, data)
+    assert resp.status == falcon.HTTP_422
+
+
+@authorize
+def test_cannot_create_position_with_invalid_positioning(client):
+    housenumber = HouseNumberFactory(number="22")
+    assert not models.Position.select().count()
+    url = '/position'
+    data = {
+        "center": "(3, 4)",
+        "housenumber": housenumber.id,
+        "kind": models.Position.ENTRANCE,
+        "positioning": "GPS",
     }
     resp = client.post(url, data)
     assert resp.status == falcon.HTTP_422
@@ -60,6 +92,7 @@ def test_create_position_with_housenumber_cia(client):
     data = {
         "center": "(3, 4)",
         "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
         "housenumber": 'cia:{}'.format(housenumber.cia),
     }
     resp = client.post(url, data)
@@ -75,6 +108,7 @@ def test_create_position_with_bad_housenumber_cia_is_422(client):
     data = {
         "center": "(3, 4)",
         "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
         "housenumber": 'cia:{}'.format('xxx'),
     }
     resp = client.post(url, data)
@@ -90,6 +124,7 @@ def test_replace_position(client, url):
         "version": 2,
         "center": (3, 4),
         "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
         "housenumber": position.housenumber.id
     }
     resp = client.put(uri, body=json.dumps(data))
@@ -109,6 +144,7 @@ def test_replace_position_with_housenumber_cia(client, url):
         "version": 2,
         "center": (3, 4),
         "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
         "housenumber": 'cia:{}'.format(position.housenumber.cia)
     }
     resp = client.put(uri, body=json.dumps(data))
@@ -125,6 +161,7 @@ def test_replace_position_with_existing_version_fails(client, url):
         "version": 1,
         "center": (3, 4),
         "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
         "housenumber": position.housenumber.id
     }
     resp = client.put(uri, body=json.dumps(data))
@@ -144,6 +181,7 @@ def test_replace_position_with_non_incremental_version_fails(client, url):
         "version": 18,
         "center": (3, 4),
         "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
         "housenumber": position.housenumber.id
     }
     resp = client.put(uri, body=json.dumps(data))

@@ -128,6 +128,7 @@ class PositionFactory(BaseFactory):
     center = (-1.1111, 48.8888)
     housenumber = factory.SubFactory(HouseNumberFactory)
     kind = models.Position.ENTRANCE
+    positioning = models.Position.IMAGERY
 
     class Meta:
         model = models.Position

@@ -196,14 +196,30 @@ class Position(Model):
         (UTILITY, _('utility service')),
     )
 
+    DGPS = 'dgps'
+    GPS = 'gps'
+    IMAGERY = 'imagery'
+    PROJECTION = 'projection'
+    INTERPOLATION = 'interpolation'
+    OTHER = 'other'
+    POSITIONING = (
+        (DGPS, _('via differencial GPS')),
+        (GPS, _('via GPS')),
+        (IMAGERY, _('via imagery')),
+        (PROJECTION, _('computed via projection')),
+        (INTERPOLATION, _('computed via interpolation')),
+        (OTHER, _('other')),
+    )
+
     resource_fields = ['center', 'source', 'housenumber', 'attributes',
-                       'kind', 'comment', 'parent']
+                       'kind', 'comment', 'parent', 'positioning']
 
     center = db.PointField(verbose_name=_("center"))
     housenumber = db.ForeignKeyField(HouseNumber)
     parent = db.ForeignKeyField('self', related_name='children', null=True)
     source = db.CharField(max_length=64, null=True)
     kind = db.CharField(max_length=64, choices=KIND)
+    positioning = db.CharField(max_length=32, choices=POSITIONING)
     attributes = db.HStoreField(null=True)
     comment = peewee.TextField(null=True)
 

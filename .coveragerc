@@ -2,6 +2,8 @@
 omit =
     ban/bin/__init__.py
     ban/commands/oldban.py
+    ban/commands/ign.py
+    ban/commands/sna.py
     ban/commands/server.py
     ban/commands/helpers.py
     ban/tests/*
