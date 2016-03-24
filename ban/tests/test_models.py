@@ -7,6 +7,18 @@ from .factories import (GroupFactory, HouseNumberFactory,
                         MunicipalityFactory, PositionFactory, PostCodeFactory)
 
 
+def test_get_model_locks_version():
+    m = MunicipalityFactory()
+    municipality = models.Municipality.get(models.Municipality.pk == m.pk)
+    assert municipality._locked_version == 1
+
+
+def test_select_first_model_locks_version():
+    MunicipalityFactory()
+    municipality = models.Municipality.select().first()
+    assert municipality._locked_version == 1
+
+
 def test_municipality_is_created_with_version_1():
     municipality = MunicipalityFactory()
     assert municipality.version == 1

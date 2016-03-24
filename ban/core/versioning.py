@@ -39,15 +39,13 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         validate_backrefs = False
         unique_together = ('pk', 'version')
 
-    @classmethod
-    def get(cls, *query, **kwargs):
-        instance = super().get(*query, **kwargs)
-        instance.lock_version()
-        return instance
+    def prepared(self):
+        self.lock_version()
+        super().prepared()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.lock_version()
+        self.prepared()
 
     def _serialize(self, fields):
         data = {}
