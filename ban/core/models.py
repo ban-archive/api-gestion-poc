@@ -85,12 +85,14 @@ class Group(BaseGroup):
         (WAY, 'way'),
         (AREA, 'area'),
     )
-    identifiers = ['fantoir']
+    identifiers = ['fantoir', 'laposte', 'ign']
     resource_fields = ['name', 'alias', 'fantoir', 'attributes',
-                       'municipality', 'kind']
+                       'municipality', 'kind', 'laposte', 'ign']
 
     kind = db.CharField(max_length=64, choices=KIND)
     fantoir = db.CharField(max_length=9, null=True, index=True)
+    laposte = db.CharField(max_length=10, null=True, unique=True)
+    ign = db.CharField(max_length=24, null=True, unique=True)
 
     @property
     def tmp_fantoir(self):
