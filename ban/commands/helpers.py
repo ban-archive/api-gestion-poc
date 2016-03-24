@@ -59,7 +59,7 @@ class Bar(ProgressBar):
                 '| ETA: {eta} | {elapsed}')
 
 
-def batch(func, iterable, chunksize=1000, total=None):
+def batch(func, iterable, chunksize=1000, total=None, progress=True):
     bar = Bar(total=total)
     workers = int(config.get('WORKERS', os.cpu_count()))
     with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -72,11 +72,13 @@ def batch(func, iterable, chunksize=1000, total=None):
             count += 1
             if count % 10000 == 0:
                 for r in executor.map(func, chunk):
-                    bar()
+                    if progress:
+                        bar()
                 chunk = []
         if chunk:
             for r in executor.map(func, chunk):
-                bar()
+                if progress:
+                    bar()
 
 
 def prompt(text, default=None, confirmation=False, coerce=None, hidden=False):
