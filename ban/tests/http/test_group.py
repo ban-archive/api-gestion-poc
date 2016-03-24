@@ -10,24 +10,28 @@ from .utils import authorize
 def test_get_group(get, url):
     street = GroupFactory(name="Rue des Boulets")
     resp = get(url('group-resource', id=street.id, identifier="id"))
+    assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == "Rue des Boulets"
 
 
 def test_get_group_without_explicit_identifier(get, url):
     street = GroupFactory(name="Rue des Boulets")
     resp = get(url('group-resource', identifier=street.id))
+    assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == "Rue des Boulets"
 
 
 def test_get_group_with_fantoir(get, url):
-    street = GroupFactory(name="Rue des Boulets")
+    street = GroupFactory(name="Rue des Boulets", fantoir='1234')
     resp = get(url('group-resource', id=street.fantoir, identifier="fantoir"))
+    assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == "Rue des Boulets"
 
 
 def test_get_group_with_pk(get, url):
     street = GroupFactory(name="Rue des Boulets")
     resp = get(url('group-resource', id=street.pk, identifier="pk"))
+    assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == "Rue des Boulets"
 
 
@@ -37,6 +41,7 @@ def test_get_group_housenumbers(get, url):
     hn2 = HouseNumberFactory(number="2", parent=street)
     hn3 = HouseNumberFactory(number="3", parent=street)
     resp = get(url('group-housenumbers', identifier=street.id))
+    assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 3
     assert resp.json['collection'][0] == hn1.as_list
     assert resp.json['collection'][1] == hn2.as_list

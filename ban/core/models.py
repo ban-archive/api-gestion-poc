@@ -90,7 +90,7 @@ class Group(BaseGroup):
                        'municipality', 'kind', 'laposte', 'ign']
 
     kind = db.CharField(max_length=64, choices=KIND)
-    fantoir = db.CharField(max_length=9, null=True, index=True)
+    fantoir = db.CharField(max_length=9, null=True, unique=True)
     laposte = db.CharField(max_length=10, null=True, unique=True)
     ign = db.CharField(max_length=24, null=True, unique=True)
 

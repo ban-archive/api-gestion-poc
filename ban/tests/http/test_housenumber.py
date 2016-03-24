@@ -1,7 +1,6 @@
 import json
 
 import falcon
-import pytest
 from ban.core import models
 
 from ..factories import (GroupFactory, HouseNumberFactory,
@@ -12,6 +11,7 @@ from .utils import authorize
 def test_get_housenumber(get, url):
     housenumber = HouseNumberFactory(number="22")
     resp = get(url('housenumber-resource', identifier=housenumber.id))
+    assert resp.status == falcon.HTTP_200
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
@@ -21,6 +21,7 @@ def test_get_housenumber(get, url):
 def test_get_housenumber_without_explicit_identifier(get, url):
     housenumber = HouseNumberFactory(number="22")
     resp = get(url('housenumber-resource', identifier=housenumber.id))
+    assert resp.status == falcon.HTTP_200
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
@@ -33,9 +34,10 @@ def test_get_housenumber_with_unknown_id_is_404(get, url):
 
 
 def test_get_housenumber_with_cia(get, url):
-    housenumber = HouseNumberFactory(number="22")
+    housenumber = HouseNumberFactory(number="22", parent__fantoir="1234")
     resp = get(url('housenumber-resource', id=housenumber.cia,
                    identifier="cia"))
+    assert resp.status == falcon.HTTP_200
     assert resp.json['number'] == "22"
 
 
@@ -181,7 +183,7 @@ def test_create_housenumber(client):
 
 @authorize
 def test_create_housenumber_with_street_fantoir(client):
-    street = GroupFactory(name="Rue de Bonbons")
+    street = GroupFactory(name="Rue de Bonbons", fantoir="1234")
     assert not models.HouseNumber.select().count()
     data = {
         "number": 20,
@@ -225,7 +227,7 @@ def test_create_housenumber_with_postcode_id(client):
 @authorize
 def test_create_housenumber_with_postcode_code(client):
     postcode = PostCodeFactory(code="12345")
-    street = GroupFactory(name="Rue de Bonbons")
+    street = GroupFactory(name="Rue de Bonbons", fantoir="1234")
     data = {
         "number": 20,
         "parent": 'fantoir:{}'.format(street.fantoir),

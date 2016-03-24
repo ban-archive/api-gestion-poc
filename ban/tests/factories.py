@@ -93,7 +93,6 @@ class PostCodeFactory(BaseFactory):
 
 class GroupFactory(BaseFactory):
     name = "Rue des Pyrénées"
-    fantoir = "0080N"
     kind = "way"
     municipality = factory.SubFactory(MunicipalityFactory)
 
