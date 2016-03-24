@@ -162,6 +162,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 'required': not field.null,
                 'coerce': field.coerce,
             }
+            if field.null:
+                row['nullable'] = True
             if field.unique:
                 row['unique'] = True
             max_length = getattr(field, 'max_length', None)
