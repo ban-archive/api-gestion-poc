@@ -1,4 +1,5 @@
 import csv
+from datetime import timedelta
 import getpass
 import os
 import pkgutil
@@ -60,7 +61,7 @@ class Bar(ProgressBar):
 
 
 def batch(func, iterable, chunksize=1000, total=None, progress=True):
-    bar = Bar(total=total)
+    bar = Bar(total=total, throttle=timedelta(seconds=1))
     workers = int(config.get('WORKERS', os.cpu_count()))
     with ThreadPoolExecutor(max_workers=workers) as executor:
         count = 0
