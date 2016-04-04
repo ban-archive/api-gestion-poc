@@ -15,9 +15,14 @@ class SelectQuery(peewee.SelectQuery):
 
 class Model(peewee.Model):
 
+    # id is reserved for BAN external id, but lets be consistent and use the
+    # same primary key name all over the models.
+    pk = peewee.PrimaryKeyField()
+
     class Meta:
         database = default
         manager = SelectQuery
+        order_by = ['pk']
 
     # TODO find a way not to override the peewee.Model select classmethod.
     @classmethod

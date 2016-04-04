@@ -37,17 +37,15 @@ class Versioned(db.Model, metaclass=BaseVersioned):
     class Meta:
         abstract = True
         validate_backrefs = False
-        unique_together = ('id', 'version')
+        unique_together = ('pk', 'version')
 
-    @classmethod
-    def get(cls, *query, **kwargs):
-        instance = super().get(*query, **kwargs)
-        instance.lock_version()
-        return instance
+    def prepared(self):
+        self.lock_version()
+        super().prepared()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.lock_version()
+        self.prepared()
 
     def _serialize(self, fields):
         data = {}
@@ -66,7 +64,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             old = self.load_version(self.version - 1)
         new = Version.create(
             model_name=self.__class__.__name__,
-            model_id=self.id,
+            model_pk=self.pk,
             sequential=self.version,
             data=self.serialize()
         )
@@ -77,7 +75,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
     def versions(self):
         return Version.select().where(
             Version.model_name == self.__class__.__name__,
-            Version.model_id == self.id)
+            Version.model_pk == self.pk)
 
     def load_version(self, id):
         return self.versions.where(Version.sequential == id).first()
@@ -93,9 +91,9 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         self._locked_version = value
 
     def lock_version(self):
-        if not self.id:
+        if not self.pk:
             self.version = 1
-        self._locked_version = self.version if self.id else 0
+        self._locked_version = self.version if self.pk else 0
 
     def increment_version(self):
         self.version = self.version + 1
@@ -143,7 +141,7 @@ class SelectQuery(db.SelectQuery):
 
 class Version(db.Model):
     model_name = db.CharField(max_length=64)
-    model_id = db.IntegerField()
+    model_pk = db.IntegerField()
     sequential = db.IntegerField()
     data = db.BinaryJSONField()
 
@@ -152,7 +150,7 @@ class Version(db.Model):
 
     def __repr__(self):
         return '<Version {} of {}({})>'.format(self.sequential,
-                                               self.model_name, self.model_id)
+                                               self.model_name, self.model_pk)
 
     @property
     def as_resource(self):
@@ -167,7 +165,7 @@ class Version(db.Model):
 
     @property
     def diff(self):
-        return Diff.first(Diff.new == self.id)
+        return Diff.first(Diff.new == self.pk)
 
 
 class Diff(db.Model):
@@ -185,11 +183,11 @@ class Diff(db.Model):
     class Meta:
         validate_backrefs = False
         manager = SelectQuery
-        order_by = ('id', )
+        order_by = ('pk', )
 
     def save(self, *args, **kwargs):
         if not self.diff:
-            meta = set(['id', 'created_by', 'modified_by', 'created_at',
+            meta = set(['pk', 'id', 'created_by', 'modified_by', 'created_at',
                         'modified_at', 'version'])
             old = self.old.as_resource if self.old else {}
             new = self.new.as_resource if self.new else {}
@@ -210,12 +208,12 @@ class Diff(db.Model):
     def as_resource(self):
         version = self.new or self.old
         return {
-            'increment': self.id,
+            'increment': self.pk,
             'old': self.old.as_resource if self.old else None,
             'new': self.new.as_resource if self.new else None,
             'diff': self.diff,
             'resource': version.model_name.lower(),
-            'resource_id': version.model_id,
+            'resource_pk': version.model_pk,
             'created_at': self.created_at
         }
 

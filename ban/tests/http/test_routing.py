@@ -12,10 +12,10 @@ from ban import http
     ['housenumber-resource', {"id": 1, "identifier": "id"}, '/housenumber/id:1'],  # noqa
     ['housenumber-resource', {"id": "93031_1491H_84_BIS", "identifier": "cia"}, '/housenumber/cia:93031_1491H_84_BIS'],  # noqa
     ['housenumber', {}, '/housenumber'],
-    ['street-resource', {"identifier": 1}, '/street/1'],
-    ['street-resource', {"id": 1, "identifier": "id"}, '/street/id:1'],
-    ['street-resource', {"id": "930310644M", "identifier": "fantoir"}, '/street/fantoir:930310644M'],  # noqa
-    ['street', {}, '/street'],
+    ['group-resource', {"identifier": 1}, '/group/1'],
+    ['group-resource', {"id": 1, "identifier": "id"}, '/group/id:1'],
+    ['group-resource', {"id": "930310644M", "identifier": "fantoir"}, '/group/fantoir:930310644M'],  # noqa
+    ['group', {}, '/group'],
     ['municipality-resource', {"identifier": 1}, '/municipality/1'],
     ['municipality-resource', {"id": 1, "identifier": "id"}, '/municipality/id:1'],  # noqa
     ['municipality-resource', {"id": "93031", "identifier": "insee"}, '/municipality/insee:93031'],  # noqa

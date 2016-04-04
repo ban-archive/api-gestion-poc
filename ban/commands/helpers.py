@@ -1,4 +1,5 @@
 import csv
+from datetime import timedelta
 import getpass
 import os
 import pkgutil
@@ -59,8 +60,8 @@ class Bar(ProgressBar):
                 '| ETA: {eta} | {elapsed}')
 
 
-def batch(func, iterable, chunksize=1000, total=None):
-    bar = Bar(total=total)
+def batch(func, iterable, chunksize=1000, total=None, progress=True):
+    bar = Bar(total=total, throttle=timedelta(seconds=1))
     workers = int(config.get('WORKERS', os.cpu_count()))
     with ThreadPoolExecutor(max_workers=workers) as executor:
         count = 0
@@ -72,11 +73,13 @@ def batch(func, iterable, chunksize=1000, total=None):
             count += 1
             if count % 10000 == 0:
                 for r in executor.map(func, chunk):
-                    bar()
+                    if progress:
+                        bar()
                 chunk = []
         if chunk:
             for r in executor.map(func, chunk):
-                bar()
+                if progress:
+                    bar()
 
 
 def prompt(text, default=None, confirmation=False, coerce=None, hidden=False):

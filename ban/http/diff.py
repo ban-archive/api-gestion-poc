@@ -16,7 +16,7 @@ class Diff(BaseCollection):
         qs = versioning.Diff.select()
         increment = req.get_param_as_int('increment')
         if increment:
-            qs = qs.where(versioning.Diff.id > increment)
+            qs = qs.where(versioning.Diff.pk > increment)
         self.collection(req, resp, qs.as_resource())
 
 

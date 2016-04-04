@@ -8,7 +8,7 @@ from ban import db
 from .versioning import Versioned, BaseVersioned
 from .resource import ResourceModel, BaseResource
 
-__all__ = ['Municipality', 'Street', 'HouseNumber', 'Locality',
+__all__ = ['Municipality', 'Group', 'HouseNumber', 'PostCode',
            'Position']
 
 
@@ -20,13 +20,13 @@ class BaseModel(BaseResource, BaseVersioned):
 
 
 class Model(ResourceModel, Versioned, metaclass=BaseModel):
-
     resource_fields = ['version']
 
     class Meta:
         validate_backrefs = False
         # 'version' is validated by us.
-        resource_schema = {'version': {'required': False}}
+        resource_schema = {'version': {'required': False},
+                           'id': {'required': False}}
 
 
 class NamedModel(Model):
@@ -41,18 +41,6 @@ class NamedModel(Model):
         ordering = ('name', )
 
 
-class Proxy(db.Model):
-    kind = db.CharField(max_length=50, null=False)
-
-    @property
-    def real(self):
-        # Make dynamic.
-        mapping = {class_.__name__.lower(): class_
-                   for class_ in [Street, Locality, PostCode, District]}
-        class_ = mapping[self.kind]
-        return class_.get(class_.proxy == self)
-
-
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
     resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
@@ -65,36 +53,21 @@ class Municipality(NamedModel):
         return [p.code for p in self.postcodes]
 
 
-class ProxyableModel(Model):
-    proxy = db.ForeignKeyField(Proxy, unique=True)
+class BaseGroup(NamedModel):
     municipality = db.ForeignKeyField(Municipality,
                                       related_name='{classname}s')
     attributes = db.HStoreField(null=True)
 
     class Meta:
-        auto_increment = False
+        abstract = True
 
     @property
     def housenumbers(self):
-        qs = (self.proxy.housenumbers | self.proxy.housenumber_set)
+        qs = (self._housenumbers | self.housenumber_set)
         return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
 
-    def save(self, *args, **kwargs):
-        if not self.id:
-            proxy = Proxy(kind=self.resource)
-            proxy.save()
-            self.proxy = proxy.id
-            self.id = proxy.id
-            kwargs['force_insert'] = True
-        return super().save(*args, **kwargs)
 
-    def delete_instance(self, recursive=False, delete_nullable=False):
-        with self._meta.database.atomic():
-            super().delete_instance(recursive, delete_nullable)
-            self.proxy.delete_instance()
-
-
-class PostCode(ProxyableModel, NamedModel):
+class PostCode(BaseGroup):
     identifiers = ['code']
     resource_fields = ['code', 'name', 'municipality']
     code = db.PostCodeField(index=True)
@@ -105,19 +78,21 @@ class PostCode(ProxyableModel, NamedModel):
         )
 
 
-class District(ProxyableModel, NamedModel):
-    """Submunicipal non administrative area."""
-    resource_fields = ['name', 'alias', 'attributes', 'municipality']
+class Group(BaseGroup):
+    AREA = 'area'
+    WAY = 'way'
+    KIND = (
+        (WAY, 'way'),
+        (AREA, 'area'),
+    )
+    identifiers = ['fantoir', 'laposte', 'ign']
+    resource_fields = ['name', 'alias', 'fantoir', 'attributes',
+                       'municipality', 'kind', 'laposte', 'ign']
 
-
-class BaseFantoirModel(ProxyableModel, NamedModel):
-    identifiers = ['fantoir']
-    resource_fields = ['name', 'alias', 'fantoir', 'municipality']
-
-    fantoir = db.CharField(max_length=9, null=True, index=True)
-
-    class Meta:
-        abstract = True
+    kind = db.CharField(max_length=64, choices=KIND)
+    fantoir = db.CharField(max_length=9, null=True, unique=True)
+    laposte = db.CharField(max_length=10, null=True, unique=True)
+    ign = db.CharField(max_length=24, null=True, unique=True)
 
     @property
     def tmp_fantoir(self):
@@ -127,31 +102,24 @@ class BaseFantoirModel(ProxyableModel, NamedModel):
         return self.fantoir or self.tmp_fantoir
 
 
-class Locality(BaseFantoirModel):
-    """Any area referenced with a Fantoir."""
-    pass
-
-
-class Street(BaseFantoirModel):
-    pass
-
-
 class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
-                       'ancestors', 'center', 'ign']
+                       'ancestors', 'center', 'ign', 'postcodes']
 
     number = db.CharField(max_length=16)
     ordinal = db.CharField(max_length=16, null=True)
-    parent = db.ProxyField(Proxy)
+    parent = db.ForeignKeyField(Group)
     cia = db.CharField(max_length=100, null=True, index=True)
     laposte = db.CharField(max_length=10, null=True, unique=True)
     ign = db.CharField(max_length=24, null=True, unique=True)
-    ancestors = db.ProxiesField(Proxy, related_name='housenumbers')
+    ancestors = db.ManyToManyField(Group, related_name='_housenumbers')
+    postcodes = db.ManyToManyField(PostCode, related_name='_housenumbers')
 
     class Meta:
         resource_schema = {'cia': {'required': False},
-                           'version': {'required': False}}
+                           'version': {'required': False},
+                           'id': {'required': False}}
         order_by = ('number', 'ordinal')
         indexes = (
             (('parent', 'number', 'ordinal'), True),
@@ -175,8 +143,8 @@ class HouseNumber(Model):
                                         HouseNumber.ordinal == self.ordinal,
                                         HouseNumber.street == self.street,
                                         HouseNumber.locality == self.locality)
-        if self.id:
-            qs = qs.where(HouseNumber.id != self.id)
+        if self.pk:
+            qs = qs.where(HouseNumber.pk != self.pk)
         if qs.exists():
             raise ValueError('Row with same number, ordinal, street and '
                              'locality already exists')
@@ -202,6 +170,10 @@ class HouseNumber(Model):
     def ancestors_resource(self):
         return [d.as_list for d in self.ancestors]
 
+    @property
+    def postcodes_resource(self):
+        return [d.as_list for d in self.postcodes]
+
 
 class Position(Model):
 
@@ -224,14 +196,30 @@ class Position(Model):
         (UTILITY, _('utility service')),
     )
 
+    DGPS = 'dgps'
+    GPS = 'gps'
+    IMAGERY = 'imagery'
+    PROJECTION = 'projection'
+    INTERPOLATION = 'interpolation'
+    OTHER = 'other'
+    POSITIONING = (
+        (DGPS, _('via differencial GPS')),
+        (GPS, _('via GPS')),
+        (IMAGERY, _('via imagery')),
+        (PROJECTION, _('computed via projection')),
+        (INTERPOLATION, _('computed via interpolation')),
+        (OTHER, _('other')),
+    )
+
     resource_fields = ['center', 'source', 'housenumber', 'attributes',
-                       'kind', 'comment', 'parent']
+                       'kind', 'comment', 'parent', 'positioning']
 
     center = db.PointField(verbose_name=_("center"))
     housenumber = db.ForeignKeyField(HouseNumber)
     parent = db.ForeignKeyField('self', related_name='children', null=True)
     source = db.CharField(max_length=64, null=True)
     kind = db.CharField(max_length=64, choices=KIND)
+    positioning = db.CharField(max_length=32, choices=POSITIONING)
     attributes = db.HStoreField(null=True)
     comment = peewee.TextField(null=True)
 

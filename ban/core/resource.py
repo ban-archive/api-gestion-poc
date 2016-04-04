@@ -1,3 +1,5 @@
+import uuid
+
 import peewee
 from cerberus import ValidationError, Validator, errors
 
@@ -23,7 +25,7 @@ class ResourceValidator(Validator):
         attr = getattr(self.model, field)
         qs = qs.where(attr == value)
         if self.instance:
-            qs = qs.where(self.model.id != self.instance.id)
+            qs = qs.where(self.model.pk != self.instance.pk)
         if qs.exists():
             self._error(field, 'Duplicate value for {}: {}'.format(field,
                                                                    value))
@@ -128,10 +130,21 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     resource_fields = ['id']
     identifiers = []
 
+    id = db.CharField(max_length=50, unique=True, null=False)
+
     class Meta:
         abstract = True
-        resource_schema = {}
+        resource_schema = {'id': {'required': False}}
         manager = SelectQuery
+
+    @classmethod
+    def make_id(cls):
+        return 'ban-{}-{}'.format(cls.__name__.lower(), uuid.uuid4().hex)
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.id = self.make_id()
+        return super().save(*args, **kwargs)
 
     @classmethod
     def build_resource_schema(cls):
@@ -149,6 +162,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 'required': not field.null,
                 'coerce': field.coerce,
             }
+            if field.null:
+                row['nullable'] = True
             if field.unique:
                 row['unique'] = True
             max_length = getattr(field, 'max_length', None)
@@ -190,21 +205,21 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     def as_relation_field(self, name):
         value = getattr(self, name)
-        return getattr(value, 'id', value)
+        return getattr(value, 'pk', value)
 
     def as_list_field(self, name):
         value = getattr(self, '{}_resource'.format(name), getattr(self, name))
-        return getattr(value, 'id', value)
+        return getattr(value, 'pk', value)
 
     @classmethod
     def coerce(cls, id, identifier=None):
         if not identifier:
-            identifier = 'id'
+            identifier = 'id'  # BAN id by default.
             if isinstance(id, str):
                 *extra, id = id.split(':')
                 if extra:
                     identifier = extra[0]
-                if identifier not in cls.identifiers + ['id']:
+                if identifier not in cls.identifiers + ['id', 'pk']:
                     raise cls.DoesNotExist("Invalid identifier {}".format(
                                                                 identifier))
         try:

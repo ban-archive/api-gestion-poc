@@ -154,5 +154,5 @@ class Token(db.Model):
             "client": Client.first(Client.client_id == data['client_id'])
         }
         session = Session.create(**session_data)  # get or create?
-        data['session'] = session.id
+        data['session'] = session.pk
         return Token.create(**data)
