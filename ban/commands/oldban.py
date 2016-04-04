@@ -62,7 +62,10 @@ def process_row(metadata):
                                 municipality=municipality.pk, version=1)
 
     if not validator.errors:
-        item = validator.save()
+        try:
+            item = validator.save()
+        except peewee.IntegrityError:
+            return report('Duplicate group', fantoir, report.ERROR)
         report(kind, item, report.NOTICE)
         housenumbers = metadata.get('housenumbers')
         if housenumbers:
