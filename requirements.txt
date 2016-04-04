@@ -1,7 +1,7 @@
 bcrypt==2.0.0
 Cerberus==0.9.2
 decorator==4.0.9
-git+https://github.com/falconry/falcon
+falcon==1.0.0-rc1
 Unidecode==0.4.19
 git+https://github.com/coleifer/peewee
 psycopg2==2.6.1
