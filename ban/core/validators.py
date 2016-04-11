@@ -100,11 +100,11 @@ class VersionedResourceValidator(ResourceValidator):
         if self.instance and claimed_version <= current_version > 1:
             base = self.instance.load_version(claimed_version - 1)
             current = self.instance.load_version(current_version)
-            diff = make_diff(base.as_resource, current.as_resource)
+            diff = make_diff(base.data, current.data)
             # Those are keys changed between that last know version of the
             # client and the current version we have.
             protected = diff.keys()
-            diff = make_diff(base.as_resource, self.document,
+            diff = make_diff(base.data, self.document,
                              update=self.update)
             conflict = any(k in protected for k in diff.keys())
             if not conflict:

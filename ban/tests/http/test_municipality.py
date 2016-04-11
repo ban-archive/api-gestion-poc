@@ -93,8 +93,8 @@ def test_get_municipality_versions(get, url):
     assert resp.status == falcon.HTTP_200
     assert len(resp.json['collection']) == 2
     assert resp.json['total'] == 2
-    assert resp.json['collection'][0]['name'] == 'Cabour'
-    assert resp.json['collection'][1]['name'] == 'Cabour2'
+    assert resp.json['collection'][0]['data']['name'] == 'Cabour'
+    assert resp.json['collection'][1]['data']['name'] == 'Cabour2'
 
 
 @authorize
@@ -106,13 +106,13 @@ def test_get_municipality_version(get, url):
     uri = url('municipality-version', identifier=municipality.id, version=1)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
-    assert resp.json['name'] == 'Cabour'
-    assert resp.json['version'] == 1
+    assert resp.json['data']['name'] == 'Cabour'
+    assert resp.json['data']['version'] == 1
     uri = url('municipality-version', identifier=municipality.id, version=2)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
-    assert resp.json['name'] == 'Cabour2'
-    assert resp.json['version'] == 2
+    assert resp.json['data']['name'] == 'Cabour2'
+    assert resp.json['data']['version'] == 2
 
 
 @authorize

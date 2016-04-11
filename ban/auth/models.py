@@ -53,6 +53,8 @@ class Client(ResourceModel):
         (GRANT_CLIENT_CREDENTIALS, _('Client credentials')),
     )
     default_scopes = ['contrib']
+    FLAGS = ['ign', 'laposte', 'local_authority']
+    FLAG_IDS = tuple((i, i) for i in FLAGS) + (None, 'None')
 
     client_id = db.UUIDField(unique=True, default=uuid.uuid4)
     name = db.CharField(max_length=100)
@@ -61,6 +63,7 @@ class Client(ResourceModel):
     redirect_uris = db.ArrayField(db.CharField)
     grant_type = db.CharField(choices=GRANT_TYPES)
     is_confidential = db.BooleanField(default=False)
+    flag_id = db.CharField(choices=FLAG_IDS, default=None, null=True)
 
     @property
     def default_redirect_uri(self):

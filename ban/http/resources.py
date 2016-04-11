@@ -172,6 +172,26 @@ class VersionnedResource(BaseCRUD):
             raise falcon.HTTPNotFound()
         resp.json(**version.as_resource)
 
+    @auth.protect  # TODO, manage scope.
+    @app.endpoint('/{identifier}/versions/{version}/flag')
+    def on_post_flag_version(self, req, resp, version, **kwargs):
+        """Flag a version."""
+        instance = self.get_object(**kwargs)
+        version = instance.load_version(version)
+        if not version:
+            raise falcon.HTTPNotFound()
+        version.flag()
+
+    @auth.protect  # TODO, manage scope.
+    @app.endpoint('/{identifier}/versions/{version}/unflag')
+    def on_post_unflag_version(self, req, resp, version, **kwargs):
+        """Unflag a version."""
+        instance = self.get_object(**kwargs)
+        version = instance.load_version(version)
+        if not version:
+            raise falcon.HTTPNotFound()
+        version.unflag()
+
 
 class Position(VersionnedResource):
     """Manipulate position resources."""
