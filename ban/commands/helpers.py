@@ -26,19 +26,21 @@ def load_commands():
         import_module(modname, package=commands.__name__)
 
 
-def load_csv(path, encoding='utf-8'):
-    path = Path(path)
-    if not path.exists():
-        abort('Path does not exist: {}'.format(path))
-    with path.open(encoding=encoding) as f:
-        extract = f.read(4096)
-        try:
-            dialect = csv.Sniffer().sniff(extract)
-        except csv.Error:
-            dialect = csv.unix_dialect()
-        f.seek(0)
-        content = f.read()
-        return csv.DictReader(content.splitlines(), dialect=dialect)
+def load_csv(path_or_file, encoding='utf-8'):
+    if isinstance(path_or_file, (str, Path)):
+        path = Path(path_or_file)
+        if not path.exists():
+            abort('Path does not exist: {}'.format(path))
+        path_or_file = path.open(encoding=encoding)
+    extract = path_or_file.read(4096)
+    try:
+        dialect = csv.Sniffer().sniff(extract)
+    except csv.Error:
+        dialect = csv.unix_dialect()
+    path_or_file.seek(0)
+    content = path_or_file.read()
+    path_or_file.close()
+    return csv.DictReader(content.splitlines(), dialect=dialect)
 
 
 def iter_file(path, formatter=lambda x: x):

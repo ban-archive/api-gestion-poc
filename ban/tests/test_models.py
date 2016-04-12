@@ -168,31 +168,31 @@ def test_tmp_fantoir_should_use_name():
 
 def test_compute_cia_should_consider_insee_fantoir_number_and_ordinal():
     municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='1491H')
+    street = GroupFactory(municipality=municipality, fantoir='930311491')
     hn = HouseNumberFactory(parent=street, number="84", ordinal="bis")
     hn = models.HouseNumber.get(models.HouseNumber.id == hn.id)
-    assert hn.compute_cia() == '93031_1491H_84_BIS'
+    assert hn.compute_cia() == '93031_1491_84_BIS'
 
 
 def test_compute_cia_should_let_ordinal_empty_if_not_set():
     municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='1491H')
+    street = GroupFactory(municipality=municipality, fantoir='930311491')
     hn = HouseNumberFactory(parent=street, number="84", ordinal="")
-    assert hn.compute_cia() == '93031_1491H_84_'
+    assert hn.compute_cia() == '93031_1491_84_'
 
 
 def test_compute_cia_should_use_locality_if_no_street():
     municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='1491H')
+    street = GroupFactory(municipality=municipality, fantoir='930311491')
     hn = HouseNumberFactory(parent=street, number="84", ordinal="")
-    assert hn.compute_cia() == '93031_1491H_84_'
+    assert hn.compute_cia() == '93031_1491_84_'
 
 
 def test_housenumber_should_create_cia_on_save():
     municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='1491H')
+    street = GroupFactory(municipality=municipality, fantoir='930311491')
     hn = HouseNumberFactory(parent=street, number="84", ordinal="bis")
-    assert hn.cia == '93031_1491H_84_BIS'
+    assert hn.cia == '93031_1491_84_BIS'
 
 
 def test_housenumber_is_versioned():

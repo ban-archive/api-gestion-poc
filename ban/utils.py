@@ -14,3 +14,8 @@ def is_uuid4(uuid_string):
         # None will raise TypeError.
         return False
     return True
+
+
+def compute_cia(insee, fantoir, number=None, ordinal=None):
+    return '_'.join([insee, fantoir, (number or '').upper(),
+                     (ordinal or '').upper()])

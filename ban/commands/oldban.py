@@ -91,6 +91,7 @@ def add_housenumber(parent, id, metadata, postcode):
         housenumber = validator.save()
         validator = Position.validator(center=center, version=1,
                                        kind=Position.ENTRANCE,
+                                       positioning=Position.OTHER,
                                        housenumber=housenumber.pk)
         if not validator.errors:
             validator.save()
