@@ -1,4 +1,5 @@
 import falcon
+from falcon_multipart.middleware import MultipartMiddleware
 
 from .request import Request
 from .response import Response
@@ -43,6 +44,7 @@ application = app = API(
     middleware=[
         middlewares.CorsMiddleware(),
         middlewares.SessionMiddleware(),
+        MultipartMiddleware(),
     ],
     response_type=Response,
     request_type=Request,
