@@ -2,7 +2,7 @@ from pathlib import Path
 
 import peewee
 
-from ban.commands import command, report
+from ban.commands import command, reporter
 from ban.core.models import PostCode, Group, HouseNumber
 from .helpers import session, batch, nodiff, file_len, Bar
 
@@ -64,43 +64,43 @@ def guess_kind(name, group_kind):
 @session
 def process_group(line):
     if not line[0] == 'V':
-        return report('Not a street', line, report.NOTICE)
+        return reporter.warning('Not a street', line)
     name = line[60:92]
     matricule = line[12:20]
     laposte = MATRICULE_TO_CEA.get(matricule)
     if not laposte:
-        return report('Missing CEA', matricule, report.ERROR)
+        return reporter.error('Missing CEA', matricule)
     municipality = 'insee:{}'.format(line[7:12])
     kind = guess_kind(name, line[92:96].strip())
 
     validator = Group.validator(name=name, laposte=laposte,
                                 municipality=municipality, kind=kind)
     if validator.errors:
-        report('Error', validator.errors, report.ERROR)
+        reporter.error('Error', validator.errors)
     else:
         validator.save()
-        report('Success', name, report.NOTICE)
+        reporter.notice('Success', name)
 
 
 @session
 def process_postcode(line):
     if line[50] != 'M':
-        return report('Cedex postcode', line, report.WARNING)
+        return reporter.warning('Cedex postcode', line)
     municipality = 'insee:{}'.format(line[6:11])
     code = line[89:94]
     name = line[90:]
     validator = PostCode.validator(code=code, name=name,
                                    municipality=municipality)
     if validator.errors:
-        return report('PostCode Error', validator.errors, report.ERROR)
+        return reporter.error('PostCode Error', validator.errors)
     else:
         with PostCode._meta.database.atomic():
             try:
                 validator.save()
             except peewee.IntegrityError:
-                report('Already created', (code, municipality), report.WARNING)
+                reporter.warning('Already created', (code, municipality))
             else:
-                report('PostCode created', code, report.NOTICE)
+                reporter.notice('PostCode created', code)
 
 
 @session
@@ -112,16 +112,16 @@ def process_housenumber(line):
     group_laposte = MATRICULE_TO_CEA.get(matricule)
     group = 'laposte:{}'.format(group_laposte)
     if not group_laposte:
-        return report('Missing group CEA', matricule, report.ERROR)
+        return reporter.error('Missing group CEA', matricule)
     if not number:
-        return report('Not a housenumber', laposte, report.NOTICE)
+        return reporter.notice('Not a housenumber', laposte)
     validator = HouseNumber.validator(number=number, ordinal=ordinal,
                                       laposte=laposte, parent=group)
     if validator.errors:
-        report('Housenumber error', validator.errors, report.ERROR)
+        reporter.error('Housenumber error', validator.errors)
     else:
         validator.save()
-        report('Housenumber created', laposte, report.NOTICE)
+        reporter.notice('Housenumber created', laposte)
 
 
 @command

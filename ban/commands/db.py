@@ -1,5 +1,5 @@
 from ban.auth import models as amodels
-from ban.commands import command, report
+from ban.commands import command, reporter
 from ban.core import models as cmodels
 from ban.core.versioning import Diff, Version, IdentifierRedirect
 
@@ -21,7 +21,7 @@ def create(fail_silently=False, **kwargs):
     """
     for model in models:
         model.create_table(fail_silently=fail_silently)
-        report('Created', model.__name__, report.NOTICE)
+        reporter.notice('Created', model.__name__)
 
 
 @command
@@ -45,4 +45,4 @@ def truncate(force=False, names=[], **kwargs):
         if name not in names:
             continue
         model.delete().execute()
-        report('Truncated', name, report.NOTICE)
+        reporter.notice('Truncated', name)

@@ -18,6 +18,8 @@ def test_bal_import_from_data_file(staff, client):
     group = models.Group.select().first()
     assert group.name == "Mail Anita Conti"
     assert group.fantoir == "350010005"
+    assert 'report' in resp.json
+    assert 'notice' in resp.json['report']
 
 
 def test_cannot_use_bal_import_without_auth(staff, client):

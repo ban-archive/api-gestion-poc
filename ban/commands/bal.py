@@ -1,6 +1,6 @@
 import peewee
 
-from ban.commands import command, report
+from ban.commands import command, reporter
 from ban.core.models import HouseNumber, Group, Position
 from ban.utils import compute_cia
 
@@ -46,7 +46,7 @@ def process_group(row, id, name, insee, group_id, fantoir):
         try:
             instance = Group.get(Group.id == id)
         except Group.DoesNotExist:
-            return report('Group id not found', id, report.ERROR)
+            return reporter.error('Group id not found', id)
     elif data['fantoir']:
         try:
             instance = Group.get(Group.fantoir == data['fantoir'])
@@ -62,11 +62,11 @@ def process_group(row, id, name, insee, group_id, fantoir):
         data['kind'] = Group.WAY
     validator = Group.validator(instance=instance, **data)
     if validator.errors:
-        report('Invalid data', validator.errors, report.ERROR)
+        reporter.error('Invalid data', validator.errors)
     else:
         street = validator.save()
         msg = 'Created group' if not instance else 'Updated group'
-        report(msg, street.id, report.NOTICE)
+        reporter.notice(msg, street.id)
         if row.get('lat') and row.get('long'):
             process_housenumber(row, id, name, insee, group_id, fantoir)
 
@@ -86,7 +86,7 @@ def process_housenumber(row, id, name, insee, group_id, fantoir):
     if id:
         instance = HouseNumber.where(HouseNumber.id == id).first()
         if not instance:
-            return report('HouseNumber id not found', id, report.ERROR)
+            return reporter.error('HouseNumber id not found', id)
         parent = instance.parent
     elif fantoir:
         parent = 'fantoir:{}'.format(fantoir)
@@ -94,12 +94,12 @@ def process_housenumber(row, id, name, insee, group_id, fantoir):
     elif group_id:
         parent = Group.where(Group.id == group_id).first()
         if not parent:
-            return report('Group id not found', group_id, report.ERROR)
+            return reporter.error('Group id not found', group_id)
         if parent.fantoir:
             cia = compute_cia(parent.fantoir[:5], parent.fantoir[5:], number,
                               ordinal)
     else:
-        return report('Missing group id and fantoir', id, report.ERROR)
+        return reporter.error('Missing group id and fantoir', id)
     if cia:
         instance = HouseNumber.where(HouseNumber.cia == cia).first()
     if instance:
@@ -112,17 +112,17 @@ def process_housenumber(row, id, name, insee, group_id, fantoir):
 
     validator = HouseNumber.validator(**data)
     if validator.errors:
-        report('HouseNumber errors', (validator.errors, parent), report.ERROR)
+        reporter.error('HouseNumber errors', (validator.errors, parent))
     else:
         try:
             housenumber = validator.save()
         except peewee.IntegrityError:
-            return report('Duplicate housenumber', (number, ordinal, parent),
-                          report.ERROR)
+            return reporter.error('Duplicate housenumber',
+                                  (number, ordinal, parent))
         if lon and lat:
             process_position(housenumber, (lon, lat), kind)
         msg = 'HouseNumber Updated' if instance else 'HouseNumber created'
-        report(msg, (number, ordinal, parent), report.NOTICE)
+        reporter.notice(msg, (number, ordinal, parent))
 
 
 KIND_MAPPING = {
@@ -148,8 +148,8 @@ def process_position(housenumber, center, kind):
                                    kind=kind, instance=instance,
                                    version=version)
     if validator.errors:
-        report('Position error', validator.errors, report.ERROR)
+        reporter.error('Position error', validator.errors)
     else:
-        validator.save()
+        position = validator.save()
         msg = 'Position updated' if instance else 'Position created'
-        report(msg, center, report.NOTICE)
+        reporter.notice(msg, position.id)

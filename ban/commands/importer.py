@@ -1,4 +1,4 @@
-from ban.commands import command, report
+from ban.commands import command, reporter
 from ban.core import models
 
 from . import helpers
@@ -35,12 +35,12 @@ def add_municipality(data, update=False):
     except models.Municipality.DoesNotExist:
         instance = None
     if instance and not update:
-        return report('Existing', name, report.WARNING)
+        return reporter.warning('Existing', name)
 
     data = dict(insee=insee, name=name, siren=siren, version=version)
     validator = models.Municipality.validator(instance=instance, **data)
     if not validator.errors:
         instance = validator.save()
-        report('Processed', instance, report.NOTICE)
+        reporter.notice('Processed', instance)
     else:
-        report('Error', validator.errors, report.ERROR)
+        reporter.error('Error', validator.errors)

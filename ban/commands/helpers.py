@@ -1,10 +1,11 @@
 import csv
 from datetime import timedelta
 import getpass
+from itertools import repeat
 import os
 import pkgutil
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from importlib import import_module
 from pathlib import Path
 
@@ -12,6 +13,7 @@ import decorator
 from progressist import ProgressBar
 
 from ban.auth.models import Session, User
+from ban.commands.reporter import Reporter
 from ban.core import context, config
 from ban.core.versioning import Diff
 
@@ -62,26 +64,45 @@ class Bar(ProgressBar):
                 '| ETA: {eta} | {elapsed}')
 
 
+def collect_report(func, *args, **kwargs):
+    # This is a process reporter instance.
+    reporter = context.get('reporter')
+    if not reporter:
+        # In thread mode, reporter is not shared with subthreads.
+        reporter = Reporter(config.get('VERBOSE'))
+        context.set('reporter', reporter)
+    func(*args, **kwargs)
+    return reporter._reports
+
+
 def batch(func, iterable, chunksize=1000, total=None, progress=True):
+    # This is the main reporter instance.
+    reporter = context.get('reporter')
+    pool = (ProcessPoolExecutor if config.get('BATCH_EXECUTOR') == 'process'
+            else ThreadPoolExecutor)
     bar = Bar(total=total, throttle=timedelta(seconds=1))
     workers = int(config.get('WORKERS', os.cpu_count()))
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        count = 0
-        chunk = []
+    chunk = []
+    count = 0
+
+    def loop():
+        for reports in executor.map(collect_report, repeat(func), chunk):
+            reporter.merge(reports)
+            if progress:
+                bar()
+
+    with pool(max_workers=workers) as executor:
+
         for item in iterable:
             if not item:
                 continue
             chunk.append(item)
             count += 1
             if count % 10000 == 0:
-                for r in executor.map(func, chunk):
-                    if progress:
-                        bar()
+                loop()
                 chunk = []
         if chunk:
-            for r in executor.map(func, chunk):
-                if progress:
-                    bar()
+            loop()
 
 
 def prompt(text, default=None, confirmation=False, coerce=None, hidden=False):
