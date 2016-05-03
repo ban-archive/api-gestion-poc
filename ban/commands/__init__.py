@@ -5,7 +5,7 @@ from itertools import zip_longest
 
 from ban.core import config, context
 
-from .reporter import Reporter, report
+from .reporter import Reporter
 
 
 NO_DEFAULT = object()

@@ -72,7 +72,9 @@ def collect_report(func, *args, **kwargs):
         reporter = Reporter(config.get('VERBOSE'))
         context.set('reporter', reporter)
     func(*args, **kwargs)
-    return reporter._reports
+    reports = reporter._reports.copy()
+    reporter.clear()
+    return reports
 
 
 def batch(func, iterable, chunksize=1000, total=None, progress=True):

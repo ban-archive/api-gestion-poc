@@ -28,11 +28,7 @@ class Reporter:
 
     def __init__(self, verbosity):
         self.verbosity = verbosity
-        self._reports = {
-            ERROR: {},
-            WARNING: {},
-            NOTICE: {}
-        }
+        self.clear()
 
     def __str__(self):
         lines = []
@@ -86,6 +82,13 @@ class Reporter:
                 else:
                     self._reports[level].setdefault(msg, 0)
                     self._reports[level][msg] += data
+
+    def clear(self):
+        self._reports = {
+            ERROR: {},
+            WARNING: {},
+            NOTICE: {}
+        }
 
 
 def report(name, item, level=1):
