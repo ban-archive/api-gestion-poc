@@ -44,10 +44,12 @@ class NamedModel(Model):
 
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
-    resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
+    resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes',
+                       'attributes']
 
     insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9, unique=True)
+    attributes = db.HStoreField(null=True)
 
     @property
     def postcodes_resource(self):
