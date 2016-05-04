@@ -54,7 +54,6 @@ class Command:
             for func in self._on_after_call:
                 func(self, args, kwargs)
         finally:
-            print(reporter)
             Command.current = None
 
     def invoke(self, parsed):
