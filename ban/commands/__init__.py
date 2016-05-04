@@ -1,25 +1,17 @@
 import argparse
 import inspect
 import os
-import sys
 from itertools import zip_longest
 
-from ban.core import config
+from ban.core import config, context
+
+from .reporter import Reporter
 
 
 NO_DEFAULT = object()
 
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(title='Available commands', metavar='')
-
-
-def report(name, item, level=1):
-    if not Command.current:
-        return
-    Command.current.report(name, item, level=level)
-report.ERROR = 1  # Shown when using --verbose or -v.
-report.WARNING = 2  # Only shown when using -vv.
-report.NOTICE = 3  # Only shown when using -vvv.
 
 
 class Command:
@@ -33,6 +25,7 @@ class Command:
         'db_name': None,
         'session_user': None,
         'workers': os.cpu_count(),
+        'batch_executor': 'thread',
         'verbose': {'action': 'count', 'default': None},
     }
 
@@ -47,6 +40,9 @@ class Command:
         self._on_after_call = []
 
     def __call__(self, *args, **kwargs):
+        """Run command."""
+        reporter = Reporter(config.get('VERBOSE'))
+        context.set('reporter', reporter)
         Command.current = self
         for func in self._on_before_call:
             func(self, args, kwargs)
@@ -58,10 +54,10 @@ class Command:
             for func in self._on_after_call:
                 func(self, args, kwargs)
         finally:
-            self.reporting()
             Command.current = None
 
     def invoke(self, parsed):
+        """Run command from command line args."""
         kwargs = {'cmd': self}
         for name, _ in self.spec:
             kwargs[name] = getattr(parsed, name)
@@ -154,31 +150,6 @@ class Command:
 
     def set_defaults(self, **kwargs):
         self.parser.set_defaults(**kwargs)
-
-    def report(self, name, item, level):
-        verbosity = config.get('VERBOSE')
-        if verbosity:
-            if name not in self._reports:
-                self._reports[name] = []
-            self._reports[name].append((item, level))
-        else:
-            # Only track totals.
-            if name not in self._reports:
-                self._reports[name] = 0
-            self._reports[name] += 1
-
-    def reporting(self):
-        if self._reports:
-            sys.stdout.write('\n# Reports:')
-            for name, items in self._reports.items():
-                verbosity = config.get('VERBOSE')
-                total = len(items) if verbosity else items
-                sys.stdout.write('\n- {}: {}'.format(name, total))
-                if verbosity:
-                    for item, level in items:
-                        if verbosity >= level:
-                            sys.stdout.write('\n  . {}'.format(item))
-        sys.stdout.write('\n')
 
 
 def command(func):

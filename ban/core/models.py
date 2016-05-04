@@ -5,6 +5,7 @@ from postgis import Point
 from unidecode import unidecode
 
 from ban import db
+from ban.utils import compute_cia
 from .versioning import Versioned, BaseVersioned
 from .resource import ResourceModel, BaseResource
 
@@ -43,10 +44,12 @@ class NamedModel(Model):
 
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
-    resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
+    resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes',
+                       'attributes']
 
     insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9, unique=True)
+    attributes = db.HStoreField(null=True)
 
     @property
     def postcodes_resource(self):
@@ -99,7 +102,8 @@ class Group(BaseGroup):
         return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
 
     def get_fantoir(self):
-        return self.fantoir or self.tmp_fantoir
+        # Without INSEE code.
+        return self.fantoir[5:] if self.fantoir else self.tmp_fantoir
 
 
 class HouseNumber(Model):
@@ -107,10 +111,10 @@ class HouseNumber(Model):
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'center', 'ign', 'postcodes']
 
-    number = db.CharField(max_length=16)
+    number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
     parent = db.ForeignKeyField(Group)
-    cia = db.CharField(max_length=100, null=True, index=True)
+    cia = db.CharField(max_length=100, null=True, unique=True)
     laposte = db.CharField(max_length=10, null=True, unique=True)
     ign = db.CharField(max_length=24, null=True, unique=True)
     ancestors = db.ManyToManyField(Group, related_name='_housenumbers')
@@ -126,7 +130,7 @@ class HouseNumber(Model):
         )
 
     def __str__(self):
-        return ' '.join([self.number, self.ordinal])
+        return ' '.join([self.number or '', self.ordinal or ''])
 
     def save(self, *args, **kwargs):
         # if not getattr(self, '_clean_called', False):
@@ -154,12 +158,8 @@ class HouseNumber(Model):
         get_fantoir = getattr(self.parent, 'get_fantoir', None)
         if not get_fantoir:
             return None
-        return '_'.join([
-            str(self.parent.municipality.insee),
-            get_fantoir(),
-            (self.number or '').upper(),
-            (self.ordinal or '').upper()
-        ])
+        return compute_cia(str(self.parent.municipality.insee),
+            get_fantoir(), self.number, self.ordinal)
 
     @property
     def center(self):

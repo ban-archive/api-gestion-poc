@@ -4,3 +4,4 @@ __pycache__
 *.egg-info
 tmp/
 .coverage
+ban/tests/commands/data/balwithbom.csv

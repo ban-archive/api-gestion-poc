@@ -1,10 +1,11 @@
 import csv
 from datetime import timedelta
 import getpass
+from itertools import repeat
 import os
 import pkgutil
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from importlib import import_module
 from pathlib import Path
 
@@ -12,6 +13,7 @@ import decorator
 from progressist import ProgressBar
 
 from ban.auth.models import Session, User
+from ban.commands.reporter import Reporter
 from ban.core import context, config
 from ban.core.versioning import Diff
 
@@ -26,19 +28,21 @@ def load_commands():
         import_module(modname, package=commands.__name__)
 
 
-def load_csv(path, encoding='utf-8'):
-    path = Path(path)
-    if not path.exists():
-        abort('Path does not exist: {}'.format(path))
-    with path.open(encoding=encoding) as f:
-        extract = f.read(4096)
-        try:
-            dialect = csv.Sniffer().sniff(extract)
-        except csv.Error:
-            dialect = csv.unix_dialect()
-        f.seek(0)
-        content = f.read()
-        return csv.DictReader(content.splitlines(), dialect=dialect)
+def load_csv(path_or_file, encoding='utf-8'):
+    if isinstance(path_or_file, (str, Path)):
+        path = Path(path_or_file)
+        if not path.exists():
+            abort('Path does not exist: {}'.format(path))
+        path_or_file = path.open(encoding=encoding)
+    extract = path_or_file.read(4096)
+    try:
+        dialect = csv.Sniffer().sniff(extract)
+    except csv.Error:
+        dialect = csv.unix_dialect()
+    path_or_file.seek(0)
+    content = path_or_file.read()
+    path_or_file.close()
+    return csv.DictReader(content.splitlines(), dialect=dialect)
 
 
 def iter_file(path, formatter=lambda x: x):
@@ -60,26 +64,47 @@ class Bar(ProgressBar):
                 '| ETA: {eta} | {elapsed}')
 
 
+def collect_report(func, *args, **kwargs):
+    # This is a process reporter instance.
+    reporter = context.get('reporter')
+    if not reporter:
+        # In thread mode, reporter is not shared with subthreads.
+        reporter = Reporter(config.get('VERBOSE'))
+        context.set('reporter', reporter)
+    func(*args, **kwargs)
+    reports = reporter._reports.copy()
+    reporter.clear()
+    return reports
+
+
 def batch(func, iterable, chunksize=1000, total=None, progress=True):
+    # This is the main reporter instance.
+    reporter = context.get('reporter')
+    pool = (ProcessPoolExecutor if config.get('BATCH_EXECUTOR') == 'process'
+            else ThreadPoolExecutor)
     bar = Bar(total=total, throttle=timedelta(seconds=1))
     workers = int(config.get('WORKERS', os.cpu_count()))
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        count = 0
-        chunk = []
+    chunk = []
+    count = 0
+
+    def loop():
+        for reports in executor.map(collect_report, repeat(func), chunk):
+            reporter.merge(reports)
+            if progress:
+                bar()
+
+    with pool(max_workers=workers) as executor:
+
         for item in iterable:
             if not item:
                 continue
             chunk.append(item)
             count += 1
             if count % 10000 == 0:
-                for r in executor.map(func, chunk):
-                    if progress:
-                        bar()
+                loop()
                 chunk = []
         if chunk:
-            for r in executor.map(func, chunk):
-                if progress:
-                    bar()
+            loop()
 
 
 def prompt(text, default=None, confirmation=False, coerce=None, hidden=False):

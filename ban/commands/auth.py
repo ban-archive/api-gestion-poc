@@ -1,5 +1,5 @@
 from ban.auth.models import Token, User
-from ban.commands import command, report
+from ban.commands import command, reporter
 from ban.core import context
 
 from . import helpers
@@ -12,7 +12,7 @@ def dummytoken(**kwargs):
     session = context.get('session')
     Token.delete().where(Token.access_token == 'token').execute()
     Token.create(session=session.pk, access_token="token", expires_in=3600*24)
-    report('Created token', 'token', report.NOTICE)
+    reporter.notice('Created token', 'token')
 
 
 @command
@@ -33,6 +33,6 @@ def createuser(username=None, email=None, is_staff=False, **kwargs):
         if is_staff:
             user.is_staff = True
             user.save()
-        report('Created', user, report.NOTICE)
+        reporter.notice('Created', user)
     else:
-        report('Errored', validator.errors, report.ERROR)
+        reporter.error('Errored', validator.errors)

@@ -11,14 +11,14 @@ from ban.core.versioning import Diff
 from ban.tests import factories
 
 
-def test_import_municipalities(staff):
+def test_import_municipalities(staff, config):
     path = Path(__file__).parent / 'data/municipalities.csv'
     municipalities(path)
     assert len(models.Municipality.select()) == 4
     assert not len(Diff.select())
 
 
-def test_import_municipalities_can_be_filtered_by_departement(staff):
+def test_import_municipalities_can_be_filtered_by_departement(staff, config):
     path = Path(__file__).parent / 'data/municipalities.csv'
     municipalities(path, departement=33)
     assert len(models.Municipality.select()) == 1

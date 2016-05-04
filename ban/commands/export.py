@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ban.commands import command, report
+from ban.commands import command, reporter
 
 from ban.core import models
 from ban.core.encoder import dumps
@@ -18,5 +18,4 @@ def resources(path, **kwargs):
         for resource in resources:
             for data in resource.select().as_resource_list():
                 f.write(dumps(data) + '\n')
-                # Memory consumption when exporting all France housenumbers?
-                report(resource.__name__, data, report.NOTICE)
+                reporter.notice(resource.__name__, data)

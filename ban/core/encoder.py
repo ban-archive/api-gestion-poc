@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from postgis import Geometry
+from ban.commands.reporter import Reporter
 
 
 class ResourceEncoder(json.JSONEncoder):
@@ -9,6 +10,8 @@ class ResourceEncoder(json.JSONEncoder):
             return o.isoformat()
         elif isinstance(o, Geometry):
             return o.geojson
+        elif isinstance(o, Reporter):
+            return o.__json__()
         try:
             return super().default(o)
         except TypeError:

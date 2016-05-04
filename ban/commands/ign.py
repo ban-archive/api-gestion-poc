@@ -1,6 +1,6 @@
 import peewee
 
-from . import command, helpers, report
+from . import command, helpers, reporter
 
 from ban.core.models import Group, PostCode, HouseNumber, Position
 
@@ -32,10 +32,10 @@ def process_group(row):
         data['laposte'] = laposte
     validator = Group.validator(**data)
     if validator.errors:
-        report('Je suis pas content', validator.errors, report.ERROR)
+        reporter.error('Je suis pas content', validator.errors)
     else:
         validator.save()
-        report('Je suis content', name, report.NOTICE)
+        reporter.notice('Je suis content', name)
 
 
 @command
@@ -57,10 +57,10 @@ def process_postcode(row):
     validator = PostCode.validator(name=name, municipality=municipality,
                                    code=code)
     if validator.errors:
-        report('Postcode error', validator.errors, report.ERROR)
+        reporter.error('Postcode error', validator.errors)
     else:
         validator.save()
-        report('Postcode saved', code, report.NOTICE)
+        reporter.notice('Postcode saved', code)
 
 
 @command
@@ -92,20 +92,19 @@ def process_housenumber(row):
         data['laposte'] = laposte
     validator = HouseNumber.validator(**data)
     if validator.errors:
-        report('HouseNumber error', validator.errors, report.ERROR)
+        reporter.error('HouseNumber error', validator.errors)
     else:
         try:
             housenumber = validator.save()
         except peewee.IntegrityError as e:
-            report('SQL Error ', str(e), report.ERROR)
+            reporter.error('SQL Error ', str(e))
         else:
-            report('HouseNumber created', (number, ordinal), report.NOTICE)
+            reporter.notice('HouseNumber created', (number, ordinal))
             if localisation_type != 'Au centre commune':
                 process_position(housenumber, (lon, lat), localisation_type,
                                  {'complement': complement})
             else:
-                report('Skipped centre commune', str(housenumber),
-                       report.NOTICE)
+                reporter.notice('Skipped centre commune', str(housenumber))
 
 
 def process_position(housenumber, center, localisation_type, attributes):
@@ -120,7 +119,7 @@ def process_position(housenumber, center, localisation_type, attributes):
                                    positioning=positioning,
                                    kind=Position.ENTRANCE)
     if validator.errors:
-        report('Position error', validator.errors, report.ERROR)
+        reporter.error('Position error', validator.errors)
     else:
         validator.save()
-        report('Position created', center, report.NOTICE)
+        reporter.notice('Position created', center)
