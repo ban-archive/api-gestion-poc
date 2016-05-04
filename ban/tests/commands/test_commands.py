@@ -12,9 +12,6 @@ from ban.tests import factories
 
 
 def test_import_municipalities(staff, config):
-    # When loaded from tests, ProcessPoolExecutor fail when more processes are
-    # used than the chunk passed to map.
-    config.get('WORKERS', 1)
     path = Path(__file__).parent / 'data/municipalities.csv'
     municipalities(path)
     assert len(models.Municipality.select()) == 4
@@ -22,7 +19,6 @@ def test_import_municipalities(staff, config):
 
 
 def test_import_municipalities_can_be_filtered_by_departement(staff, config):
-    config.get('WORKERS', 1)
     path = Path(__file__).parent / 'data/municipalities.csv'
     municipalities(path, departement=33)
     assert len(models.Municipality.select()) == 1
