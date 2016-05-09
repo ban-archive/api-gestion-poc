@@ -4,7 +4,7 @@ decorator==4.0.9
 falcon==1.0.0-rc2
 falcon-multipart
 Unidecode==0.4.19
-git+https://github.com/coleifer/peewee
+peewee==2.8.1
 psycopg2==2.6.1
 git+https://github.com/yohanboniface/falcon-oauth
 psycopg-postgis
