@@ -16,12 +16,14 @@ def test_config_should_use_environ(config):
 def test_config_should_give_environ_priority_over_defaults(config):
     os.environ['DB_NAME'] = 'barfoo'
     assert config.DB_NAME == 'barfoo'
+    del os.environ['DB_NAME']
 
 
 def test_config_should_give_cache_priority_over_environ(config):
     os.environ['DB_NAME'] = 'barfoo'
     config.DB_NAME = 'newvalue'
     assert config.DB_NAME == 'newvalue'
+    del os.environ['DB_NAME']
 
 
 def test_config_should_raise_for_unkown_attr(config):
@@ -34,7 +36,7 @@ def test_config_get_should_accept_default(config):
 
 
 def test_config_get_should_return_none_if_missing_and_no_default(config):
-    assert config.get('FOOBAR') == None
+    assert config.get('FOOBAR') is None
 
 
 def test_config_set_should_normalize_key(config):

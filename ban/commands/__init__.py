@@ -16,7 +16,6 @@ subparsers = parser.add_subparsers(title='Available commands', metavar='')
 
 class Command:
 
-    current = None
     _globals = {
         'db_port': None,
         'db_host': None,
@@ -43,7 +42,6 @@ class Command:
         """Run command."""
         reporter = Reporter(config.get('VERBOSE'))
         context.set('reporter', reporter)
-        Command.current = self
         for func in self._on_before_call:
             func(self, args, kwargs)
         try:
@@ -54,7 +52,8 @@ class Command:
             for func in self._on_after_call:
                 func(self, args, kwargs)
         finally:
-            Command.current = None
+            # Display reports, if any.
+            print(reporter)
 
     def invoke(self, parsed):
         """Run command from command line args."""
