@@ -1,4 +1,4 @@
-from ban.auth.models import Token, User
+from ban.auth.models import Token, User, Client
 from ban.commands import command, reporter
 from ban.core import context
 
@@ -36,3 +36,44 @@ def createuser(username=None, email=None, is_staff=False, **kwargs):
         reporter.notice('Created', user)
     else:
         reporter.error('Errored', validator.errors)
+
+
+@command
+def listusers(**kwargs):
+    """List registered users with details."""
+    tpl = '{:<20} {}'
+    print(tpl.format('username', 'email'))
+    for user in User.select():
+        print(tpl.format(user.username, user.email))
+
+
+@command
+def createclient(name=None, user=None, **kwargs):
+    """Create a client.
+
+    name    name of the client to create
+    user    username or email of an existing user
+    """
+    if not name:
+        name = helpers.prompt('Client name')
+    if not user:
+        user = helpers.prompt('User username or email')
+    user_inst = User.first((User.username == user) | (User.email == user))
+    if not user_inst:
+        return reporter.error('User not found', user)
+    validator = Client.validator(name=name, user=user_inst)
+    if validator.errors:
+        return reporter.error('Errored', validator.errors)
+    client = validator.save()
+    reporter.notice('Created', client)
+    listclients()
+
+
+@command
+def listclients(**kwargs):
+    """List existing clients with details."""
+    tpl = '{:<40} {:<40} {}'
+    print(tpl.format('name', 'client_id', 'client_secret'))
+    for client in Client.select():
+        print(tpl.format(client.name, str(client.client_id),
+                         client.client_secret))
