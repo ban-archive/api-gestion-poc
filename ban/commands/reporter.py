@@ -33,7 +33,7 @@ class Reporter:
     def __str__(self):
         lines = []
 
-        if self._reports:
+        if self.has_report:
             lines.append('# Reports')
             for level, reports in self._reports.items():
                 if reports:
@@ -89,6 +89,10 @@ class Reporter:
             WARNING: {},
             NOTICE: {}
         }
+
+    @property
+    def has_report(self):
+        return any(self._reports.values())
 
 
 def report(name, item, level=1):
