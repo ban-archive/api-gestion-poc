@@ -188,6 +188,25 @@ def test_compute_cia_should_use_locality_if_no_street():
     assert hn.compute_cia() == '93031_1491_84_'
 
 
+def test_group_as_list():
+    municipality = MunicipalityFactory()
+    street = GroupFactory(municipality=municipality, name="Rue des Fleurs",
+                          fantoir="930311491")
+    data = street.as_list
+    assert data == {
+        'id': street.id,
+        'municipality': municipality.id,
+        'kind': 'way',
+        'fantoir': '930311491',
+        'alias': None,
+        'ign': None,
+        'name': 'Rue des Fleurs',
+        'resource': 'group',
+        'attributes': None,
+        'laposte': None
+    }
+
+
 def test_housenumber_should_create_cia_on_save():
     municipality = MunicipalityFactory(insee='93031')
     street = GroupFactory(municipality=municipality, fantoir='930311491')

@@ -205,11 +205,11 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     def as_relation_field(self, name):
         value = getattr(self, name)
-        return getattr(value, 'pk', value)
+        return getattr(value, 'id', value)
 
     def as_list_field(self, name):
         value = getattr(self, '{}_resource'.format(name), getattr(self, name))
-        return getattr(value, 'pk', value)
+        return getattr(value, 'id', value)
 
     @classmethod
     def coerce(cls, id, identifier=None):
