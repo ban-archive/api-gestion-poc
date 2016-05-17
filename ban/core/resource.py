@@ -10,6 +10,7 @@ from postgis import Point
 class ResourceValidator(Validator):
 
     ValidationError = ValidationError
+    ERROR_REQUIRED_FIELD = errors.ERROR_REQUIRED_FIELD
 
     def __init__(self, model, *args, **kwargs):
         self.model = model
@@ -41,9 +42,10 @@ class ResourceValidator(Validator):
     def validate(self, data, instance=None, **kwargs):
         self.instance = instance
         super().validate(data, **kwargs)
-        if ('version' in self.schema and instance
-           and not self.document.get('version')):
-            self._error('version', errors.ERROR_REQUIRED_FIELD)
+        if hasattr(self.model, 'validate'):
+            for key, message in self.model.validate(self, self.document,
+                                                    instance).items():
+                self._error(key, message)
 
     def save(self):
         if self.errors:

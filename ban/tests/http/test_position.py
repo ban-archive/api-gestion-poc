@@ -27,6 +27,38 @@ def test_create_position(client):
 
 
 @authorize
+def test_create_position_with_name(client):
+    housenumber = HouseNumberFactory(number="22")
+    assert not models.Position.select().count()
+    url = '/position'
+    data = {
+        "center": "(3, 4)",
+        "kind": models.Position.BUILDING,
+        "positioning": models.Position.IMAGERY,
+        "housenumber": housenumber.id,
+        "name": "bâtiment A"
+    }
+    resp = client.post(url, data)
+    assert resp.status == falcon.HTTP_201
+    assert resp.json['name'] == "bâtiment A"
+
+
+@authorize
+def test_create_position_with_name_but_not_center(client):
+    housenumber = HouseNumberFactory(number="22")
+    assert not models.Position.select().count()
+    url = '/position'
+    data = {
+        "kind": models.Position.BUILDING,
+        "positioning": models.Position.IMAGERY,
+        "housenumber": housenumber.id,
+        "name": "bâtiment A"
+    }
+    resp = client.post(url, data)
+    assert resp.status == falcon.HTTP_201
+
+
+@authorize
 def test_cannot_create_position_without_kind(client):
     housenumber = HouseNumberFactory(number="22")
     assert not models.Position.select().count()
@@ -53,6 +85,21 @@ def test_cannot_create_position_without_invalid_kind(client):
     }
     resp = client.post(url, data)
     assert resp.status == falcon.HTTP_422
+
+
+@authorize
+def test_cannot_create_position_without_center_and_name(client):
+    housenumber = HouseNumberFactory(number="22")
+    assert not models.Position.select().count()
+    url = '/position'
+    data = {
+        "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
+        "housenumber": housenumber.id,
+    }
+    resp = client.post(url, data)
+    assert resp.status == falcon.HTTP_422
+    assert 'center' in resp.json['errors']
 
 
 @authorize
@@ -300,6 +347,21 @@ def test_patch_with_wrong_version_should_fail(client, url):
     }
     resp = client.patch(uri, body=json.dumps(data))
     assert resp.status == falcon.HTTP_409
+
+
+@authorize
+def test_cannot_remove_center_and_name(client, url):
+    position = PositionFactory(source="XXX", center=(1, 2))
+    assert models.Position.select().count() == 1
+    uri = url('position-resource', identifier=position.id)
+    data = {
+        "version": 2,
+        "center": "",
+        "name": ""
+    }
+    resp = client.patch(uri, body=json.dumps(data))
+    assert resp.status == falcon.HTTP_422
+    assert "center" in resp.json['errors']
 
 
 @authorize
