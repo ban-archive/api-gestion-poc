@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from ban.auth import models as amodels
-from ban.commands.auth import createuser
+from ban.commands.auth import createuser, listusers, createclient, listclients
 from ban.commands.db import truncate
 from ban.commands.export import resources
 from ban.commands.importer import municipalities
@@ -41,6 +41,48 @@ def test_create_user_should_accept_is_staff_kwarg(monkeypatch):
     assert amodels.User.select().count() == 1
     user = amodels.User.first()
     assert user.is_staff
+
+
+def test_listusers(capsys):
+    user = factories.UserFactory()
+    listusers()
+    out, err = capsys.readouterr()
+    assert user.username in out
+
+
+def test_create_client_should_accept_username():
+    user = factories.UserFactory()
+    assert not amodels.Client.select().count()
+    createclient(name='test client', user=user.username)
+    assert amodels.Client.select().count() == 1
+    client = amodels.Client.first()
+    assert client.user == user
+
+
+def test_create_client_should_accept_email():
+    user = factories.UserFactory()
+    assert not amodels.Client.select().count()
+    createclient(name='test client', user=user.email)
+    assert amodels.Client.select().count() == 1
+    client = amodels.Client.first()
+    assert client.user == user
+
+
+def test_create_client_should_not_crash_on_non_existing_user(capsys):
+    assert not amodels.Client.select().count()
+    createclient(name='test client', user='doesnotexist')
+    assert not amodels.Client.select().count()
+    out, err = capsys.readouterr()
+    assert 'User not found' in out
+
+
+def test_listclients(capsys):
+    client = factories.ClientFactory()
+    listclients()
+    out, err = capsys.readouterr()
+    assert client.name in out
+    assert str(client.client_id) in out
+    assert client.client_secret in out
 
 
 def test_truncate_should_truncate_all_tables_by_default(monkeypatch):

@@ -2,8 +2,9 @@ import uuid
 from datetime import datetime, timedelta
 
 from ban import db
-
 from ban.core.resource import ResourceModel
+
+from .utils import generate_secret
 
 __all__ = ['User', 'Client', 'Grant', 'Token']
 
@@ -39,6 +40,7 @@ class User(ResourceModel):
 
 class Client(ResourceModel):
     identifiers = ['client_id']
+    resource_fields = ['name', 'user']
 
     GRANT_AUTHORIZATION_CODE = 'authorization_code'
     GRANT_IMPLICIT = 'implicit'
@@ -55,7 +57,7 @@ class Client(ResourceModel):
     client_id = db.UUIDField(unique=True, default=uuid.uuid4)
     name = db.CharField(max_length=100)
     user = db.ForeignKeyField(User)
-    client_secret = db.CharField(unique=True, max_length=55, index=True)
+    client_secret = db.CharField(unique=True, max_length=55)
     redirect_uris = db.ArrayField(db.CharField)
     grant_type = db.CharField(choices=GRANT_TYPES)
     is_confidential = db.BooleanField(default=False)
@@ -67,6 +69,13 @@ class Client(ResourceModel):
     @property
     def allowed_grant_types(self):
         return [id for id, name in self.GRANT_TYPES]
+
+    def save(self, *args, **kwargs):
+        if not self.client_secret:
+            self.client_secret = generate_secret()
+            self.redirect_uris = ['http://localhost/authorize']  # FIXME
+            self.grant_type = self.GRANT_CLIENT_CREDENTIALS
+        super().save(*args, **kwargs)
 
 
 class Grant(db.Model):
