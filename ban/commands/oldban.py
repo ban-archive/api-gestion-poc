@@ -82,7 +82,7 @@ def add_housenumber(parent, id, metadata, postcode):
     data = dict(number=number, ordinal=ordinal, version=1, parent=parent.pk,
                 ign=ign)
     if postcode:
-        data['postcodes'] = [postcode]
+        data['postcode'] = postcode
 
     validator = HouseNumber.validator(**data)
 

@@ -139,9 +139,9 @@ def test_get_housenumber_with_position(get, url):
 
 def test_get_housenumber_with_postcode(get, url):
     postcode = PostCodeFactory(code="12345")
-    housenumber = HouseNumberFactory(postcodes=[postcode])
+    housenumber = HouseNumberFactory(postcode=postcode)
     resp = get(url('housenumber-resource', identifier=housenumber.id))
-    assert postcode.as_list in resp.json['postcodes']
+    assert resp.json['postcode'] == postcode.as_relation
 
 
 def test_get_housenumber_positions(get, url):
@@ -215,13 +215,13 @@ def test_create_housenumber_with_postcode_id(client):
     data = {
         "number": 20,
         "parent": street.id,
-        "postcodes": [postcode.id]
+        "postcode": postcode.id
     }
     headers = {'Content-Type': 'application/json'}
     resp = client.post('/housenumber', data, headers=headers)
     assert resp.status == falcon.HTTP_201
     assert models.HouseNumber.select().count() == 1
-    assert postcode in models.HouseNumber.first().postcodes
+    assert models.HouseNumber.first().postcode == postcode
 
 
 @authorize
@@ -231,13 +231,13 @@ def test_create_housenumber_with_postcode_code(client):
     data = {
         "number": 20,
         "parent": 'fantoir:{}'.format(street.fantoir),
-        "postcodes": ['code:12345'],
+        "postcode": 'code:12345',
     }
     headers = {'Content-Type': 'application/json'}
     resp = client.post('/housenumber', data, headers=headers)
     assert resp.status == falcon.HTTP_201
     assert models.HouseNumber.select().count() == 1
-    assert postcode in models.HouseNumber.first().postcodes
+    assert models.HouseNumber.first().postcode == postcode
 
 
 @authorize
@@ -299,14 +299,14 @@ def test_patch_housenumber_with_postcode(client, url):
     housenumber = HouseNumberFactory()
     data = {
         "version": 2,
-        "postcodes": [postcode.id],
+        "postcode": postcode.id,
     }
     headers = {'Content-Type': 'application/json'}
     uri = url('housenumber-resource', identifier=housenumber.id)
     resp = client.patch(uri, body=data, headers=headers)
     assert resp.status == falcon.HTTP_200
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
-    assert postcode in hn.postcodes
+    assert hn.postcode == postcode
 
 
 @authorize

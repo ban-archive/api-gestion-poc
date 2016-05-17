@@ -86,7 +86,7 @@ def process_housenumber(row):
     lon = row.get('lon')
     localisation_type = row.get('type_de_localisation')
     data = dict(number=number, ordinal=ordinal, ign=ign, parent=parent,
-                postcodes=postcode)
+                postcode=postcode)
     laposte = row.get('cea')
     if laposte:
         data['laposte'] = laposte

@@ -112,13 +112,6 @@ class HouseNumberFactory(BaseFactory):
         if extracted:
             self.ancestors.add(extracted)
 
-    @factory.post_generation
-    def postcodes(self, create, extracted, **kwargs):
-        if not create:
-            return
-        if extracted:
-            self.postcodes.add(extracted)
-
     class Meta:
         model = models.HouseNumber
 

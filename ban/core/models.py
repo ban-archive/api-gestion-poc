@@ -109,7 +109,7 @@ class Group(BaseGroup):
 class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
-                       'ancestors', 'center', 'ign', 'postcodes']
+                       'ancestors', 'center', 'ign', 'postcode']
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
@@ -118,7 +118,7 @@ class HouseNumber(Model):
     laposte = db.CharField(max_length=10, null=True, unique=True)
     ign = db.CharField(max_length=24, null=True, unique=True)
     ancestors = db.ManyToManyField(Group, related_name='_housenumbers')
-    postcodes = db.ManyToManyField(PostCode, related_name='_housenumbers')
+    postcode = db.ForeignKeyField(PostCode, null=True)
 
     class Meta:
         resource_schema = {'cia': {'required': False},
@@ -169,10 +169,6 @@ class HouseNumber(Model):
     @property
     def ancestors_resource(self):
         return [d.as_list for d in self.ancestors]
-
-    @property
-    def postcodes_resource(self):
-        return [d.as_list for d in self.postcodes]
 
 
 class Position(Model):

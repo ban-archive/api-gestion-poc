@@ -9,7 +9,6 @@ models = [Version, Diff, IdentifierRedirect, amodels.User, amodels.Client,
           amodels.Grant, amodels.Session, amodels.Token, cmodels.Municipality,
           cmodels.PostCode, cmodels.Group, cmodels.HouseNumber,
           cmodels.HouseNumber.ancestors.get_through_model(),
-          cmodels.HouseNumber.postcodes.get_through_model(),
           cmodels.Position]
 
 
