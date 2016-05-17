@@ -265,6 +265,12 @@ def test_housenumber_center_without_position():
     assert housenumber.center is None
 
 
+def test_housenumber_center_with_position_without_center():
+    housenumber = HouseNumberFactory()
+    PositionFactory(housenumber=housenumber, name="bâtiment A", center=None)
+    assert housenumber.center is None
+
+
 def test_create_housenumber_with_district():
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
@@ -371,8 +377,11 @@ def test_get_instantiate_object_properly():
     ((1.123456789, 2.987654321), (1.123456789, 2.987654321)),
     ([1, 2], (1, 2)),
     ("(1, 2)", (1, 2)),
+    (None, None),
+    ("", None),
 ])
 def test_position_center_coerce(given, expected):
-    position = PositionFactory(center=given)
+    position = PositionFactory(center=given, name="bâtiment Z")
     center = models.Position.get(models.Position.id == position.id).center
-    assert center.coords == expected
+    if given:
+        assert center.coords == expected
