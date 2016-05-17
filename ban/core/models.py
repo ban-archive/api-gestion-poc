@@ -159,7 +159,7 @@ class HouseNumber(Model):
         if not get_fantoir:
             return None
         return compute_cia(str(self.parent.municipality.insee),
-            get_fantoir(), self.number, self.ordinal)
+                           get_fantoir(), self.number, self.ordinal)
 
     @property
     def center(self):
