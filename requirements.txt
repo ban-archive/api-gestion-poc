@@ -1,7 +1,7 @@
 bcrypt==2.0.0
 Cerberus==0.9.2
 decorator==4.0.9
-falcon==1.0.0-rc2
+falcon==1.0.0
 falcon-multipart
 Unidecode==0.4.19
 peewee==2.8.1
