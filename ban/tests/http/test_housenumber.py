@@ -2,6 +2,7 @@ import json
 
 import falcon
 from ban.core import models
+from ban.core.encoder import dumps
 
 from ..factories import (GroupFactory, HouseNumberFactory,
                          MunicipalityFactory, PositionFactory, PostCodeFactory)
@@ -58,8 +59,8 @@ def test_get_housenumber_collection(get, url):
     objs = HouseNumberFactory.create_batch(5)
     resp = get(url('housenumber'))
     assert resp.json['total'] == 5
-    for i, obj in enumerate(objs):
-        assert resp.json['collection'][i] == obj.as_resource
+    for obj in objs:
+        assert json.loads(dumps(obj.as_resource)) in resp.json['collection']
 
 
 def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
@@ -70,8 +71,7 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
     assert resp.json['total'] == 1
     # JSON transform internals tuples to lists.
     resource = position.housenumber.as_resource
-    resource['center']['coordinates'] = list(resource['center']['coordinates'])
-    assert resp.json['collection'][0] == resource
+    assert resp.json['collection'][0] == json.loads(dumps(resource))
 
 
 def test_bbox_allows_floats(get, url):
@@ -125,8 +125,7 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get, url):
     resp = get(url('housenumber', query_string=bbox))
     assert resp.json['total'] == 1
     # JSON transform internals tuples to lists.
-    data = position.housenumber.as_resource
-    data['center']['coordinates'] = list(data['center']['coordinates'])
+    data = json.loads(dumps(position.housenumber.as_resource))
     assert resp.json['collection'][0] == data
 
 
@@ -141,7 +140,7 @@ def test_get_housenumber_with_postcode(get, url):
     postcode = PostCodeFactory(code="12345")
     housenumber = HouseNumberFactory(postcode=postcode)
     resp = get(url('housenumber-resource', identifier=housenumber.id))
-    assert resp.json['postcode'] == postcode.as_relation
+    assert resp.json['postcode'] == json.loads(dumps(postcode.as_relation))
 
 
 def test_get_housenumber_positions(get, url):
@@ -156,8 +155,7 @@ def test_get_housenumber_positions(get, url):
         data = position.as_list
         # postgis uses tuples for coordinates, while json does not know
         # tuple and transforms everything to lists.
-        data['center']['coordinates'] = list(data['center']['coordinates'])
-        assert data in resp.json['collection']
+        assert json.loads(dumps(data)) in resp.json['collection']
 
     check(pos1)
     check(pos2)

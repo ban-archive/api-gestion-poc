@@ -100,6 +100,7 @@ def test_cannot_create_position_without_center_and_name(client):
     resp = client.post(url, data)
     assert resp.status == falcon.HTTP_422
     assert 'center' in resp.json['errors']
+    assert 'name' in resp.json['errors']
 
 
 @authorize
@@ -361,7 +362,8 @@ def test_cannot_remove_center_and_name(client, url):
     }
     resp = client.patch(uri, body=json.dumps(data))
     assert resp.status == falcon.HTTP_422
-    assert "center" in resp.json['errors']
+    assert "center" in resp.json["errors"]
+    assert "name" in resp.json["errors"]
 
 
 @authorize

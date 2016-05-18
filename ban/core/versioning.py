@@ -6,6 +6,7 @@ import peewee
 from ban import db
 from ban.auth.models import Session
 from ban.core.encoder import dumps
+from ban.utils import make_diff
 
 from . import context
 
@@ -47,16 +48,8 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         super().__init__(*args, **kwargs)
         self.prepared()
 
-    def _serialize(self, fields):
-        data = {}
-        for name, field in fields.items():
-            value = getattr(self, field.name)
-            value = field.db_value(value)
-            data[field.name] = value
-        return data
-
-    def serialize(self, fields=None):
-        return dumps(self._serialize(self._meta.fields))
+    def serialize(self):
+        return dumps(self.as_resource)
 
     def store_version(self):
         old = None
@@ -161,7 +154,8 @@ class Version(db.Model):
         return BaseVersioned.registry[self.model_name]
 
     def load(self):
-        return self.model(**self.as_resource)
+        validator = self.model.validator(**self.as_resource)
+        return self.model(**validator.document)
 
     @property
     def diff(self):
@@ -187,20 +181,9 @@ class Diff(db.Model):
 
     def save(self, *args, **kwargs):
         if not self.diff:
-            meta = set(['pk', 'id', 'created_by', 'modified_by', 'created_at',
-                        'modified_at', 'version'])
             old = self.old.as_resource if self.old else {}
             new = self.new.as_resource if self.new else {}
-            keys = set(list(old.keys()) + list(new.keys())) - meta
-            self.diff = {}
-            for key in keys:
-                old_value = old.get(key)
-                new_value = new.get(key)
-                if new_value != old_value:
-                    self.diff[key] = {
-                        'old': str(old_value),
-                        'new': str(new_value)
-                    }
+            self.diff = make_diff(old, new)
         super().save(*args, **kwargs)
         IdentifierRedirect.from_diff(self)
 

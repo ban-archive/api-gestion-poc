@@ -203,7 +203,11 @@ def test_group_as_list():
         'name': 'Rue des Fleurs',
         'resource': 'group',
         'attributes': None,
-        'laposte': None
+        'laposte': None,
+        'created_at': street.created_at,
+        'created_by': street.created_by.pk,
+        'modified_at': street.modified_at,
+        'modified_by': street.modified_by.pk,
     }
 
 
@@ -330,7 +334,11 @@ def test_housenumber_as_resource():
         'id': housenumber.id,
         'number': '90',
         'postcode': None,
-        'ordinal': 'bis'
+        'ordinal': 'bis',
+        'created_by': housenumber.created_by.pk,
+        'created_at': housenumber.created_at,
+        'modified_by': housenumber.modified_by.pk,
+        'modified_at': housenumber.modified_at,
     }
 
 
@@ -345,8 +353,8 @@ def test_position_is_versioned():
     assert len(position.versions) == 2
     version1 = position.versions[0].load()
     version2 = position.versions[1].load()
-    assert version1.center == {'type': 'Point', 'coordinates': [1, 2]}
-    assert version2.center == {'type': 'Point', 'coordinates': [3, 4]}
+    assert version1.center.geojson == {'type': 'Point', 'coordinates': (1, 2)}
+    assert version2.center.geojson == {'type': 'Point', 'coordinates': (3, 4)}
     assert version2.housenumber == housenumber
 
 
@@ -385,3 +393,5 @@ def test_position_center_coerce(given, expected):
     center = models.Position.get(models.Position.id == position.id).center
     if given:
         assert center.coords == expected
+    else:
+        assert not center

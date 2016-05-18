@@ -7,6 +7,7 @@ from ban.commands.db import truncate
 from ban.commands.export import resources
 from ban.commands.importer import municipalities
 from ban.core import models
+from ban.core.encoder import dumps
 from ban.core.versioning import Diff
 from ban.tests import factories
 
@@ -116,13 +117,13 @@ def test_export_resources():
     factories.PositionFactory(housenumber=hn)
     path = Path(__file__).parent / 'data/export.sjson'
     resources(path)
+
     with path.open() as f:
         lines = f.readlines()
         assert len(lines) == 3
-        assert json.loads(lines[0]) == mun.as_list
-        assert json.loads(lines[1]) == street.as_list
-        resource = hn.as_list
-        # JSON transform internals tuples to lists.
-        resource['center']['coordinates'] = list(resource['center']['coordinates'])  # noqa
-        assert json.loads(lines[2]) == resource
+        # loads/dumps to compare string dates to string dates.
+        assert json.loads(lines[0]) == json.loads(dumps(mun.as_list))
+        assert json.loads(lines[1]) == json.loads(dumps(street.as_list))
+        # Plus, JSON transform internals tuples to lists.
+        assert json.loads(lines[2]) == json.loads(dumps(hn.as_list))
     path.unlink()

@@ -1,13 +1,13 @@
 import re
 
 import peewee
-from postgis import Point
 from unidecode import unidecode
 
 from ban import db
 from ban.utils import compute_cia
 from .versioning import Versioned, BaseVersioned
 from .resource import ResourceModel, BaseResource
+from .validators import VersionedResourceValidator
 
 __all__ = ['Municipality', 'Group', 'HouseNumber', 'PostCode',
            'Position']
@@ -21,15 +21,20 @@ class BaseModel(BaseResource, BaseVersioned):
 
 
 class Model(ResourceModel, Versioned, metaclass=BaseModel):
-    resource_fields = ['version', 'attributes']
+    resource_fields = ['version', 'created_at', 'created_by', 'modified_at',
+                       'modified_by', 'attributes']
+    # 'version' is validated by us.
+    resource_schema = {'version': {'required': False},
+                       'created_at': {'readonly': True},
+                       'created_by': {'readonly': True},
+                       'modified_at': {'readonly': True},
+                       'modified_by': {'readonly': True}}
 
     attributes = db.HStoreField(null=True)
 
     class Meta:
         validate_backrefs = False
-        # 'version' is validated by us.
-        resource_schema = {'version': {'required': False},
-                           'id': {'required': False}}
+        validator = VersionedResourceValidator
 
     @classmethod
     def validate(cls, validator, document, instance):
@@ -117,6 +122,8 @@ class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'center', 'ign', 'postcode']
+    resource_schema = {'cia': {'readonly': True},
+                       'center': {'readonly': True}}
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
@@ -128,9 +135,6 @@ class HouseNumber(Model):
     postcode = db.ForeignKeyField(PostCode, null=True)
 
     class Meta:
-        resource_schema = {'cia': {'required': False},
-                           'version': {'required': False},
-                           'id': {'required': False}}
         order_by = ('number', 'ordinal')
         indexes = (
             (('parent', 'number', 'ordinal'), True),
@@ -234,11 +238,8 @@ class Position(Model):
 
     @property
     def center_resource(self):
-        if not self.center:
-            return None
-        if not isinstance(self.center, Point):
-            self.center = Point(*self.center)
-        return self.center.geojson
+        self.center = self._meta.fields["center"].coerce(self.center)
+        return self.center.geojson if self.center else None
 
     @classmethod
     def validate(cls, validator, document, instance):

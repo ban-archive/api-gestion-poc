@@ -78,7 +78,10 @@ class ForeignKeyField(peewee.ForeignKeyField):
     def coerce(self, value):
         if isinstance(value, peewee.Model):
             value = value.pk
-        elif isinstance(value, str) and hasattr(self.rel_model, 'coerce'):
+        elif isinstance(value, dict):
+            # We have a resource dict.
+            value = value['id']
+        if isinstance(value, str) and hasattr(self.rel_model, 'coerce'):
             value = self.rel_model.coerce(value).pk
         return super().coerce(value)
 
@@ -128,7 +131,7 @@ class ArrayField(postgres_ext.ArrayField):
 
 
 class DateTimeField(peewee.DateTimeField):
-    pass
+    schema_type = 'datetime'
 
 
 class BooleanField(peewee.BooleanField):
