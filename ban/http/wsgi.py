@@ -1,5 +1,6 @@
 import falcon
 from falcon_multipart.middleware import MultipartMiddleware
+from falcon import HTTPNotFound
 
 from .request import Request
 from .response import Response
@@ -12,6 +13,7 @@ class API(falcon.API):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._router.register_route(self)
+        self.add_error_handler(HTTPNotFound, self.render_not_found)
 
     def register_resource(self, resource):
         self._router.register_resource(resource)
@@ -38,6 +40,9 @@ class API(falcon.API):
             params['resource'] = resource
             responder = self._router.on_get_endpoint_help
         return responder, params, resource
+
+    def render_not_found(self, ex, req, resp, params):
+        self._router.on_get(req, resp, **params)
 
 
 application = app = API(
