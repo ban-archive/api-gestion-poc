@@ -15,9 +15,9 @@ Create a virtualenv (but you'd better use virtualenvwrapper or pew):
 
     virtualenv banenv --python=`which python3.4`
     source banenv/bin/activate
-    
+
 Install developpement tools
-    
+
     pip install ipython ipdb
 
 
@@ -51,12 +51,12 @@ Create a virtualenv
     banenv/Scripts/activate.bat
 
 Install developpement tools
-    
+
     pip install ipython pyreadline ipdb
 
 Create a psql database
 
-    createdb -U youruser ban 
+    createdb -U youruser ban
 
 Add postgis and hstore extensions
 
@@ -109,5 +109,24 @@ For development:
 For production, you need to use either gunicorn or uwsgi.
 
 Load the API root to get the available endpoints:
+
+    http http://localhost:5959/
+
+## Docker-compose all-in-one
+
+You can be set quickly with `docker-compose`.
+
+Copy the `docker/env.sample` to `docker/env` and edit it to match your expected "departement".
+
+```
+DEPARTEMENT=77
+```
+
+Run:
+
+    docker compose build
+    docker-compose up
+
+You are now ready to use your BAN server:
 
     http http://localhost:5959/
