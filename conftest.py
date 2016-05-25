@@ -11,9 +11,9 @@ from ban.http import application, reverse
 
 def pytest_configure(config):
     assert db.test.database.startswith('test_')
-    db.test.connect()
     for model in models:
         model._meta.database = db.test
+    db.test.connect()
     createdb(fail_silently=True)
     verbose = config.getoption('verbose')
     if verbose:
