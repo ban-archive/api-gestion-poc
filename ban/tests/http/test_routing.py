@@ -50,3 +50,4 @@ def test_reverse_uri_are_attached_to_resource():
 def test_invalid_identifier_returns_404(get):
     resp = get('/position/invalid:22')
     assert resp.status == falcon.HTTP_404
+    assert 'endpoints' in resp.json
