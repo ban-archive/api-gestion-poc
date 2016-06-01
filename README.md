@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/etalab/ban.svg)](https://travis-ci.org/etalab/ban) [![Coverage Status](https://coveralls.io/repos/etalab/ban/badge.svg?branch=master&service=github)](https://coveralls.io/github/etalab/ban?branch=master) [![Requirements Status](https://requires.io/github/etalab/ban/requirements.svg?branch=master)](https://requires.io/github/etalab/ban/requirements/?branch=master)
+[![Build Status](https://travis-ci.org/BaseAdresseNationale/ban.svg)](https://travis-ci.org/BaseAdresseNationale/ban) [![Coverage Status](https://coveralls.io/repos/BaseAdresseNationale/ban/badge.svg?branch=master&service=github)](https://coveralls.io/github/BaseAdresseNationale/ban?branch=master) [![Requirements Status](https://requires.io/github/BaseAdresseNationale/ban/requirements.svg?branch=master)](https://requires.io/github/BaseAdresseNationale/ban/requirements/?branch=master)
 # BAN
 
 This is a POC of API for managing the future "Base adresses nationale".
@@ -15,9 +15,9 @@ Create a virtualenv (but you'd better use virtualenvwrapper or pew):
 
     virtualenv banenv --python=`which python3.4`
     source banenv/bin/activate
-    
+
 Install developpement tools
-    
+
     pip install ipython ipdb
 
 
@@ -51,12 +51,12 @@ Create a virtualenv
     banenv/Scripts/activate.bat
 
 Install developpement tools
-    
+
     pip install ipython pyreadline ipdb
 
 Create a psql database
 
-    createdb -U youruser ban 
+    createdb -U youruser ban
 
 Add postgis and hstore extensions
 
@@ -69,7 +69,7 @@ Add postgis and hstore extensions
 
 Clone repository
 
-    git clone https://github.com/etalab/ban
+    git clone https://github.com/BaseAdresseNationale/ban
     cd ban/
 
 Install python dependencies
