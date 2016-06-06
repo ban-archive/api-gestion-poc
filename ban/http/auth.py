@@ -55,6 +55,7 @@ def grantgetter(client_id, code):
 class Token:
 
     @auth.token_endpoint
+    @app.endpoint()
     def on_post(self, req, resp, *args, **kwargs):
         """Get a token to use the API."""
         return {}

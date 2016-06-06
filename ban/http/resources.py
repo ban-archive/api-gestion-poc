@@ -73,6 +73,7 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
     def get_collection(self, req, resp, **params):
         return self.model.select()
 
+    @app.endpoint()
     def on_get(self, req, resp, **params):
         """Get {resource} collection."""
         qs = self.get_collection(req, resp, **params)
@@ -92,6 +93,7 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
         self.save_object(req.params, req, resp, instance, **params)
 
     @auth.protect
+    @app.endpoint()
     def on_post(self, req, resp, *args, **params):
         """Create {resource}"""
         self.save_object(req.params, req, resp, **params)

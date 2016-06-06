@@ -7,6 +7,7 @@ from .resources import BaseCollection
 class Diff(BaseCollection):
 
     @auth.protect
+    @app.endpoint()
     def on_get(self, req, resp, *args, **kwargs):
         """Get database diffs.
 

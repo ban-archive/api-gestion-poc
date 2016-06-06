@@ -15,11 +15,6 @@ class Router(DefaultRouter):
         reverse.attach_router(self)
         super().__init__(*args, **kwargs)
 
-    def find(self, uri):
-        if uri == '/':
-            return (self, {'GET': self.on_get}, {})
-        return super().find(uri)
-
     def reverse(self, name, **params):
         if not isinstance(name, str):
             name = self.cls_name(name)
@@ -61,17 +56,6 @@ class Router(DefaultRouter):
                                 if hasattr(func, '_path')}  # Not 405 attached.
         self.add_route(path, method_map, resource)
 
-    def default_method_endpoint(self, resource, attr):
-        method = getattr(resource.__class__, attr)
-        if not hasattr(method, '_path'):
-            _, verb, *path = method.__name__.split('_')
-            path = '/'.join(path)
-            if path:
-                path = '/' + path
-            setattr(method, '_path', path)
-            method._verb = verb
-            method._suffix = '-'.join(path)
-
     def extend_method_map(self, method_map):
         # See https://github.com/falconry/falcon/issues/667
         allowed_methods = sorted(list(method_map.keys()))
@@ -87,9 +71,6 @@ class Router(DefaultRouter):
         base = self.cls_name(resource.__class__)
         paths = {}
         for attr in dir(resource):
-            # Keep supporting default "on_VERB" format for simple cases.
-            if attr.startswith('on_'):
-                self.default_method_endpoint(resource, attr)
             responder = getattr(resource, attr)
             if hasattr(responder, '_path'):
                 path = '/{}{}'.format(base, responder._path)
