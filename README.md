@@ -4,6 +4,13 @@
 This is a POC of API for managing the future "Base adresses nationale".
 
 ## Install
+
+### OSX
+
+Install system dependencies with homebrew (or by hand)
+
+    brew install postgres postgis
+
 ### Linux
 
 Install system dependencies
