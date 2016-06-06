@@ -74,7 +74,6 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
         return self.model.select()
 
     @app.endpoint()
-    @app.endpoint()
     def on_get(self, req, resp, **params):
         """Get {resource} collection."""
         qs = self.get_collection(req, resp, **params)
