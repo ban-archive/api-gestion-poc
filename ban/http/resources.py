@@ -16,38 +16,116 @@ class BaseCollection:
     DEFAULT_LIMIT = 20
     MAX_LIMIT = 100
 
-    def get_limit(self, req):
-        return min(int(req.params.get('limit', self.DEFAULT_LIMIT)),
-                   self.MAX_LIMIT)
+    def get_start(self, req, count):
+        """Get start value from request.
+
+        Keyword arguments:
+            req -- Request.
+
+        Business rules:
+            if start == not defined then start = 0.
+            if start < 0            then start = 0.
+            if start > count        then start = 0.
+            else start = start.
+        """
+        try:
+            start = int(req.params.get('start', 0))
+        except (ValueError, TypeError):
+            return 0
+        else:
+            if (start <= 0):
+                start = 0
+            if (start > count):
+                start = 0
+            else:
+                start = start
+
+            return start
+
+    def get_limit(self, req, count):
+        """Get limit value from request.
+
+        Keyword arguments:
+            req -- Request.
+
+        Business rules:
+            if limit == not defined then limit = count.
+            if limit < 0            then limit = count.
+            if limit > count        then limit = count.
+            else limit = limit.
+
+        """
+        try:
+            limit = int(req.params.get('limit', count))
+        except (ValueError, TypeError):
+            return 0
+        else:
+            if (limit <= 0):
+                limit = count
+            if (limit > count):
+                limit = count
+
+            return limit
 
     def get_offset(self, req):
+        """Get offset value from request.
+
+        Keyword arguments:
+            req -- Request.
+        """
         try:
             return int(req.params.get('offset'))
         except (ValueError, TypeError):
             return 0
 
     def collection(self, req, resp, queryset):
-        limit = self.get_limit(req)
-        offset = self.get_offset(req)
-        end = offset + limit
+        """Create 'Previous' & 'Next' uri and get last collected id.
+
+        Keyword arguments:
+            req  -- Request.
+            resp -- Response.
+            queryset -- Queryset to initialize & execute.
+        """
+
+        # How many records are contained in this query?
         count = len(queryset)
+        # Is a pk value defined to start the query and which one is it?
+        start = self.get_start(req, count)
+        # How many records does the user want?
+        limit = self.get_limit(req, count)
+
+        # Add pk where clause to the query.
+        queryset.where(queryset.model_class.pk >= start)
+
+        # Out structure
         kwargs = {
-            'collection': list(queryset[offset:end]),
+            'collection': list(queryset[start: start + limit]),
             'total': count,
         }
+        # Url definition
         url = '{}://{}{}'.format(req.protocol, req.host, req.path)
-        if count > end:
+
+        # Uri definition
+        if (limit != 0) and (limit < count):
+            # Limit defined.
+            #   A 'Next' data range exists. Let's create 'Next uri'.
             query_string = req.params.copy()
-            query_string.update({'offset': end})
+            query_string.update({'start': min(start + limit, count)})
+            query_string.update({'limit': min(limit, count)})
             uri = '{}?{}'.format(url, urlencode(sorted(query_string.items())))
             kwargs['next'] = uri
             resp.add_link(uri, 'next')
-        if offset >= limit:
+
+        if (limit != 0) and ((start - limit >= 0) and (start - limit < count)):
+            # Limit defined.
+            #   A 'Previous' data range exists. Let's create 'Previous uri'.
             query_string = req.params.copy()
-            query_string.update({'offset': offset - limit})
+            query_string.update({'start': max(start - limit, 1)})
+            query_string.update({'limit': min(limit, count)})
             uri = '{}?{}'.format(url, urlencode(sorted(query_string.items())))
             kwargs['previous'] = uri
             resp.add_link(uri, 'previous')
+
         resp.json(**kwargs)
 
 
