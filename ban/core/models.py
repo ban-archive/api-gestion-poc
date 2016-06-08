@@ -29,6 +29,14 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
         resource_schema = {'version': {'required': False},
                            'id': {'required': False}}
 
+    @classmethod
+    def validate(cls, validator, document, instance):
+        errors = {}
+        # Only check version if instance already exists.
+        if instance and not document.get('version'):
+            errors['version'] = validator.ERROR_REQUIRED_FIELD
+        return errors
+
 
 class NamedModel(Model):
     name = db.CharField(max_length=200)
@@ -164,7 +172,8 @@ class HouseNumber(Model):
     @property
     def center(self):
         position = self.position_set.first()
-        return position.center.geojson if position else None
+        return (position.center.geojson
+                if position and position.center else None)
 
     @property
     def ancestors_resource(self):
@@ -208,9 +217,10 @@ class Position(Model):
     )
 
     resource_fields = ['center', 'source', 'housenumber', 'attributes',
-                       'kind', 'comment', 'parent', 'positioning']
+                       'kind', 'comment', 'parent', 'positioning', 'name']
 
-    center = db.PointField(verbose_name=_("center"))
+    name = db.CharField(max_length=200, null=True)
+    center = db.PointField(verbose_name=_("center"), null=True)
     housenumber = db.ForeignKeyField(HouseNumber)
     parent = db.ForeignKeyField('self', related_name='children', null=True)
     source = db.CharField(max_length=64, null=True)
@@ -224,6 +234,17 @@ class Position(Model):
 
     @property
     def center_resource(self):
+        if not self.center:
+            return None
         if not isinstance(self.center, Point):
             self.center = Point(*self.center)
         return self.center.geojson
+
+    @classmethod
+    def validate(cls, validator, document, instance):
+        errors = super().validate(validator, document, instance)
+        if not document.get('name') and not document.get('center'):
+            msg = 'A position must have either a center or a name.'
+            errors['center'] = msg
+            errors['name'] = msg
+        return errors
