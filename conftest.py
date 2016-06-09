@@ -4,6 +4,7 @@ import pytest
 from ban.tests.factories import UserFactory, TokenFactory, SessionFactory
 
 from ban import db
+from ban.commands.reporter import Reporter
 from ban.commands.db import models, create as createdb, truncate as truncatedb
 from ban.core import context
 from ban.http import application, reverse
@@ -95,3 +96,10 @@ def config(request, monkeypatch):
     # Make sure config cache is empty.
     ban_config.cache.clear()
     return MonkeyPatchWrapper(monkeypatch, ban_config)
+
+
+@pytest.fixture
+def reporter():
+    reporter_ = Reporter(2)
+    context.set('reporter', reporter_)
+    return reporter_
