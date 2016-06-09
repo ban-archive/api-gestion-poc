@@ -60,7 +60,7 @@ def test_process_can_import_two_postcode_with_same_code(session):
 def test_process_housenumber_from_dgfip(session):
     group = factories.GroupFactory(fantoir="900010016")
     data = {"type": "housenumber", "source": "DGFiP/BANO (2016-04)",
-            "group:fantoir": "90001_0016V", "numero": "15", "ordinal": "bis"}
+            "group:fantoir": "900010016", "numero": "15", "ordinal": "bis"}
     process_row(data)
     assert models.HouseNumber.select().count() == 1
     housenumber = models.HouseNumber.first()
