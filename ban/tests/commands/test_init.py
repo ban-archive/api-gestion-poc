@@ -27,3 +27,30 @@ def test_process_group(session):
     assert group.municipality == municipality
     assert group.fantoir == "900080203"
     assert group.name == "GRANDE RUE F. MITTERRAND"
+
+
+def test_process_postcode(session):
+    municipality = factories.MunicipalityFactory(insee="01030")
+    data = {"type": "postcode", "source": "La Poste (2015)",
+            "postcode": "01480", "name": "BEAUREGARD",
+            "municipality:insee": "01030"}
+    process_row(data)
+    assert models.PostCode.select().count() == 1
+    postcode = models.PostCode.first()
+    assert postcode.code == "01480"
+    assert postcode.name == "BEAUREGARD"
+    assert postcode.municipality == municipality
+
+
+def test_process_can_import_two_postcode_with_same_code(session):
+    factories.MunicipalityFactory(insee="90049")
+    factories.MunicipalityFactory(insee="90050")
+    first = {"type": "postcode", "source": "La Poste (2015)",
+             "postcode": "90150", "name": "FOUSSEMAGNE",
+             "municipality:insee": "90049"}
+    second = {"type": "postcode", "source": "La Poste (2015)",
+              "postcode": "90150", "name": "FRAIS",
+              "municipality:insee": "90050"}
+    process_row(first)
+    process_row(second)
+    assert models.PostCode.select().count() == 2

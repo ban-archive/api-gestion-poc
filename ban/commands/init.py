@@ -97,7 +97,7 @@ def process_postcode(row):
     code = row.get('postcode')
     data = dict(name=name, code=code, municipality=municipality,
                 version=1)
-    instance = PostCode.first(PostCode.code == code)
+    instance = PostCode.first(PostCode.code == code, PostCode.name == name)
     if instance:
         return reporter.notice('PostCode already exists', code)
     validator = PostCode.validator(**data)
