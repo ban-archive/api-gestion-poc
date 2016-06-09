@@ -21,7 +21,9 @@ class BaseModel(BaseResource, BaseVersioned):
 
 
 class Model(ResourceModel, Versioned, metaclass=BaseModel):
-    resource_fields = ['version']
+    resource_fields = ['version', 'attributes']
+
+    attributes = db.HStoreField(null=True)
 
     class Meta:
         validate_backrefs = False
@@ -44,12 +46,10 @@ class NamedModel(Model):
 
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
-    resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes',
-                       'attributes']
+    resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
 
     insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9, unique=True)
-    attributes = db.HStoreField(null=True)
 
     @property
     def postcodes_resource(self):
@@ -59,7 +59,6 @@ class Municipality(NamedModel):
 class BaseGroup(NamedModel):
     municipality = db.ForeignKeyField(Municipality,
                                       related_name='{classname}s')
-    attributes = db.HStoreField(null=True)
 
     class Meta:
         abstract = True
@@ -89,8 +88,8 @@ class Group(BaseGroup):
         (AREA, 'area'),
     )
     identifiers = ['fantoir', 'laposte', 'ign']
-    resource_fields = ['name', 'alias', 'fantoir', 'attributes',
-                       'municipality', 'kind', 'laposte', 'ign']
+    resource_fields = ['name', 'alias', 'fantoir', 'municipality', 'kind',
+                       'laposte', 'ign']
 
     kind = db.CharField(max_length=64, choices=KIND)
     fantoir = db.CharField(max_length=9, null=True, unique=True)
@@ -207,8 +206,8 @@ class Position(Model):
         (OTHER, _('other')),
     )
 
-    resource_fields = ['center', 'source', 'housenumber', 'attributes',
-                       'kind', 'comment', 'parent', 'positioning']
+    resource_fields = ['center', 'source', 'housenumber', 'kind', 'comment',
+                       'parent', 'positioning']
 
     center = db.PointField(verbose_name=_("center"))
     housenumber = db.ForeignKeyField(HouseNumber)
@@ -216,7 +215,6 @@ class Position(Model):
     source = db.CharField(max_length=64, null=True)
     kind = db.CharField(max_length=64, choices=KIND)
     positioning = db.CharField(max_length=32, choices=POSITIONING)
-    attributes = db.HStoreField(null=True)
     comment = peewee.TextField(null=True)
 
     class Meta:

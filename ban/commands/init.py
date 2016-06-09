@@ -92,11 +92,11 @@ def process_group(row):
 def process_postcode(row):
     municipality = 'insee:{}'.format(row.get('municipality:insee'))
     # TODO: add attributes to PostCode.
-    # attributes = {'source': row.pop('source')}
+    attributes = {'source': row.pop('source')}
     name = row.get('name')
     code = row.get('postcode')
     data = dict(name=name, code=code, municipality=municipality,
-                version=1)
+                version=1, attributes=attributes)
     instance = PostCode.first(PostCode.code == code, PostCode.name == name)
     if instance:
         return reporter.notice('PostCode already exists', code)
@@ -116,16 +116,16 @@ def process_housenumber(row):
     cia = compute_cia(insee, raw_fantoir[6:10], number, ordinal)
     parent = 'fantoir:{}'.format(fantoir)
     source = row.get('source')
-    # TODO add attributes to HouseNumber
-    # attributes = {'source': source}
-    data = dict(number=number, ordinal=ordinal, version=1, parent=parent)
+    attributes = {'source': source}
+    data = dict(number=number, ordinal=ordinal, version=1, parent=parent,
+                attributes=attributes)
     instance = HouseNumber.first(HouseNumber.cia == cia)
     update = False
     if instance:
-        # if instance.attributes['source'] == source:
-        #     # Reimporting same data?
-        #     reporter.warning('HouseNumber already exists', instance.id)
-        #     return
+        if instance.attributes['source'] == source:
+            # Reimporting same data?
+            reporter.warning('HouseNumber already exists', instance.id)
+            return
         data['version'] = instance.version + 1
         update = True
 

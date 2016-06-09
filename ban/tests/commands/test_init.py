@@ -40,6 +40,7 @@ def test_process_postcode(session):
     assert postcode.code == "01480"
     assert postcode.name == "BEAUREGARD"
     assert postcode.municipality == municipality
+    assert postcode.attributes['source'] == "La Poste (2015)"
 
 
 def test_process_can_import_two_postcode_with_same_code(session):
@@ -65,6 +66,7 @@ def test_process_housenumber_from_dgfip(session):
     process_row(data)
     assert models.HouseNumber.select().count() == 1
     housenumber = models.HouseNumber.first()
+    assert housenumber.attributes['source'] == "DGFiP/BANO (2016-04)"
+    assert housenumber.parent == group
     assert housenumber.number == "15"
     assert housenumber.ordinal == "bis"
-    assert housenumber.parent == group

@@ -307,6 +307,27 @@ def test_should_not_allow_deleting_housenumber_not_linked():
     assert models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
 
 
+def test_housenumber_as_resource():
+    housenumber = HouseNumberFactory(number="90", ordinal="bis",
+                                     attributes={"source": "openbar"},
+                                     parent__municipality__insee="21892",
+                                     parent__fantoir="218921234")
+    assert housenumber.as_resource == {
+        'ancestors': [],
+        'cia': '21892_1234_90_BIS',
+        'parent': housenumber.parent.as_relation,
+        'center': None,
+        'laposte': None,
+        'ign': None,
+        'attributes': {'source': 'openbar'},
+        'version': 1,
+        'id': housenumber.id,
+        'number': '90',
+        'postcode': None,
+        'ordinal': 'bis'
+    }
+
+
 def test_position_is_versioned():
     housenumber = HouseNumberFactory()
     position = PositionFactory(housenumber=housenumber, center=(1, 2))
