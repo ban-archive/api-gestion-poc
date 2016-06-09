@@ -45,6 +45,8 @@ class PointField(peewee.Field):
             return None
         if isinstance(value, Point):
             return value
+        if isinstance(value, dict):  # GeoJSON
+            value = value['coordinates']
         if isinstance(value, str):
             search = lonlat_pattern.search(value)
             if search:

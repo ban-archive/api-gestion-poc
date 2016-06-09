@@ -58,9 +58,7 @@ def test_process_can_import_two_postcode_with_same_code(session):
 
 
 def test_process_housenumber_from_dgfip(session):
-    municipality = factories.MunicipalityFactory(insee="01030")
-    group = factories.GroupFactory(municipality=municipality,
-                                   fantoir="900010016")
+    group = factories.GroupFactory(fantoir="900010016")
     data = {"type": "housenumber", "source": "DGFiP/BANO (2016-04)",
             "group:fantoir": "90001_0016V", "numero": "15", "ordinal": "bis"}
     process_row(data)
@@ -70,3 +68,23 @@ def test_process_housenumber_from_dgfip(session):
     assert housenumber.parent == group
     assert housenumber.number == "15"
     assert housenumber.ordinal == "bis"
+
+
+def test_process_position_from_dgfip(session, reporter):
+    data = {"type": "position", "kind": "entrance",
+            "source": "DGFiP/BANO (2016-04)",
+            "housenumber:cia": "90001_0016V_15_bis",
+            "geometry": {"type": "Point",
+                         "coordinates": [6.87116577514, 47.6029533961]}}
+    group = factories.GroupFactory(municipality__insee="90001",
+                                   fantoir="900010016")
+    housenumber = factories.HouseNumberFactory(parent=group, number="15",
+                                               ordinal="bis")
+    process_row(data)
+    print(reporter)
+    assert models.Position.select().count() == 1
+    position = models.Position.first()
+    assert position.kind == models.Position.ENTRANCE
+    assert position.source == "DGFiP/BANO (2016-04)"
+    assert position.housenumber == housenumber
+    assert position.center.coords == (6.87116577514, 47.6029533961)
