@@ -70,7 +70,7 @@ def test_process_housenumber_from_dgfip(session):
     assert housenumber.ordinal == "bis"
 
 
-def test_process_position_from_dgfip(session, reporter):
+def test_process_position_from_dgfip(session):
     data = {"type": "position", "kind": "entrance",
             "source": "DGFiP/BANO (2016-04)",
             "housenumber:cia": "90001_0016V_15_bis",
@@ -81,10 +81,29 @@ def test_process_position_from_dgfip(session, reporter):
     housenumber = factories.HouseNumberFactory(parent=group, number="15",
                                                ordinal="bis")
     process_row(data)
-    print(reporter)
     assert models.Position.select().count() == 1
     position = models.Position.first()
     assert position.kind == models.Position.ENTRANCE
     assert position.source == "DGFiP/BANO (2016-04)"
     assert position.housenumber == housenumber
     assert position.center.coords == (6.87116577514, 47.6029533961)
+
+
+def test_process_housenumber_from_oldban(session):
+    data = {"type": "housenumber", "source": "BAN (2016-06-05)",
+            "cia": "90001_0005_2_BIS", "group:fantoir": "900010005",
+            "numero": "2", "ordinal": "BIS",
+            "ref:ign": "ADRNIVX_0000000259416737", "postcode": "90400"}
+    group = factories.GroupFactory(municipality__insee="90001",
+                                   fantoir="900010005")
+    factories.HouseNumberFactory(parent=group, number="2", ordinal="bis")
+    factories.PostCodeFactory(municipality=group.municipality, code="90400")
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.attributes['source'] == "BAN (2016-06-05)"
+    assert housenumber.parent == group
+    assert housenumber.number == "2"
+    assert housenumber.ordinal == "BIS"
+    assert housenumber.postcode.code == "90400"
+    assert housenumber.ign == "ADRNIVX_0000000259416737"

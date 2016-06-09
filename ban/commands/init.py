@@ -110,19 +110,32 @@ def process_postcode(row):
 def process_housenumber(row):
     number = row.get('numero')
     ordinal = row.get('ordinal') or None
-    raw_fantoir = row.get('group:fantoir')
-    insee = raw_fantoir[:5]
-    fantoir = '{}{}'.format(raw_fantoir[:5], raw_fantoir[6:10])
-    cia = compute_cia(insee, raw_fantoir[6:10], number, ordinal)
+    fantoir = row.get('group:fantoir')
+    insee = fantoir[:5]
+    cia = row.get('cia')
+    if not cia:
+        cia = compute_cia(insee, fantoir[5:], number, ordinal)
     parent = 'fantoir:{}'.format(fantoir)
     source = row.get('source')
     attributes = {'source': source}
     data = dict(number=number, ordinal=ordinal, version=1, parent=parent,
                 attributes=attributes)
+    if 'ref:ign' in row:
+        data['ign'] = row.get('ref:ign')
+    if 'postcode' in row:
+        code = row.get('postcode')
+        postcode = PostCode.select().join(Municipality).where(
+            PostCode.code == code,
+            Municipality.insee == insee).first()
+        if not postcode:
+            reporter.error('HouseNumber postcode not found', (cia, code))
+        else:
+            data['postcode'] = postcode
     instance = HouseNumber.first(HouseNumber.cia == cia)
     update = False
     if instance:
-        if instance.attributes['source'] == source:
+        attributes = getattr(instance, 'attributes') or {}
+        if attributes.get('source') == source:
             # Reimporting same data?
             reporter.warning('HouseNumber already exists', instance.id)
             return
