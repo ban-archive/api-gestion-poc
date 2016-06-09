@@ -54,3 +54,17 @@ def test_process_can_import_two_postcode_with_same_code(session):
     process_row(first)
     process_row(second)
     assert models.PostCode.select().count() == 2
+
+
+def test_process_housenumber_from_dgfip(session):
+    municipality = factories.MunicipalityFactory(insee="01030")
+    group = factories.GroupFactory(municipality=municipality,
+                                   fantoir="900010016")
+    data = {"type": "housenumber", "source": "DGFiP/BANO (2016-04)",
+            "group:fantoir": "90001_0016V", "numero": "15", "ordinal": "bis"}
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.number == "15"
+    assert housenumber.ordinal == "bis"
+    assert housenumber.parent == group
