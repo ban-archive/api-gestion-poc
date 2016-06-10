@@ -114,10 +114,11 @@ def test_process_housenumber_from_oldban(session):
     assert housenumber.ordinal == "BIS"
     assert housenumber.postcode.code == "90400"
     assert housenumber.ign == "ADRNIVX_0000000259416737"
+    assert len(housenumber.versions) == 2
 
 
 # File: 07x_positions_ban.json
-def test_process_positions_from_oldban(session, reporter):
+def test_process_positions_from_oldban(session):
     data = {"type": "position", "kind": "unknown",
             "source": "BAN (2016-06-05)", "housenumber:cia": "90001_0005_5_",
             "ref:ign": "ADRNIVX_0000000259416584",
@@ -128,5 +129,9 @@ def test_process_positions_from_oldban(session, reporter):
     housenumber = factories.HouseNumberFactory(parent=group, number="5",
                                                ordinal="")
     process_row(data)
-    print(reporter)
     assert models.Position.select().count() == 1
+    position = models.Position.first()
+    assert position.kind == models.Position.UNKNOWN
+    assert position.source == "BAN (2016-06-05)"
+    assert position.housenumber == housenumber
+    assert position.center.coords == (6.871125, 47.602046)
