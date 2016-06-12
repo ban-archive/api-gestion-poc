@@ -18,7 +18,7 @@ def test_process_group(session):
     municipality = factories.MunicipalityFactory(insee="90008")
     data = {"type": "group", "source": "DGFIP/FANTOIR (2015-07)",
             "group": "way", "municipality:insee": "90008",
-            "group:fantoir": "90008_0203T", "name": "GRANDE RUE F. MITTERRAND"}
+            "group:fantoir": "900080203", "name": "GRANDE RUE F. MITTERRAND"}
     process_row(data)
     assert models.Group.select().count() == 1
     group = models.Group.first()

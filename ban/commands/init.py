@@ -62,7 +62,6 @@ def process_municipality(row):
 def process_group(row):
     municipality = 'insee:{}'.format(row.get('municipality:insee'))
     fantoir = row.get('group:fantoir')
-    fantoir = '{}{}'.format(fantoir[:5], fantoir[6:10])
     name = row.get('name')
     kind = row.get('group')
     source = row.get('source')
