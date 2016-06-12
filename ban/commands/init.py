@@ -154,7 +154,6 @@ def process_position(row):
     kind = row.get("kind")
     source = row.get("source")
     cia = row.get('housenumber:cia').upper()
-    cia = cia[:10] + cia[11:]  # Remove control letter from data instead.
     center = row.get('geometry')
     housenumber = HouseNumber.first(HouseNumber.cia == cia)
     if not housenumber:

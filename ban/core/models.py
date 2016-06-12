@@ -180,6 +180,7 @@ class Position(Model):
     PARCEL = 'parcel'
     SEGMENT = 'segment'
     UTILITY = 'utility'
+    UNKNOWN = 'unknown'
     KIND = (
         (POSTAL, _('postal delivery')),
         (ENTRANCE, _('entrance')),
@@ -189,6 +190,7 @@ class Position(Model):
         (PARCEL, _('parcel')),
         (SEGMENT, _('road segment')),
         (UTILITY, _('utility service')),
+        (UNKNOWN, _('unknown')),
     )
 
     DGPS = 'dgps'

@@ -3,6 +3,7 @@ from ban.core import models
 from ban.tests import factories
 
 
+# File: 01_municipalities.json
 def test_process_municipality(session):
     data = {"type": "municipality", "source": "INSEE/COG (2015)",
             "insee": "22059", "name": "Le Fœil"}
@@ -14,6 +15,7 @@ def test_process_municipality(session):
     assert municipality.attributes['source'] == "INSEE/COG (2015)"
 
 
+# File: 02_groups.json
 def test_process_group(session):
     municipality = factories.MunicipalityFactory(insee="90008")
     data = {"type": "group", "source": "DGFIP/FANTOIR (2015-07)",
@@ -29,6 +31,7 @@ def test_process_group(session):
     assert group.name == "GRANDE RUE F. MITTERRAND"
 
 
+# File: 03_postcodes.json
 def test_process_postcode(session):
     municipality = factories.MunicipalityFactory(insee="01030")
     data = {"type": "postcode", "source": "La Poste (2015)",
@@ -43,6 +46,7 @@ def test_process_postcode(session):
     assert postcode.attributes['source'] == "La Poste (2015)"
 
 
+# File: 03_postcodes.json
 def test_process_can_import_two_postcode_with_same_code(session):
     factories.MunicipalityFactory(insee="90049")
     factories.MunicipalityFactory(insee="90050")
@@ -57,6 +61,7 @@ def test_process_can_import_two_postcode_with_same_code(session):
     assert models.PostCode.select().count() == 2
 
 
+# File: 04_housenumbers_dgfip.json
 def test_process_housenumber_from_dgfip(session):
     group = factories.GroupFactory(fantoir="900010016")
     data = {"type": "housenumber", "source": "DGFiP/BANO (2016-04)",
@@ -70,10 +75,11 @@ def test_process_housenumber_from_dgfip(session):
     assert housenumber.ordinal == "bis"
 
 
+# File: 05_positions_dgfip.json
 def test_process_position_from_dgfip(session):
     data = {"type": "position", "kind": "entrance",
             "source": "DGFiP/BANO (2016-04)",
-            "housenumber:cia": "90001_0016V_15_bis",
+            "housenumber:cia": "90001_0016_15_bis",
             "geometry": {"type": "Point",
                          "coordinates": [6.87116577514, 47.6029533961]}}
     group = factories.GroupFactory(municipality__insee="90001",
@@ -89,6 +95,7 @@ def test_process_position_from_dgfip(session):
     assert position.center.coords == (6.87116577514, 47.6029533961)
 
 
+# File: 06x_housenumbers_ban.json
 def test_process_housenumber_from_oldban(session):
     data = {"type": "housenumber", "source": "BAN (2016-06-05)",
             "cia": "90001_0005_2_BIS", "group:fantoir": "900010005",
@@ -107,3 +114,24 @@ def test_process_housenumber_from_oldban(session):
     assert housenumber.ordinal == "BIS"
     assert housenumber.postcode.code == "90400"
     assert housenumber.ign == "ADRNIVX_0000000259416737"
+    assert len(housenumber.versions) == 2
+
+
+# File: 07x_positions_ban.json
+def test_process_positions_from_oldban(session):
+    data = {"type": "position", "kind": "unknown",
+            "source": "BAN (2016-06-05)", "housenumber:cia": "90001_0005_5_",
+            "ref:ign": "ADRNIVX_0000000259416584",
+            "geometry": {"type": "Point",
+                         "coordinates": [6.871125, 47.602046]}}
+    group = factories.GroupFactory(municipality__insee="90001",
+                                   fantoir="900010005")
+    housenumber = factories.HouseNumberFactory(parent=group, number="5",
+                                               ordinal="")
+    process_row(data)
+    assert models.Position.select().count() == 1
+    position = models.Position.first()
+    assert position.kind == models.Position.UNKNOWN
+    assert position.source == "BAN (2016-06-05)"
+    assert position.housenumber == housenumber
+    assert position.center.coords == (6.871125, 47.602046)
