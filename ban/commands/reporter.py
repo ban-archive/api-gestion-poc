@@ -27,7 +27,7 @@ class Reporter:
     }
 
     def __init__(self, verbosity):
-        self.verbosity = verbosity
+        self.verbosity = verbosity or 0
         self.clear()
 
     def __str__(self):
@@ -39,9 +39,9 @@ class Reporter:
                 if reports:
                     lines.append(self.LEVEL_LABEL[level].title())
                 for msg, data in reports.items():
-                    total = len(data) if self.verbosity else data
+                    total = len(data) if self.verbosity >= level else data
                     lines.append('\t- {} ({})'.format(msg, total))
-                    if self.verbosity:
+                    if self.verbosity >= level:
                         for item in data:
                             if self.verbosity >= level:
                                 lines.append('\t\t. {}'.format(item))
@@ -65,7 +65,7 @@ class Reporter:
         return out
 
     def __call__(self, msg, data, level):
-        if self.verbosity:
+        if self.verbosity >= level:
             self._reports[level].setdefault(msg, [])
             self._reports[level][msg].append(data)
         else:
@@ -76,7 +76,7 @@ class Reporter:
     def merge(self, reports):
         for level, msgs in reports.items():
             for msg, data in msgs.items():
-                if self.verbosity:
+                if self.verbosity >= level:
                     self._reports[level].setdefault(msg, [])
                     self._reports[level][msg].extend(data)
                 else:
