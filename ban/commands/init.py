@@ -1,9 +1,8 @@
 import json
 
-import peewee
-
 from ban.commands import command, reporter
-from ban.core.models import Municipality, HouseNumber, Group, Position, PostCode
+from ban.core.models import (Group, HouseNumber, Municipality, Position,
+                             PostCode)
 from ban.utils import compute_cia
 
 from . import helpers
@@ -51,7 +50,6 @@ def process_row(row):
 
 def process_municipality(row):
     row['attributes'] = {'source': row.pop('source')}
-    row['siren'] = '2101' + row['insee']  # Dummy, but hey.
     validator = Municipality.validator(**row)
     if validator.errors:
         return reporter.error('Municipality errors', validator.errors)
