@@ -12,23 +12,26 @@ __namespace__ = 'import'
 
 @command
 @helpers.nodiff
-def init(path, limit=0, **kwargs):
-    """Initial import for real™."""
-    rows = helpers.iter_file(path, formatter=json.loads)
-    if limit:
-        print('Running with limit', limit)
-        extract = []
-        for i, row in enumerate(rows):
-            if i >= limit:
-                break
-            extract.append(row)
-        rows = extract
-        total = limit
-    else:
-        print('Computing file size')
-        total = sum(1 for line in helpers.iter_file(path))
-        print('Done computing file size')
-    helpers.batch(process_row, rows, chunksize=100, total=total)
+def init(paths=[], limit=0, **kwargs):
+    """Initial import for real™.
+
+    paths   Paths to json files."""
+    for path in paths:
+        rows = helpers.iter_file(path, formatter=json.loads)
+        if limit:
+            print('Running with limit', limit)
+            extract = []
+            for i, row in enumerate(rows):
+                if i >= limit:
+                    break
+                extract.append(row)
+            rows = extract
+            total = limit
+        else:
+            print('Computing file size')
+            total = sum(1 for line in helpers.iter_file(path))
+            print('Done computing file size')
+        helpers.batch(process_row, rows, chunksize=100, total=total)
 
 
 @helpers.session
