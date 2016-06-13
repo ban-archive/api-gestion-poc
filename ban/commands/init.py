@@ -89,19 +89,21 @@ def process_group(row):
 
 
 def process_postcode(row):
-    municipality = 'insee:{}'.format(row.get('municipality:insee'))
-    # TODO: add attributes to PostCode.
+    insee = row['municipality:insee']
+    municipality = 'insee:{}'.format(insee)
     attributes = {'source': row.pop('source')}
     name = row.get('name')
     code = row.get('postcode')
     data = dict(name=name, code=code, municipality=municipality,
                 version=1, attributes=attributes)
-    instance = PostCode.first(PostCode.code == code, PostCode.name == name)
+    instance = PostCode.select().join(Municipality).where(
+        PostCode.code == code, Municipality.insee == insee).first()
     if instance:
         return reporter.notice('PostCode already exists', code)
     validator = PostCode.validator(**data)
     if validator.errors:
-        return reporter.error('PostCode errors', validator.errors)
+        return reporter.error('PostCode errors', (validator.errors,
+                                                  code, insee))
     validator.save()
     reporter.notice('Imported PostCode', code)
 
