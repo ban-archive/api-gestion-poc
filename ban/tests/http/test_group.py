@@ -2,6 +2,7 @@ import json
 
 import falcon
 from ban.core import models
+from ban.core.encoder import dumps
 
 from ..factories import HouseNumberFactory, MunicipalityFactory, GroupFactory
 from .utils import authorize
@@ -43,9 +44,10 @@ def test_get_group_housenumbers(get, url):
     resp = get(url('group-housenumbers', identifier=street.id))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 3
-    assert resp.json['collection'][0] == hn1.as_list
-    assert resp.json['collection'][1] == hn2.as_list
-    assert resp.json['collection'][2] == hn3.as_list
+    # loads/dumps to compare string dates to string dates.
+    assert resp.json['collection'][0] == json.loads(dumps(hn1.as_list))
+    assert resp.json['collection'][1] == json.loads(dumps(hn2.as_list))
+    assert resp.json['collection'][2] == json.loads(dumps(hn3.as_list))
 
 
 @authorize

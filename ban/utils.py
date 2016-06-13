@@ -19,3 +19,25 @@ def is_uuid4(uuid_string):
 def compute_cia(insee, fantoir, number=None, ordinal=None):
     return '_'.join([insee, fantoir, (number or '').upper(),
                      (ordinal or '').upper()])
+
+
+def make_diff(old, new, update=False):
+    """Create a diff between two versions of the same resource.
+
+    update      only consider new keys"""
+    meta = set(['pk', 'id', 'created_by', 'modified_by', 'created_at',
+                'modified_at', 'version', 'cia'])
+    keys = list(new)
+    if not update:
+        keys += list(old)
+    keys = set(keys) - meta
+    diff = {}
+    for key in keys:
+        old_value = old.get(key)
+        new_value = new.get(key)
+        if new_value != old_value:
+            diff[key] = {
+                'old': str(old_value),
+                'new': str(new_value)
+            }
+    return diff

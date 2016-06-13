@@ -102,6 +102,18 @@ class Session(db.Model):
     ip = db.CharField(null=True)  # TODO IPField
     email = db.CharField(null=True)  # TODO EmailField
 
+    @property
+    def as_relation(self):
+        # Pretend to be a resource for created_by/modified_by values in
+        # resources serialization.
+        return self.pk
+
+    @property
+    def id(self):
+        # Pretend to be a resource for created_by/modified_by values in
+        # list resources serialization.
+        return self.pk
+
 
 class Token(db.Model):
     session = db.ForeignKeyField(Session)

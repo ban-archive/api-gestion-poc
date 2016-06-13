@@ -290,3 +290,47 @@ def test_can_update_housenumber_ancestor(session):
     assert not validator.errors
     housenumber = validator.save()
     assert district in housenumber.ancestors
+
+
+def test_giving_wrong_version_should_patch_if_possible(session):
+    # Create an object.
+    housenumber = HouseNumberFactory(number="18", ordinal=None)
+    # Update one field.
+    resource = housenumber.as_resource
+    resource['number'] = "19"
+    resource['version'] = 2
+    del resource['center']  # This is not a real resource field.
+    del resource['cia']  # Readonly field.
+    validator = models.HouseNumber.validator(instance=housenumber, **resource)
+    assert not validator.errors
+    validator.save()
+    # Update another field and give again version=2 as if we were only aware
+    # of version 1.
+    resource['number'] = "18"  # Pretend we haven't changed it.
+    resource['ordinal'] = 'bis'
+    resource['version'] = 2
+    validator = models.HouseNumber.validator(instance=housenumber, **resource)
+    assert not validator.errors
+    housenumber = validator.save()
+    assert housenumber.number == "19"
+    assert housenumber.ordinal == "bis"
+
+
+def test_giving_wrong_version_should_patch_if_possible_with_update(session):
+    # Create an object.
+    housenumber = HouseNumberFactory(number="18", ordinal=None)
+    # Update one field.
+    validator = models.HouseNumber.validator(instance=housenumber,
+                                             update=True,
+                                             version=2,
+                                             number="19")
+    validator.save()
+    # Update another field and give again version=2.
+    validator = models.HouseNumber.validator(instance=housenumber,
+                                             update=True,
+                                             version=2,
+                                             ordinal="bis")
+    assert not validator.errors
+    housenumber = validator.save()
+    assert housenumber.number == "19"
+    assert housenumber.ordinal == "bis"

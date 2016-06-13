@@ -2,6 +2,7 @@ import json
 
 import falcon
 from ban.core import models
+from ban.core.encoder import dumps
 
 from ..factories import MunicipalityFactory, PostCodeFactory, GroupFactory
 from .utils import authorize
@@ -42,7 +43,8 @@ def test_get_municipality_groups_collection(get, url):
     uri = url('municipality-groups', identifier=municipality.id)
     resp = get(uri, query_string='pouet=ah')
     assert resp.status == falcon.HTTP_200
-    assert resp.json['collection'][0] == street.as_list
+    # loads/dumps to compare date strings to date strings.
+    assert resp.json['collection'][0] == json.loads(dumps(street.as_list))
     assert resp.json['total'] == 1
 
 

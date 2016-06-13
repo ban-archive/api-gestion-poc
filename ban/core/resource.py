@@ -1,74 +1,10 @@
 import uuid
 
 import peewee
-from cerberus import ValidationError, Validator, errors
 
 from ban import db
-from postgis import Point
 
-
-class ResourceValidator(Validator):
-
-    ValidationError = ValidationError
-
-    def __init__(self, model, *args, **kwargs):
-        self.model = model
-        kwargs['purge_unknown'] = True
-        super().__init__(model._meta.resource_schema, *args, **kwargs)
-
-    def _validate_type_point(self, field, value):
-        if not isinstance(value, (str, list, tuple, Point)):
-            self._error(field, 'Invalid Point: {}'.format(value))
-
-    def _validate_unique(self, unique, field, value):
-        qs = self.model.select()
-        attr = getattr(self.model, field)
-        qs = qs.where(attr == value)
-        if self.instance:
-            qs = qs.where(self.model.pk != self.instance.pk)
-        if qs.exists():
-            self._error(field, 'Duplicate value for {}: {}'.format(field,
-                                                                   value))
-
-    def _validate_coerce(self, coerce, field, value):
-        # See https://github.com/nicolaiarocci/cerberus/issues/171.
-        try:
-            value = coerce(value)
-        except (TypeError, ValueError, peewee.DoesNotExist):
-            self._error(field, errors.ERROR_COERCION_FAILED.format(field))
-        return value
-
-    def validate(self, data, instance=None, **kwargs):
-        self.instance = instance
-        super().validate(data, **kwargs)
-        if ('version' in self.schema and instance
-           and not self.document.get('version')):
-            self._error('version', errors.ERROR_REQUIRED_FIELD)
-
-    def save(self):
-        if self.errors:
-            raise ValidationError('Invalid document')
-        database = self.model._meta.database
-        if self.instance:
-            with database.atomic():
-                for key, value in self.document.items():
-                    setattr(self.instance, key, value)
-                self.instance.save()
-        else:
-            with database.atomic():
-                m2m = {}
-                data = {}
-                for key, value in self.document.items():
-                    field = getattr(self.model, key)
-                    if isinstance(field, db.ManyToManyField):
-                        m2m[key] = value
-                    else:
-                        data[key] = value
-                self.instance = self.model.create(**data)
-                # m2m need the instance to be saved.
-                for key, value in m2m.items():
-                    setattr(self.instance, key, value)
-        return self.instance
+from .validators import ResourceValidator
 
 
 class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
@@ -111,31 +47,36 @@ class BaseResource(peewee.BaseModel):
     def __new__(mcs, name, bases, attrs, **kwargs):
         # Inherit and extend instead of replacing.
         resource_fields = attrs.pop('resource_fields', None)
+        resource_schema = attrs.pop('resource_schema', None)
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
         if resource_fields is not None:
-            inherited = getattr(cls, 'resource_fields', None)
-            if inherited:
-                resource_fields.extend(inherited)
+            inherited = getattr(cls, 'resource_fields', {})
+            resource_fields.extend(inherited)
             cls.resource_fields = resource_fields
+        if resource_schema is not None:
+            inherited = getattr(cls, 'resource_schema', {})
+            resource_schema.update(inherited)
+            cls.resource_schema = resource_schema
         cls.fields_for_resource = cls.resource_fields
         cls.fields_for_relation = [
             n for n in cls.fields_for_resource
             if mcs.include_field_for_relation(cls, n)]
         cls.fields_for_list = cls.fields_for_relation + ['resource']
-        cls._meta.resource_schema = cls.build_resource_schema()
+        cls.build_resource_schema()
         return cls
 
 
 class ResourceModel(db.Model, metaclass=BaseResource):
     resource_fields = ['id']
     identifiers = []
+    resource_schema = {'id': {'readonly': True}}
 
     id = db.CharField(max_length=50, unique=True, null=False)
 
     class Meta:
         abstract = True
-        resource_schema = {'id': {'required': False}}
         manager = SelectQuery
+        validator = ResourceValidator
 
     @classmethod
     def make_id(cls):
@@ -148,7 +89,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     @classmethod
     def build_resource_schema(cls):
-        schema = {}
+        """Map Peewee models to Cerberus validation schema."""
+        schema = dict(cls.resource_schema)
         for name, field in cls._meta.fields.items():
             if name not in cls.fields_for_resource:
                 continue
@@ -173,13 +115,15 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 row['empty'] = False
             if getattr(field, 'choices', None):
                 row['allowed'] = [v for v, l in field.choices]
-            row.update(cls._meta.resource_schema.get(name, {}))
+            row.update(cls.resource_schema.get(name, {}))
             schema[name] = row
-        return schema
+            if schema[name].get('readonly'):
+                schema[name]['required'] = False
+        cls.resource_schema = schema
 
     @classmethod
     def validator(cls, instance=None, update=False, **data):
-        validator = ResourceValidator(cls)
+        validator = cls._meta.validator(cls)
         validator(data, update=update, instance=instance)
         return validator
 
