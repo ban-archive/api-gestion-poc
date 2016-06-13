@@ -63,20 +63,22 @@ def process_group(row):
     name = row.get('name')
     kind = row.get('group')
     source = row.get('source')
-    attributes = {'source': source}
+    attributes = row.get('attributes', {})
+    attributes['source'] = source
     data = dict(name=name, fantoir=fantoir, municipality=municipality,
                 kind=kind, version=1, attributes=attributes)
     update = False
-    try:
-        instance = Group.coerce('fantoir:{}'.format(fantoir))
-    except Group.DoesNotExist:
-        instance = None
-    else:
-        if instance.attributes['source'] == source:
+    instance = Group.first(Group.fantoir == fantoir)
+    if instance:
+        attributes = getattr(instance, 'attributes', {})
+        if attributes.get('source') == source:
             # Reimporting same data?
-            reporter.warning('Group already exist', instance.id)
+            reporter.warning('Group already exist', fantoir)
             return
         data['version'] = instance.version + 1
+        if instance.attributes:
+            attributes.update(data['attributes'])
+            data['attributes'] = attributes
         update = True
     validator = Group.validator(instance=instance, update=update, **data)
     if validator.errors:

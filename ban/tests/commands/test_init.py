@@ -20,15 +20,33 @@ def test_process_group(session):
     municipality = factories.MunicipalityFactory(insee="90008")
     data = {"type": "group", "source": "DGFIP/FANTOIR (2015-07)",
             "group": "way", "municipality:insee": "90008",
-            "group:fantoir": "900080203", "name": "GRANDE RUE F. MITTERRAND"}
+            "group:fantoir": "900080203", "name": "GRANDE RUE F. MITTERRAND",
+            "attributes": {"somekey": "somevalue"}}
     process_row(data)
     assert models.Group.select().count() == 1
     group = models.Group.first()
-    assert group.attributes['source'] == "DGFIP/FANTOIR (2015-07)"
+    assert group.attributes['source'] == 'DGFIP/FANTOIR (2015-07)'
+    assert group.attributes['somekey'] == 'somevalue'
     assert group.kind == models.Group.WAY
     assert group.municipality == municipality
     assert group.fantoir == "900080203"
     assert group.name == "GRANDE RUE F. MITTERRAND"
+
+
+def test_process_group_do_not_drop_attributes(session):
+    group = factories.GroupFactory(fantoir='900080203',
+                                   municipality__insee="90008",
+                                   attributes={'iwashere': 'before',
+                                               'me': 'too'})
+    data = {"type": "group", "source": "DGFIP/FANTOIR (2015-07)",
+            "group": "way", "municipality:insee": "90008",
+            "group:fantoir": "900080203", "name": "GRANDE RUE F. MITTERRAND",
+            "attributes": {"me": "no"}}
+    process_row(data)
+    assert models.Group.select().count() == 1
+    group = models.Group.first()
+    assert group.attributes['iwashere'] == 'before'
+    assert group.attributes['me'] == 'no'
 
 
 # File: 03_postcodes.json
