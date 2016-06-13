@@ -35,7 +35,8 @@ class ResourceValidator(Validator):
         try:
             value = coerce(value)
         except (TypeError, ValueError, peewee.DoesNotExist):
-            self._error(field, errors.ERROR_COERCION_FAILED.format(field))
+            msg = "Unable to coerce {} for field {}"
+            self._error(field, msg.format(value, field))
         return value
 
     def _purge_readonly(self, data):
