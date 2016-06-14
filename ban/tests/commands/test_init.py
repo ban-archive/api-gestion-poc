@@ -93,6 +93,40 @@ def test_process_housenumber_from_dgfip(session):
     assert housenumber.ordinal == "bis"
 
 
+def test_process_housenumber_skip_duplicate_cia_on_same_source(session):
+    factories.GroupFactory(municipality__insee="78297", fantoir="782970102")
+    data1 = {"type": "housenumber", "source": "DGFiP/BANO (2016-04)",
+             "group:fantoir": "782970102", "numero": "6", "ordinal": "B"}
+    data2 = {"type": "housenumber", "source": "DGFiP/BANO (2016-04)",
+             "group:fantoir": "782970102", "numero": "6", "ordinal": "b"}
+    process_row(data1)
+    process_row(data2)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.ordinal == "B"
+
+
+def test_process_housenumber_skip_duplicate_cia_on_different_source(session):
+    group = factories.GroupFactory(municipality__insee="90001",
+                                   fantoir="900010016")
+    factories.HouseNumberFactory(parent=group, number="2", ordinal="B",
+                                 attributes={"source": "DGFiP"})
+    factories.HouseNumberFactory(parent=group, number="2", ordinal="",
+                                 attributes={"source": "DGFiP"})
+
+    # There is no ordinal, but the CIA refers to an ordinal, like if the
+    # ordinal has been removed. But the housenumber without ordinal already
+    # exists in the DB.
+    data = {"type": "housenumber", "source": "BAN",
+            "housenumber:cia": "90001_0016_2_B",
+            "group:fantoir": "900010016", "numero": "2", "ordinal": ""}
+    process_row(data)
+    assert models.HouseNumber.select().count() == 2
+    housenumber = models.HouseNumber.first(
+        models.HouseNumber.cia == "90001_0016_2_B")
+    assert housenumber.ordinal == "B"
+
+
 # File: 05_positions_dgfip.json
 def test_process_position_from_dgfip(session):
     data = {"type": "position", "kind": "entrance",

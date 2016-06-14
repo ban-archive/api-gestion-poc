@@ -1,5 +1,7 @@
 import json
 
+import peewee
+
 from ban.commands import command, reporter
 from ban.core.models import (Group, HouseNumber, Municipality, Position,
                              PostCode)
@@ -37,8 +39,6 @@ def init(paths=[], limit=0, **kwargs):
 @helpers.session
 def process_row(row):
     kind = row.pop('type')
-    if not kind:
-        return reporter.error('Missing "type" key', row)
     if kind == "municipality":
         return process_municipality(row)
     elif kind == "group":
@@ -49,6 +49,8 @@ def process_row(row):
         return process_housenumber(row)
     elif kind == "position":
         return process_position(row)
+    else:
+        return reporter.error('Missing "type" key', row)
 
 
 def process_municipality(row):
@@ -79,7 +81,7 @@ def process_group(row):
             reporter.warning('Group already exist', fantoir)
             return
         data['version'] = instance.version + 1
-        if instance.attributes:
+        if attributes:
             attributes.update(data['attributes'])
             data['attributes'] = attributes
         update = True
@@ -117,8 +119,9 @@ def process_housenumber(row):
     fantoir = row.get('group:fantoir')
     insee = fantoir[:5]
     cia = row.get('cia')
+    computed_cia = compute_cia(insee, fantoir[5:], number, ordinal)
     if not cia:
-        cia = compute_cia(insee, fantoir[5:], number, ordinal)
+        cia = computed_cia
     parent = 'fantoir:{}'.format(fantoir)
     source = row.get('source')
     attributes = {'source': source}
@@ -138,10 +141,19 @@ def process_housenumber(row):
     instance = HouseNumber.first(HouseNumber.cia == cia)
     update = False
     if instance:
+        if cia != computed_cia:
+            # Means new values are changing one of the four values of the cia
+            # (insee, fantoir, number, ordinal). Make sure we are not creating
+            # a duplicate.
+            duplicate = HouseNumber.first(HouseNumber.cia == computed_cia)
+            if duplicate:
+                msg = 'Duplicate CIA'
+                reporter.error(msg, (cia, computed_cia))
+                return
         attributes = getattr(instance, 'attributes') or {}
         if attributes.get('source') == source:
             # Reimporting same data?
-            reporter.warning('HouseNumber already exists', instance.id)
+            reporter.warning('HouseNumber already exists', instance.cia)
             return
         data['version'] = instance.version + 1
         update = True
@@ -149,10 +161,15 @@ def process_housenumber(row):
     validator = HouseNumber.validator(instance=instance, update=update, **data)
     if validator.errors:
         reporter.error('HouseNumber errors', (validator.errors, parent))
-    else:
-        validator.save()
-        msg = 'HouseNumber Updated' if instance else 'HouseNumber created'
-        reporter.notice(msg, (number, ordinal, parent))
+        return
+    with HouseNumber._meta.database.atomic():
+        try:
+            validator.save()
+        except peewee.IntegrityError:
+            reporter.warning('HouseNumber DB error', cia)
+        else:
+            msg = 'HouseNumber Updated' if instance else 'HouseNumber created'
+            reporter.notice(msg, (number, ordinal, parent))
 
 
 def process_position(row):
