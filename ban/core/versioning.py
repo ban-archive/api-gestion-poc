@@ -140,6 +140,9 @@ class Version(db.Model):
 
     class Meta:
         manager = SelectQuery
+        indexes = (
+            (('model_name', 'model_pk', 'sequential'), True),
+        )
 
     def __repr__(self):
         return '<Version {} of {}({})>'.format(self.sequential,
