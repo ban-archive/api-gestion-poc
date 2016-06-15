@@ -43,4 +43,5 @@ class Model(peewee.Model):
         qs = cls.select()
         if expressions:
             qs = qs.where(*expressions)
-        return qs.first()
+        # See https://github.com/coleifer/peewee/commit/eeb6d4d727da8536906a00c490f94352465e90bb  # noqa
+        return qs.limit(1).first()
