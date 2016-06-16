@@ -52,9 +52,6 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         return dumps(self.as_resource)
 
     def store_version(self):
-        old = None
-        if self.version > 1:
-            old = self.load_version(self.version - 1)
         new = Version.create(
             model_name=self.__class__.__name__,
             model_pk=self.pk,
@@ -62,6 +59,9 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             data=self.serialize()
         )
         if Diff.ACTIVE:
+            old = None
+            if self.version > 1:
+                old = self.load_version(self.version - 1)
             Diff.create(old=old, new=new, created_at=self.modified_at)
 
     @property
