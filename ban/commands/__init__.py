@@ -64,8 +64,10 @@ class Command:
             value = getattr(parsed, name)
             if default == NARGS:
                 args.extend(value)
-            else:
+            elif default == NO_DEFAULT:
                 args.append(value)
+            else:
+                kwargs[name] = value
         for func in self._on_parse_args:
             func(self, parsed, kwargs)
         self.parse_globals(parsed, **kwargs)
@@ -117,6 +119,9 @@ class Command:
         matched_args = [reversed(x) for x in [spec.args, spec.defaults or []]]
         spec_dict = dict(zip_longest(*matched_args, fillvalue=NO_DEFAULT))
         self.spec = [(x, spec_dict[x]) for x in arg_names]
+        if spec.kwonlydefaults:
+            for key, value in spec.kwonlydefaults.items():
+                self.spec.append((key, value))
         if spec.varargs:
             self.spec.append((spec.varargs, NARGS))
 
