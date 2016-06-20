@@ -173,8 +173,8 @@ def process_housenumber(row):
 
 
 def process_position(row):
-    kind = row.get("kind")
-    source = row.get("source")
+    kind = row.get('kind')
+    source = row.get('source')
     cia = row.get('housenumber:cia').upper()
     center = row.get('geometry')
     housenumber = HouseNumber.first(HouseNumber.cia == cia)
@@ -190,6 +190,10 @@ def process_position(row):
     if validator.errors:
         reporter.error('Position error', validator.errors)
     else:
-        position = validator.save()
-        msg = 'Position updated' if instance else 'Position created'
-        reporter.notice(msg, position.id)
+        try:
+            position = validator.save()
+        except peewee.IntegrityError:
+            reporter.error('Integrity error', row)
+        else:
+            msg = 'Position updated' if instance else 'Position created'
+            reporter.notice(msg, position.id)
