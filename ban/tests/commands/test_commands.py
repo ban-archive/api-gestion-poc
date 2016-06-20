@@ -99,7 +99,7 @@ def test_truncate_should_only_truncate_given_names(monkeypatch):
     factories.MunicipalityFactory()
     factories.GroupFactory()
     monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
-    truncate(names=['group'])
+    truncate('group')
     assert models.Municipality.select().count()
     assert not models.Group.select().count()
 

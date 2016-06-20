@@ -14,7 +14,7 @@ __namespace__ = 'import'
 
 @command
 @helpers.nodiff
-def init(paths=[], limit=0, **kwargs):
+def init(*paths, limit=0, **kwargs):
     """Initial import for real™.
 
     paths   Paths to json files."""
