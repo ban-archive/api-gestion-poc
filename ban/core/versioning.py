@@ -111,11 +111,12 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         self.modified_at = now
 
     def save(self, *args, **kwargs):
-        self.check_version()
-        self.update_meta()
-        super().save(*args, **kwargs)
-        self.store_version()
-        self.lock_version()
+        with self._meta.database.atomic():
+            self.check_version()
+            self.update_meta()
+            super().save(*args, **kwargs)
+            self.store_version()
+            self.lock_version()
 
 
 class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
