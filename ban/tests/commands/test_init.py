@@ -187,3 +187,26 @@ def test_process_positions_from_oldban(session):
     assert position.source == "BAN (2016-06-05)"
     assert position.housenumber == housenumber
     assert position.center.coords == (6.871125, 47.602046)
+
+
+# File: 09x_positions_sga-ign.json
+def test_process_positions_from_sga_ign(session):
+    data = {'type': 'position', 'kind': 'segment',
+            'positionning': 'interpolation', 'source': 'IGN (2016-04)',
+            'housenumber:cia': '90004_0022_1_',
+            'ref:ign': 'ADRNIVX_0000000354868426',
+            'geometry': {'type': 'Point',
+                         'coordinates': [6.82920162869564, 47.6098351749073]}}
+    group = factories.GroupFactory(municipality__insee='90004',
+                                   fantoir='900040022')
+    housenumber = factories.HouseNumberFactory(parent=group, number='1',
+                                               ordinal='')
+    process_row(data)
+    assert models.Position.select().count() == 1
+    position = models.Position.first()
+    assert position.kind == models.Position.SEGMENT
+    assert position.positioning == models.Position.INTERPOLATION
+    assert position.source == 'IGN (2016-04)'
+    assert position.ign == 'ADRNIVX_0000000354868426'
+    assert position.housenumber == housenumber
+    assert position.center.coords == (6.82920162869564, 47.6098351749073)

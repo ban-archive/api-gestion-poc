@@ -222,7 +222,7 @@ class Position(Model):
     )
 
     resource_fields = ['center', 'source', 'housenumber', 'kind', 'comment',
-                       'parent', 'positioning', 'name']
+                       'parent', 'positioning', 'name', 'ign']
 
     name = db.CharField(max_length=200, null=True)
     center = db.PointField(verbose_name=_("center"), null=True)
@@ -231,6 +231,7 @@ class Position(Model):
     source = db.CharField(max_length=64, null=True)
     kind = db.CharField(max_length=64, choices=KIND)
     positioning = db.CharField(max_length=32, choices=POSITIONING)
+    ign = db.CharField(max_length=24, null=True, unique=True)
     comment = peewee.TextField(null=True)
 
     class Meta:

@@ -174,6 +174,11 @@ def process_housenumber(row):
 
 def process_position(row):
     kind = row.get('kind')
+    if not hasattr(Position, kind.upper()):
+        kind = Position.UNKNOWN
+    positioning = row.get('positionning')  # two "n" in the data.
+    if not positioning or not hasattr(Position, positioning.upper()):
+        positioning = Position.OTHER
     source = row.get('source')
     cia = row.get('housenumber:cia').upper()
     center = row.get('geometry')
@@ -185,7 +190,9 @@ def process_position(row):
                               Position.kind == kind, Position.source == source)
     version = instance.version + 1 if instance else 1
     data = dict(kind=kind, source=source, housenumber=housenumber,
-                center=center, positioning=Position.OTHER, version=version)
+                center=center, positioning=positioning, version=version)
+    if 'ref:ign' in row:
+        data['ign'] = row.get('ref:ign')
     validator = Position.validator(instance=instance, **data)
     if validator.errors:
         reporter.error('Position error', validator.errors)
