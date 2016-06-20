@@ -226,7 +226,7 @@ def test_import_poste_group_matricule(session):
     assert group.attributes['source'] == 'IGN (2016-04)'
 
 
-# File:11_housenumbers_group_cea_poste.json
+# File: 11_housenumbers_group_cea_poste.json
 def test_import_housenumbers_group_cea_poste(session):
     data = {'type': 'housenumber', 'source': 'IGN/Poste (2016-04)',
             'group:fantoir': '330010005', 'poste:cea': '330012223B',
@@ -239,3 +239,17 @@ def test_import_housenumbers_group_cea_poste(session):
     assert housenumber.number is None
     assert housenumber.ordinal is None
     assert housenumber.laposte == '330012223B'
+
+
+# File: 12_housenumber_cea.json
+def test_import_housenumber_cea(session):
+    data = {'type': 'housenumber', 'cia': '33001_B072_2_',
+            'poste:cea': '33001223T2', 'numero': '2', 'ordinal': '',
+            'source': 'IGN/Poste (2016-04)'}
+    group = factories.GroupFactory(municipality__insee='33001',
+                                   fantoir='33001B072', kind=models.Group.AREA)
+    factories.HouseNumberFactory(parent=group, number='2', ordinal='')
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.laposte == '33001223T2'

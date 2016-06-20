@@ -126,8 +126,11 @@ def process_housenumber(row):
     number = row.get('numero')
     ordinal = row.get('ordinal') or None
     fantoir = row.get('group:fantoir')
-    insee = fantoir[:5]
     cia = row.get('cia')
+    if not fantoir and cia:
+        # 12xxx.json is missing group:fantoir.
+        fantoir = '{}{}'.format(cia[:5], cia[6:10])
+    insee = fantoir[:5]
     computed_cia = compute_cia(insee, fantoir[5:], number, ordinal)
     if not cia:
         cia = computed_cia
@@ -136,10 +139,11 @@ def process_housenumber(row):
     attributes = {'source': source}
     data = dict(number=number, ordinal=ordinal, version=1, parent=parent,
                 attributes=attributes)
+    # Only override if key is present (even if value is null).
     if 'ref:ign' in row:
-        data['ign'] = row.get('ref:ign')
+        data['ign'] = row['ref:ign']
     if 'poste:cea' in row:
-        data['laposte'] = row.get('poste:cea')
+        data['laposte'] = row['poste:cea']
     if 'postcode' in row:
         code = row.get('postcode')
         postcode = PostCode.select().join(Municipality).where(
