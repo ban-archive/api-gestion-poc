@@ -224,3 +224,18 @@ def test_import_poste_group_matricule(session):
     assert group.name == 'RUE DES ARNAUDS'
     assert group.laposte == '00580321'
     assert group.attributes['source'] == 'IGN (2016-04)'
+
+
+# File:11_housenumbers_group_cea_poste.json
+def test_import_housenumbers_group_cea_poste(session):
+    data = {'type': 'housenumber', 'source': 'IGN/Poste (2016-04)',
+            'group:fantoir': '330010005', 'poste:cea': '330012223B',
+            'numero': None}
+    factories.GroupFactory(name='RUE DES ARNAUDS', municipality__insee='33001',
+                           fantoir='330010005', kind=models.Group.WAY)
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.number is None
+    assert housenumber.ordinal is None
+    assert housenumber.laposte == '330012223B'

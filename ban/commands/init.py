@@ -138,6 +138,8 @@ def process_housenumber(row):
                 attributes=attributes)
     if 'ref:ign' in row:
         data['ign'] = row.get('ref:ign')
+    if 'poste:cea' in row:
+        data['laposte'] = row.get('poste:cea')
     if 'postcode' in row:
         code = row.get('postcode')
         postcode = PostCode.select().join(Municipality).where(
