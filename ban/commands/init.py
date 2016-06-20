@@ -63,19 +63,28 @@ def process_municipality(row):
 
 
 def process_group(row):
-    municipality = 'insee:{}'.format(row.get('municipality:insee'))
     fantoir = row.get('group:fantoir')
+    data = dict(version=1, fantoir=fantoir)
     name = row.get('name')
+    if name:
+        data['name'] = name
     kind = row.get('group')
+    if kind:
+        data['kind'] = kind
+    insee = row.get('municipality:insee')
+    if insee:
+        data['municipality'] = 'insee:{}'.format(insee)
+    laposte = row.get('poste:matricule')
+    if laposte:
+        data['laposte'] = laposte
     source = row.get('source')
     attributes = row.get('attributes', {})
     attributes['source'] = source
-    data = dict(name=name, fantoir=fantoir, municipality=municipality,
-                kind=kind, version=1, attributes=attributes)
+    data['attributes'] = attributes
     update = False
     instance = Group.first(Group.fantoir == fantoir)
     if instance:
-        attributes = getattr(instance, 'attributes', {})
+        attributes = getattr(instance, 'attributes') or {}
         if attributes.get('source') == source:
             # Reimporting same data?
             reporter.warning('Group already exist', fantoir)
@@ -87,7 +96,7 @@ def process_group(row):
         update = True
     validator = Group.validator(instance=instance, update=update, **data)
     if validator.errors:
-        reporter.error('Invalid group data', validator.errors)
+        reporter.error('Invalid group data', (validator.errors, fantoir))
     else:
         group = validator.save()
         reporter.notice('Created group', group.id)

@@ -210,3 +210,17 @@ def test_process_positions_from_sga_ign(session):
     assert position.ign == 'ADRNIVX_0000000354868426'
     assert position.housenumber == housenumber
     assert position.center.coords == (6.82920162869564, 47.6098351749073)
+
+
+# File: 10_groups-poste-matricule.json
+def test_import_poste_group_matricule(session):
+    data = {'type': 'group', 'source': 'IGN (2016-04)',
+            'group:fantoir': '330010005', 'poste:matricule': '00580321'}
+    factories.GroupFactory(name='RUE DES ARNAUDS', municipality__insee='33001',
+                           fantoir='330010005', kind=models.Group.WAY)
+    process_row(data)
+    assert models.Group.select().count() == 1
+    group = models.Group.first()
+    assert group.name == 'RUE DES ARNAUDS'
+    assert group.laposte == '00580321'
+    assert group.attributes['source'] == 'IGN (2016-04)'
