@@ -253,3 +253,16 @@ def test_import_housenumber_cea(session):
     assert models.HouseNumber.select().count() == 1
     housenumber = models.HouseNumber.first()
     assert housenumber.laposte == '33001223T2'
+
+
+# File: 15_group_noms_cadastre_dgfip_bano.json
+def test_import_group_from_bano_dgfip(session):
+    data = {'type': 'group', 'source': 'DGFiP/BANO (2016-05)',
+            'group:fantoir': '01001A008', 'name': 'Lotissement Bellevue'}
+    factories.GroupFactory(municipality__insee='01001', fantoir='01001A008',
+                           kind=models.Group.AREA, name='LOTISSEMENT BELLEVUE')
+    process_row(data)
+    assert models.Group.select().count() == 1
+    group = models.Group.first()
+    assert group.name == 'Lotissement Bellevue'
+    assert group.version == 2

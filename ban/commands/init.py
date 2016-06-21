@@ -19,6 +19,7 @@ def init(*paths, limit=0, **kwargs):
 
     paths   Paths to json files."""
     for path in paths:
+        print('Processing', path)
         rows = helpers.iter_file(path, formatter=json.loads)
         if limit:
             print('Running with limit', limit)
@@ -98,8 +99,13 @@ def process_group(row):
     if validator.errors:
         reporter.error('Invalid group data', (validator.errors, fantoir))
     else:
-        group = validator.save()
-        reporter.notice('Created group', group.id)
+        try:
+            validator.save()
+        except peewee.IntegrityError:
+            reporter.error('Integrity Error', fantoir)
+        else:
+            msg = 'Group updated' if instance else 'Group created'
+            reporter.notice(msg, fantoir)
 
 
 def process_postcode(row):
