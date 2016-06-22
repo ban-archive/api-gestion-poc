@@ -174,10 +174,9 @@ def confirm(text, default=None):
 
 @decorator.decorator
 def session(func, *args, **kwargs):
-    # TODO make configurable from command line
     session = context.get('session')
     if not session:
-        qs = User.select().select(User.is_staff == True)
+        qs = User.select().where(User.is_staff == True)
         username = config.get('SESSION_USER')
         if username:
             qs = qs.where(User.username == username)

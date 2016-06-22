@@ -106,13 +106,23 @@ class Session(db.Model):
     def as_relation(self):
         # Pretend to be a resource for created_by/modified_by values in
         # resources serialization.
-        return self.pk
+        # Should we also expose the email/ip? CNIL question to be solved.
+        return {
+            'id': self.pk,
+            'client': self.client.name if self.client else None,
+            'user': self.user.username if self.user else None
+        }
 
     @property
     def id(self):
         # Pretend to be a resource for created_by/modified_by values in
         # list resources serialization.
         return self.pk
+
+    def save(self, **kwargs):
+        if not self.user and not self.client:
+            raise ValueError('Session must have either a client or a user')
+        super().save(**kwargs)
 
 
 class Token(db.Model):

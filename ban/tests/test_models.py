@@ -349,9 +349,9 @@ def test_housenumber_as_resource():
         'number': '90',
         'postcode': None,
         'ordinal': 'bis',
-        'created_by': housenumber.created_by.pk,
+        'created_by': housenumber.created_by.as_relation,
         'created_at': housenumber.created_at,
-        'modified_by': housenumber.modified_by.pk,
+        'modified_by': housenumber.modified_by.as_relation,
         'modified_at': housenumber.modified_at,
     }
 
