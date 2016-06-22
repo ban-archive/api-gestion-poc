@@ -82,15 +82,24 @@ class BaseGroup(NamedModel):
         return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
 
 
-class PostCode(BaseGroup):
+class PostCode(NamedModel):
     identifiers = ['code']
     resource_fields = ['code', 'name', 'municipality']
+
     code = db.PostCodeField(index=True)
+    municipality = db.ForeignKeyField(Municipality,
+                                      related_name='{classname}s')
 
     class Meta:
+        abstract = True
         indexes = (
             (('code', 'municipality'), True),
         )
+
+    @property
+    def housenumbers(self):
+        qs = (self.housenumber_set)
+        return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
 
 
 class Group(BaseGroup):
