@@ -223,22 +223,6 @@ def test_create_housenumber_with_postcode_id(client):
 
 
 @authorize
-def test_create_housenumber_with_postcode_code(client):
-    postcode = PostCodeFactory(code="12345")
-    street = GroupFactory(name="Rue de Bonbons", fantoir="1234")
-    data = {
-        "number": 20,
-        "parent": 'fantoir:{}'.format(street.fantoir),
-        "postcode": 'code:12345',
-    }
-    headers = {'Content-Type': 'application/json'}
-    resp = client.post('/housenumber', data, headers=headers)
-    assert resp.status == falcon.HTTP_201
-    assert models.HouseNumber.select().count() == 1
-    assert models.HouseNumber.first().postcode == postcode
-
-
-@authorize
 def test_replace_housenumber(client, url):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     assert models.HouseNumber.select().count() == 1

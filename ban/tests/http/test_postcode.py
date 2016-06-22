@@ -13,14 +13,6 @@ def test_get_postcode(get, url):
     assert resp.json['code'] == '09350'
 
 
-def test_get_postcode_with_code(get, url):
-    PostCodeFactory(code="09350")
-    resp = get(url('postcode-resource', identifier='code:09350'))
-    assert resp.status == falcon.HTTP_200
-    assert resp.json['id']
-    assert resp.json['code'] == '09350'
-
-
 @authorize
 def test_create_postcode(client, url):
     municipality = MunicipalityFactory()

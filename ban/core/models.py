@@ -83,7 +83,6 @@ class BaseGroup(NamedModel):
 
 
 class PostCode(BaseGroup):
-    identifiers = ['code']
     resource_fields = ['code', 'name', 'municipality']
     code = db.PostCodeField(index=True)
 
