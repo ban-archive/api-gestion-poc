@@ -252,7 +252,7 @@ def test_can_create_street_with_falsy_laposte(session):
     assert models.Group.get(models.Group.pk == street.pk).laposte is None
 
 
-def test_bad_foreign_key_procude_readable_message(session):
+def test_bad_foreign_key_gives_readable_message(session):
     validator = models.Group.validator(name='Rue des Girafes',
                                        kind=models.Group.WAY,
                                        municipality='insee:12345',
