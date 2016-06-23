@@ -167,11 +167,10 @@ class HouseNumber(Model):
         self._clean_called = True
 
     def compute_cia(self):
-        get_fantoir = getattr(self.parent, 'get_fantoir', None)
-        if not get_fantoir:
+        if not self.parent.get_fantoir:
             return None
         return compute_cia(str(self.parent.municipality.insee),
-                           get_fantoir, self.number, self.ordinal)
+                           self.parent.get_fantoir, self.number, self.ordinal)
 
     @property
     def center(self):
