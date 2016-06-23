@@ -69,30 +69,25 @@ class Municipality(NamedModel):
         return [p.code for p in self.postcodes]
 
 
-class BaseGroup(NamedModel):
-    municipality = db.ForeignKeyField(Municipality,
-                                      related_name='{classname}s')
+class PostCode(NamedModel):
+    resource_fields = ['code', 'name', 'municipality']
+
+    code = db.PostCodeField(index=True)
+    municipality = db.ForeignKeyField(Municipality, related_name='postcodes')
 
     class Meta:
         abstract = True
-
-    @property
-    def housenumbers(self):
-        qs = (self._housenumbers | self.housenumber_set)
-        return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
-
-
-class PostCode(BaseGroup):
-    resource_fields = ['code', 'name', 'municipality']
-    code = db.PostCodeField(index=True)
-
-    class Meta:
         indexes = (
             (('code', 'municipality'), True),
         )
 
+    @property
+    def housenumbers(self):
+        qs = (self.housenumber_set)
+        return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
 
-class Group(BaseGroup):
+
+class Group(NamedModel):
     AREA = 'area'
     WAY = 'way'
     KIND = (
@@ -108,14 +103,24 @@ class Group(BaseGroup):
     laposte = db.CharField(max_length=10, null=True, unique=True)
     ign = db.CharField(max_length=24, null=True, unique=True)
 
+    municipality = db.ForeignKeyField(Municipality, related_name='groups')
+
+    class Meta:
+        abstract = True
+
     @property
     def tmp_fantoir(self):
         return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
 
+    @property
     def get_fantoir(self):
         # Without INSEE code.
         return self.fantoir[5:] if self.fantoir else self.tmp_fantoir
 
+    @property
+    def housenumbers(self):
+        qs = (self._housenumbers | self.housenumber_set)
+        return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
 
 class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
@@ -169,7 +174,8 @@ class HouseNumber(Model):
         if not get_fantoir:
             return None
         return compute_cia(str(self.parent.municipality.insee),
-                           get_fantoir(), self.number, self.ordinal)
+                           get_fantoir,
+                           self.number, self.ordinal)
 
     @property
     def center(self):
