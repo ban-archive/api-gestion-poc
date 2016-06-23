@@ -187,3 +187,82 @@ def test_process_positions_from_oldban(session):
     assert position.source == "BAN (2016-06-05)"
     assert position.housenumber == housenumber
     assert position.center.coords == (6.871125, 47.602046)
+
+
+# File: 09x_positions_sga-ign.json
+def test_process_positions_from_sga_ign(session):
+    data = {'type': 'position', 'kind': 'segment',
+            'positionning': 'interpolation', 'source': 'IGN (2016-04)',
+            'housenumber:cia': '90004_0022_1_',
+            'ref:ign': 'ADRNIVX_0000000354868426',
+            'geometry': {'type': 'Point',
+                         'coordinates': [6.82920162869564, 47.6098351749073]}}
+    group = factories.GroupFactory(municipality__insee='90004',
+                                   fantoir='900040022')
+    housenumber = factories.HouseNumberFactory(parent=group, number='1',
+                                               ordinal='')
+    process_row(data)
+    assert models.Position.select().count() == 1
+    position = models.Position.first()
+    assert position.kind == models.Position.SEGMENT
+    assert position.positioning == models.Position.INTERPOLATION
+    assert position.source == 'IGN (2016-04)'
+    assert position.ign == 'ADRNIVX_0000000354868426'
+    assert position.housenumber == housenumber
+    assert position.center.coords == (6.82920162869564, 47.6098351749073)
+
+
+# File: 10_groups-poste-matricule.json
+def test_import_poste_group_matricule(session):
+    data = {'type': 'group', 'source': 'IGN (2016-04)',
+            'group:fantoir': '330010005', 'poste:matricule': '00580321'}
+    factories.GroupFactory(name='RUE DES ARNAUDS', municipality__insee='33001',
+                           fantoir='330010005', kind=models.Group.WAY)
+    process_row(data)
+    assert models.Group.select().count() == 1
+    group = models.Group.first()
+    assert group.name == 'RUE DES ARNAUDS'
+    assert group.laposte == '00580321'
+    assert group.attributes['source'] == 'IGN (2016-04)'
+
+
+# File: 11_housenumbers_group_cea_poste.json
+def test_import_housenumbers_group_cea_poste(session):
+    data = {'type': 'housenumber', 'source': 'IGN/Poste (2016-04)',
+            'group:fantoir': '330010005', 'poste:cea': '330012223B',
+            'numero': None}
+    factories.GroupFactory(name='RUE DES ARNAUDS', municipality__insee='33001',
+                           fantoir='330010005', kind=models.Group.WAY)
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.number is None
+    assert housenumber.ordinal is None
+    assert housenumber.laposte == '330012223B'
+
+
+# File: 12_housenumber_cea.json
+def test_import_housenumber_cea(session):
+    data = {'type': 'housenumber', 'cia': '33001_B072_2_',
+            'poste:cea': '33001223T2', 'numero': '2', 'ordinal': '',
+            'source': 'IGN/Poste (2016-04)'}
+    group = factories.GroupFactory(municipality__insee='33001',
+                                   fantoir='33001B072', kind=models.Group.AREA)
+    factories.HouseNumberFactory(parent=group, number='2', ordinal='')
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.laposte == '33001223T2'
+
+
+# File: 15_group_noms_cadastre_dgfip_bano.json
+def test_import_group_from_bano_dgfip(session):
+    data = {'type': 'group', 'source': 'DGFiP/BANO (2016-05)',
+            'group:fantoir': '01001A008', 'name': 'Lotissement Bellevue'}
+    factories.GroupFactory(municipality__insee='01001', fantoir='01001A008',
+                           kind=models.Group.AREA, name='LOTISSEMENT BELLEVUE')
+    process_row(data)
+    assert models.Group.select().count() == 1
+    group = models.Group.first()
+    assert group.name == 'Lotissement Bellevue'
+    assert group.version == 2

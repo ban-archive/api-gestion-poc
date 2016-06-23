@@ -252,6 +252,15 @@ def test_can_create_street_with_falsy_laposte(session):
     assert models.Group.get(models.Group.pk == street.pk).laposte is None
 
 
+def test_bad_foreign_key_gives_readable_message(session):
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality='insee:12345',
+                                       fantoir='123456789')
+    assert validator.errors['municipality'] == ('No matching resource for '
+                                                'insee:12345')
+
+
 def test_can_create_housenumber(session):
     street = GroupFactory()
     validator = models.HouseNumber.validator(parent=street, number='11')

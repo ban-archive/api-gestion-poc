@@ -8,6 +8,7 @@ from ban.auth import models as amodels
 from .wsgi import app
 from .auth import auth
 
+
 __all__ = ['Municipality', 'Group', 'Postcode', 'Housenumber', 'Position']
 
 

@@ -35,11 +35,13 @@ def test_get_housenumber_with_unknown_id_is_404(get, url):
 
 
 def test_get_housenumber_with_cia(get, url):
-    housenumber = HouseNumberFactory(number="22", parent__fantoir="1234")
+    housenumber = HouseNumberFactory(number="1", ordinal="A", 
+                                     parent__municipality__insee="27638",
+                                     parent__fantoir="276380011")
     resp = get(url('housenumber-resource', id=housenumber.cia,
                    identifier="cia"))
     assert resp.status == falcon.HTTP_200
-    assert resp.json['number'] == "22"
+    assert resp.json['number'] == "1"
 
 
 def test_get_housenumber_with_districts(get, url):
@@ -214,22 +216,6 @@ def test_create_housenumber_with_postcode_id(client):
         "number": 20,
         "parent": street.id,
         "postcode": postcode.id
-    }
-    headers = {'Content-Type': 'application/json'}
-    resp = client.post('/housenumber', data, headers=headers)
-    assert resp.status == falcon.HTTP_201
-    assert models.HouseNumber.select().count() == 1
-    assert models.HouseNumber.first().postcode == postcode
-
-
-@authorize
-def test_create_housenumber_with_postcode_code(client):
-    postcode = PostCodeFactory(code="12345")
-    street = GroupFactory(name="Rue de Bonbons", fantoir="1234")
-    data = {
-        "number": 20,
-        "parent": 'fantoir:{}'.format(street.fantoir),
-        "postcode": 'code:12345',
     }
     headers = {'Content-Type': 'application/json'}
     resp = client.post('/housenumber', data, headers=headers)

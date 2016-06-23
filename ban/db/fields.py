@@ -73,7 +73,7 @@ postgres_ext.PostgresqlExtDatabase.register_fields({'point':
 
 class ForeignKeyField(peewee.ForeignKeyField):
 
-    schema_type = 'integer'
+    schema_type = 'foreignkey'
 
     def coerce(self, value):
         if isinstance(value, peewee.Model):

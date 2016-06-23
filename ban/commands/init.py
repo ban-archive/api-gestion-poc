@@ -14,11 +14,12 @@ __namespace__ = 'import'
 
 @command
 @helpers.nodiff
-def init(paths=[], limit=0, **kwargs):
+def init(*paths, limit=0, **kwargs):
     """Initial import for real™.
 
     paths   Paths to json files."""
     for path in paths:
+        print('Processing', path)
         rows = helpers.iter_file(path, formatter=json.loads)
         if limit:
             print('Running with limit', limit)
@@ -63,19 +64,28 @@ def process_municipality(row):
 
 
 def process_group(row):
-    municipality = 'insee:{}'.format(row.get('municipality:insee'))
     fantoir = row.get('group:fantoir')
+    data = dict(version=1, fantoir=fantoir)
     name = row.get('name')
+    if name:
+        data['name'] = name
     kind = row.get('group')
+    if kind:
+        data['kind'] = kind
+    insee = row.get('municipality:insee')
+    if insee:
+        data['municipality'] = 'insee:{}'.format(insee)
+    laposte = row.get('poste:matricule')
+    if laposte:
+        data['laposte'] = laposte
     source = row.get('source')
     attributes = row.get('attributes', {})
     attributes['source'] = source
-    data = dict(name=name, fantoir=fantoir, municipality=municipality,
-                kind=kind, version=1, attributes=attributes)
+    data['attributes'] = attributes
     update = False
     instance = Group.first(Group.fantoir == fantoir)
     if instance:
-        attributes = getattr(instance, 'attributes', {})
+        attributes = getattr(instance, 'attributes') or {}
         if attributes.get('source') == source:
             # Reimporting same data?
             reporter.warning('Group already exist', fantoir)
@@ -87,10 +97,15 @@ def process_group(row):
         update = True
     validator = Group.validator(instance=instance, update=update, **data)
     if validator.errors:
-        reporter.error('Invalid group data', validator.errors)
+        reporter.error('Invalid group data', (validator.errors, fantoir))
     else:
-        group = validator.save()
-        reporter.notice('Created group', group.id)
+        try:
+            validator.save()
+        except peewee.IntegrityError:
+            reporter.error('Integrity Error', fantoir)
+        else:
+            msg = 'Group updated' if instance else 'Group created'
+            reporter.notice(msg, fantoir)
 
 
 def process_postcode(row):
@@ -117,8 +132,11 @@ def process_housenumber(row):
     number = row.get('numero')
     ordinal = row.get('ordinal') or None
     fantoir = row.get('group:fantoir')
-    insee = fantoir[:5]
     cia = row.get('cia')
+    if not fantoir and cia:
+        # 12xxx.json is missing group:fantoir.
+        fantoir = '{}{}'.format(cia[:5], cia[6:10])
+    insee = fantoir[:5]
     computed_cia = compute_cia(insee, fantoir[5:], number, ordinal)
     if not cia:
         cia = computed_cia
@@ -127,8 +145,11 @@ def process_housenumber(row):
     attributes = {'source': source}
     data = dict(number=number, ordinal=ordinal, version=1, parent=parent,
                 attributes=attributes)
+    # Only override if key is present (even if value is null).
     if 'ref:ign' in row:
-        data['ign'] = row.get('ref:ign')
+        data['ign'] = row['ref:ign']
+    if 'poste:cea' in row:
+        data['laposte'] = row['poste:cea']
     if 'postcode' in row:
         code = row.get('postcode')
         postcode = PostCode.select().join(Municipality).where(
@@ -173,8 +194,13 @@ def process_housenumber(row):
 
 
 def process_position(row):
-    kind = row.get("kind")
-    source = row.get("source")
+    kind = row.get('kind')
+    if not hasattr(Position, kind.upper()):
+        kind = Position.UNKNOWN
+    positioning = row.get('positionning')  # two "n" in the data.
+    if not positioning or not hasattr(Position, positioning.upper()):
+        positioning = Position.OTHER
+    source = row.get('source')
     cia = row.get('housenumber:cia').upper()
     center = row.get('geometry')
     housenumber = HouseNumber.first(HouseNumber.cia == cia)
@@ -185,11 +211,17 @@ def process_position(row):
                               Position.kind == kind, Position.source == source)
     version = instance.version + 1 if instance else 1
     data = dict(kind=kind, source=source, housenumber=housenumber,
-                center=center, positioning=Position.OTHER, version=version)
+                center=center, positioning=positioning, version=version)
+    if 'ref:ign' in row:
+        data['ign'] = row.get('ref:ign')
     validator = Position.validator(instance=instance, **data)
     if validator.errors:
         reporter.error('Position error', validator.errors)
     else:
-        position = validator.save()
-        msg = 'Position updated' if instance else 'Position created'
-        reporter.notice(msg, position.id)
+        try:
+            position = validator.save()
+        except peewee.IntegrityError:
+            reporter.error('Integrity error', row)
+        else:
+            msg = 'Position updated' if instance else 'Position created'
+            reporter.notice(msg, position.id)

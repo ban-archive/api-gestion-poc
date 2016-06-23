@@ -2,6 +2,7 @@ import peewee
 import pytest
 
 from ban.core import models
+from ban.core.versioning import Version
 
 from .factories import (GroupFactory, HouseNumberFactory,
                         MunicipalityFactory, PositionFactory, PostCodeFactory)
@@ -100,6 +101,19 @@ def test_municipality_as_relation():
 def test_municipality_str():
     municipality = MunicipalityFactory(name="Salsein")
     assert str(municipality) == 'Salsein'
+
+
+def test_save_should_be_rollbacked_if_version_save_fails():
+    municipality = MunicipalityFactory()
+    assert Version.select().count() == 1
+    # Artificially create a version
+    municipality.increment_version()
+    municipality.store_version()
+    assert Version.select().count() == 2
+    with pytest.raises(peewee.IntegrityError):
+        municipality.save()
+    assert Version.select().count() == 2
+    models.Municipality.select().count() == 1
 
 
 @pytest.mark.parametrize('factory,kwargs', [

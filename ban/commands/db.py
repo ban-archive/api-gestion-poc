@@ -24,7 +24,7 @@ def create(fail_silently=False, **kwargs):
 
 
 @command
-def truncate(force=False, names=[], **kwargs):
+def truncate(*names, force=False, **kwargs):
     """Truncate database tables.
 
     force   Do not ask for confirm.

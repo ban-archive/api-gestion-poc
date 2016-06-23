@@ -20,6 +20,10 @@ class ResourceValidator(Validator):
         if not isinstance(value, (str, list, tuple, Point)):
             self._error(field, 'Invalid Point: {}'.format(value))
 
+    def _validate_type_foreignkey(self, field, value):
+        if not isinstance(value, int):
+            self._error(field, 'No matching resource for {}'.format(value))
+
     def _validate_unique(self, unique, field, value):
         qs = self.model.select()
         attr = getattr(self.model, field)
@@ -34,9 +38,12 @@ class ResourceValidator(Validator):
         # See https://github.com/nicolaiarocci/cerberus/issues/171.
         try:
             value = coerce(value)
-        except (TypeError, ValueError, peewee.DoesNotExist):
-            msg = "Unable to coerce {} for field {}"
+        except (TypeError, ValueError):
+            msg = 'Unable to coerce {} for field {}'
             self._error(field, msg.format(value, field))
+        except peewee.DoesNotExist:
+            # Error will be handled by _validate_type_foreignkey.
+            pass
         return value
 
     def _purge_readonly(self, data):

@@ -9,6 +9,7 @@ from .reporter import Reporter
 
 
 NO_DEFAULT = object()
+NARGS = '*'
 
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(title='Available commands', metavar='')
@@ -58,12 +59,19 @@ class Command:
     def invoke(self, parsed):
         """Run command from command line args."""
         kwargs = {'cmd': self}
-        for name, _ in self.spec:
-            kwargs[name] = getattr(parsed, name)
+        args = []
+        for name, default in self.spec:
+            value = getattr(parsed, name)
+            if default == NARGS:
+                args.extend(value)
+            elif default == NO_DEFAULT:
+                args.append(value)
+            else:
+                kwargs[name] = value
         for func in self._on_parse_args:
             func(self, parsed, kwargs)
         self.parse_globals(parsed, **kwargs)
-        self(**kwargs)
+        self(*args, **kwargs)
 
     def on_parse_args(self, func):
         self._on_parse_args.append(func)
@@ -106,11 +114,16 @@ class Command:
 
     def inspect(self):
         self.__doc__ = inspect.getdoc(self.command)
-        spec = inspect.getargspec(self.command)
+        spec = inspect.getfullargspec(self.command)
         arg_names = spec.args[:]
         matched_args = [reversed(x) for x in [spec.args, spec.defaults or []]]
         spec_dict = dict(zip_longest(*matched_args, fillvalue=NO_DEFAULT))
         self.spec = [(x, spec_dict[x]) for x in arg_names]
+        if spec.kwonlydefaults:
+            for key, value in spec.kwonlydefaults.items():
+                self.spec.append((key, value))
+        if spec.varargs:
+            self.spec.append((spec.varargs, NARGS))
 
     def parse_parameter_help(self, name):
         try:
@@ -128,7 +141,7 @@ class Command:
     def add_argument(self, name, default=NO_DEFAULT, **kwargs):
             kwargs['help'] = self.parse_parameter_help(name)
             args = [name]
-            if default != NO_DEFAULT:
+            if default not in (NO_DEFAULT, NARGS):
                 kwargs['dest'] = name
                 if '_' not in name:
                     args.append('-{}'.format(name[0]))
@@ -145,6 +158,8 @@ class Command:
                 elif callable(default):
                     kwargs['type'] = type_
                     kwargs['default'] = ''
+            elif default == NARGS:
+                kwargs['nargs'] = '*'
             self.parser.add_argument(*args, **kwargs)
 
     def set_defaults(self, **kwargs):

@@ -69,26 +69,11 @@ class Municipality(NamedModel):
         return [p.code for p in self.postcodes]
 
 
-class BaseGroup(NamedModel):
-    municipality = db.ForeignKeyField(Municipality,
-                                      related_name='{classname}s')
-
-    class Meta:
-        abstract = True
-
-    @property
-    def housenumbers(self):
-        qs = (self._housenumbers | self.housenumber_set)
-        return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
-
-
 class PostCode(NamedModel):
-    identifiers = ['code']
     resource_fields = ['code', 'name', 'municipality']
 
     code = db.PostCodeField(index=True)
-    municipality = db.ForeignKeyField(Municipality,
-                                      related_name='{classname}s')
+    municipality = db.ForeignKeyField(Municipality, related_name='postcodes')
 
     class Meta:
         abstract = True
@@ -102,7 +87,7 @@ class PostCode(NamedModel):
         return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
 
 
-class Group(BaseGroup):
+class Group(NamedModel):
     AREA = 'area'
     WAY = 'way'
     KIND = (
@@ -118,14 +103,24 @@ class Group(BaseGroup):
     laposte = db.CharField(max_length=10, null=True, unique=True)
     ign = db.CharField(max_length=24, null=True, unique=True)
 
+    municipality = db.ForeignKeyField(Municipality, related_name='groups')
+
+    class Meta:
+        abstract = True
+
     @property
     def tmp_fantoir(self):
         return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
 
+    @property
     def get_fantoir(self):
         # Without INSEE code.
         return self.fantoir[5:] if self.fantoir else self.tmp_fantoir
 
+    @property
+    def housenumbers(self):
+        qs = (self._housenumbers | self.housenumber_set)
+        return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
 
 class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
@@ -179,7 +174,8 @@ class HouseNumber(Model):
         if not get_fantoir:
             return None
         return compute_cia(str(self.parent.municipality.insee),
-                           get_fantoir(), self.number, self.ordinal)
+                           get_fantoir,
+                           self.number, self.ordinal)
 
     @property
     def center(self):
@@ -231,7 +227,7 @@ class Position(Model):
     )
 
     resource_fields = ['center', 'source', 'housenumber', 'kind', 'comment',
-                       'parent', 'positioning', 'name']
+                       'parent', 'positioning', 'name', 'ign']
 
     name = db.CharField(max_length=200, null=True)
     center = db.PointField(verbose_name=_("center"), null=True)
@@ -240,6 +236,7 @@ class Position(Model):
     source = db.CharField(max_length=64, null=True)
     kind = db.CharField(max_length=64, choices=KIND)
     positioning = db.CharField(max_length=32, choices=POSITIONING)
+    ign = db.CharField(max_length=24, null=True, unique=True)
     comment = peewee.TextField(null=True)
 
     class Meta:
