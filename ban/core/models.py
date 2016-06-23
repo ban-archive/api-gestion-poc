@@ -167,8 +167,6 @@ class HouseNumber(Model):
         self._clean_called = True
 
     def compute_cia(self):
-        if not self.parent.get_fantoir:
-            return None
         return compute_cia(str(self.parent.municipality.insee),
                            self.parent.get_fantoir, self.number, self.ordinal)
 
