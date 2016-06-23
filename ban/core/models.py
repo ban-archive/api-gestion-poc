@@ -76,7 +76,6 @@ class PostCode(NamedModel):
     municipality = db.ForeignKeyField(Municipality, related_name='postcodes')
 
     class Meta:
-        abstract = True
         indexes = (
             (('code', 'municipality'), True),
         )
@@ -104,9 +103,6 @@ class Group(NamedModel):
     ign = db.CharField(max_length=24, null=True, unique=True)
 
     municipality = db.ForeignKeyField(Municipality, related_name='groups')
-
-    class Meta:
-        abstract = True
 
     @property
     def tmp_fantoir(self):
