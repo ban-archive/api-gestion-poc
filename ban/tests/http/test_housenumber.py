@@ -57,7 +57,6 @@ def test_add_district_to_housenumber():
     assert postcode.housenumbers[2] == hn2bis
 
 
-
 def test_get_housenumber_with_districts(get, url):
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
