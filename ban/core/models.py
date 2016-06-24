@@ -82,8 +82,9 @@ class PostCode(NamedModel):
 
     @property
     def housenumbers(self):
-        return self.housenumber_set.order_by(peewee.SQL('number ASC NULLS FIRST'),
-                                             peewee.SQL('ordinal ASC NULLS FIRST'))
+        return self.housenumber_set.order_by(
+            peewee.SQL('number ASC NULLS FIRST'),
+            peewee.SQL('ordinal ASC NULLS FIRST'))
 
 
 class Group(NamedModel):
@@ -108,7 +109,6 @@ class Group(NamedModel):
     def tmp_fantoir(self):
         return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
 
-    @property
     def get_fantoir(self):
         # Without INSEE code.
         return self.fantoir[5:] if self.fantoir else self.tmp_fantoir
@@ -168,7 +168,8 @@ class HouseNumber(Model):
 
     def compute_cia(self):
         return compute_cia(str(self.parent.municipality.insee),
-                           self.parent.get_fantoir, self.number, self.ordinal)
+                           self.parent.get_fantoir(),
+                           self.number, self.ordinal)
 
     @property
     def center(self):
