@@ -44,6 +44,20 @@ def test_get_housenumber_with_cia(get, url):
     assert resp.json['number'] == "1"
 
 
+def test_add_district_to_housenumber():
+    housenumber = HouseNumberFactory(number="1", ordinal="A",
+                                     parent__municipality__insee="27638",
+                                     parent__fantoir="276380011")
+    postcode = PostCodeFactory(municipality=housenumber.parent.municipality)
+    hn2 = HouseNumberFactory(postcode=postcode, number="2", ordinal="")
+    hn1 = HouseNumberFactory(postcode=postcode, number="1", ordinal="")
+    hn2bis = HouseNumberFactory(postcode=postcode, number="2", ordinal="bis")
+    assert postcode.housenumbers[0] == hn1
+    assert postcode.housenumbers[1] == hn2
+    assert postcode.housenumbers[2] == hn2bis
+
+
+
 def test_get_housenumber_with_districts(get, url):
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)

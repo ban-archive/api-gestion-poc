@@ -82,8 +82,8 @@ class PostCode(NamedModel):
 
     @property
     def housenumbers(self):
-        return self.housenumber_set.order_by(peewee.SQL('number'),
-                                             peewee.SQL('ordinal'))
+        return self.housenumber_set.order_by(peewee.SQL('number').asc(),
+                                             peewee.SQL('ordinal').desc())
 
 
 class Group(NamedModel):
