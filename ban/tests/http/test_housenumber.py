@@ -43,7 +43,7 @@ def test_get_housenumber_with_cia(get, url):
     assert resp.json['number'] == "22"
 
 
-def test_add_district_to_housenumber():
+def test_get_housenumber_sorted():
     housenumber = HouseNumberFactory(number="1", ordinal="A",
                                      parent__municipality__insee="27638",
                                      parent__fantoir="276380011")
