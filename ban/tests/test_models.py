@@ -257,10 +257,7 @@ def test_get_housenumber_sorted():
     hn2ter = HouseNumberFactory(postcode=postcode, number="2", ordinal="ter")
     hn1 = HouseNumberFactory(postcode=postcode, number="1", ordinal="")
     hn2bis = HouseNumberFactory(postcode=postcode, number="2", ordinal="bis")
-    assert postcode.housenumbers[0] == hn1
-    assert postcode.housenumbers[1] == hn2
-    assert postcode.housenumbers[2] == hn2bis
-    assert postcode.housenumbers[3] == hn2ter
+    assert postcode.housenumbers == [hn1, hn2, hn2bis, hn2ter]
 
 
 def test_cannot_duplicate_housenumber_on_same_street():
