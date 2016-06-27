@@ -116,7 +116,8 @@ class Group(NamedModel):
     @property
     def housenumbers(self):
         qs = (self._housenumbers | self.housenumber_set)
-        return qs.order_by(peewee.SQL('number'), peewee.SQL('ordinal'))
+        return qs.order_by(peewee.SQL('number ASC NULLS FIRST'),
+                           peewee.SQL('ordinal ASC NULLS FIRST'))
 
 
 class HouseNumber(Model):
