@@ -35,7 +35,8 @@ def test_get_housenumber_with_unknown_id_is_404(get, url):
 
 
 def test_get_housenumber_with_cia(get, url):
-    housenumber = HouseNumberFactory(number="22", parent__fantoir="1234")
+    housenumber = HouseNumberFactory(number="22", ordinal="A",
+                                     parent__fantoir="276380011")
     resp = get(url('housenumber-resource', id=housenumber.cia,
                    identifier="cia"))
     assert resp.status == falcon.HTTP_200

@@ -249,6 +249,42 @@ def test_housenumber_is_versioned():
     assert version2.parent == street
 
 
+def test_get_postcode_housenumbers_sorted():
+    postcode = PostCodeFactory()
+    hn2 = HouseNumberFactory(postcode=postcode, number="2", ordinal="")
+    hn2ter = HouseNumberFactory(postcode=postcode, number="2", ordinal="ter")
+    hn1 = HouseNumberFactory(postcode=postcode, number="1", ordinal="")
+    hn2bis = HouseNumberFactory(postcode=postcode, number="2", ordinal="bis")
+    assert postcode.housenumbers == [hn1, hn2, hn2bis, hn2ter]
+
+
+def test_get_group_housenumbers_parent_sorted():
+    group = GroupFactory()
+    hn1a = HouseNumberFactory(parent=group, number="1", ordinal="A")
+    hn2ter = HouseNumberFactory(parent=group, number="2", ordinal="ter")
+    hn1 = HouseNumberFactory(parent=group, number="1", ordinal="")
+    hn2bis = HouseNumberFactory(parent=group, number="2", ordinal="bis")
+    assert group.housenumbers == [hn1, hn1a, hn2bis, hn2ter]
+
+
+def test_get_group_housenumbers_ancestor_sorted():
+    group = GroupFactory()
+    hn1a = HouseNumberFactory(ancestors=group, number="1", ordinal="A")
+    hn2ter = HouseNumberFactory(ancestors=group, number="2", ordinal="ter")
+    hn1 = HouseNumberFactory(ancestors=group, number="1", ordinal="")
+    hn2bis = HouseNumberFactory(ancestors=group, number="2", ordinal="bis")
+    assert group.housenumbers == [hn1, hn1a, hn2bis, hn2ter]
+
+
+def test_get_group_housenumbers_parent_ancestor_sorted():
+    group = GroupFactory()
+    hn1a = HouseNumberFactory(parent=group, number="1", ordinal="A")
+    hn2ter = HouseNumberFactory(parent=group, number="2", ordinal="ter")
+    hn1 = HouseNumberFactory(ancestors=group, number="1", ordinal="")
+    hn2bis = HouseNumberFactory(ancestors=group, number="2", ordinal="bis")
+    assert group.housenumbers == [hn1, hn1a, hn2bis, hn2ter]
+
+
 def test_cannot_duplicate_housenumber_on_same_street():
     street = GroupFactory()
     HouseNumberFactory(parent=street, ordinal="b", number="10")
