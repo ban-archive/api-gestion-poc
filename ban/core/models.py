@@ -238,7 +238,7 @@ class Position(Model):
                        'parent', 'positioning', 'name', 'ign']
 
     name = db.CharField(max_length=200, null=True)
-    center = db.PointField(verbose_name=_("center"), null=True)
+    center = db.PointField(verbose_name=_("center"), null=True, index=True)
     housenumber = db.ForeignKeyField(HouseNumber)
     parent = db.ForeignKeyField('self', related_name='children', null=True)
     source = db.CharField(max_length=64, null=True)
