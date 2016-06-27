@@ -218,6 +218,7 @@ def test_group_as_list():
         'resource': 'group',
         'attributes': None,
         'laposte': None,
+        'addressing': None,
         'created_at': street.created_at,
         'created_by': street.created_by.pk,
         'modified_at': street.modified_at,

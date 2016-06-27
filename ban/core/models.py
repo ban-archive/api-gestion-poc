@@ -99,11 +99,24 @@ class Group(BaseGroup):
         (WAY, 'way'),
         (AREA, 'area'),
     )
+    CLASSICAL = 'classical'
+    METRIC = 'metric'
+    LINEAR = 'linear'
+    MIXED = 'mixed'
+    ANARCHICAL = 'anarchical'
+    ADDRESSING = (
+        (CLASSICAL, 'classical'),
+        (METRIC, 'metric'),
+        (LINEAR, 'linear'),
+        (MIXED, 'mixed types'),
+        (ANARCHICAL, 'anarchical'),
+    )
     identifiers = ['fantoir', 'laposte', 'ign']
     resource_fields = ['name', 'alias', 'fantoir', 'municipality', 'kind',
-                       'laposte', 'ign']
+                       'laposte', 'ign', 'addressing']
 
     kind = db.CharField(max_length=64, choices=KIND)
+    addressing = db.CharField(max_length=16, choices=ADDRESSING, null=True)
     fantoir = db.CharField(max_length=9, null=True, unique=True)
     laposte = db.CharField(max_length=10, null=True, unique=True)
     ign = db.CharField(max_length=24, null=True, unique=True)
