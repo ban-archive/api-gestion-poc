@@ -109,6 +109,14 @@ Import some adresses (get data from http://bano.openstreetmap.fr/BAN_odbl/)
 
 ## Run the server
 
+Create a dummy token for development:
+
+    ban auth:dummytoken blablablabla
+
+You will need to use it for any request to the API, passing the header `Authorization: Bearer blablablabla`.
+Replace `blablablabla` both on the command line and header value by any other value you can remember easily.
+This is **just** for development, never user this command in production servers.
+
 For development:
 
     ban server:run

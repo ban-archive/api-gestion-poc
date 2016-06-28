@@ -73,12 +73,14 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
     def get_collection(self, req, resp, **params):
         return self.model.select()
 
+    @auth.protect
     @app.endpoint()
     def on_get(self, req, resp, **params):
         """Get {resource} collection."""
         qs = self.get_collection(req, resp, **params)
         self.collection(req, resp, qs.as_resource())
 
+    @auth.protect
     @app.endpoint(path='/{identifier}')
     def on_get_resource(self, req, resp, **params):
         """Get {resource} with 'identifier'."""
@@ -153,12 +155,14 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
 
 class VersionnedResource(BaseCRUD):
 
+    @auth.protect
     @app.endpoint('/{identifier}/versions')
     def on_get_versions(self, req, resp, *args, **kwargs):
         """Get resource versions."""
         instance = self.get_object(**kwargs)
         self.collection(req, resp, instance.versions.as_resource())
 
+    @auth.protect
     @app.endpoint('/{identifier}/versions/{version}')
     def on_get_version(self, req, resp, version, **kwargs):
         """Get {resource} version corresponding to 'version' number."""
@@ -197,6 +201,7 @@ class Housenumber(VersionnedResource):
                     .order_by(models.HouseNumber.pk))
         return qs
 
+    @auth.protect
     @app.endpoint('/{identifier}/positions')
     def on_get_positions(self, req, resp, *args, **kwargs):
         """Retrieve {resource} positions."""
@@ -207,6 +212,7 @@ class Housenumber(VersionnedResource):
 
 class WithHousenumbers(VersionnedResource):
 
+    @auth.protect
     @app.endpoint('/{identifier}/housenumbers')
     def on_get_housenumbers(self, req, resp, *args, **kwargs):
         """Retrieve {resource} housenumbers."""
@@ -230,6 +236,7 @@ class Postcode(WithHousenumbers):
 class Municipality(VersionnedResource):
     model = models.Municipality
 
+    @auth.protect
     @app.endpoint('/{identifier}/groups')
     def on_get_groups(self, req, resp, *args, **kwargs):
         """Retrieve {resource} groups."""

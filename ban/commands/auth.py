@@ -7,12 +7,13 @@ from . import helpers
 
 @command
 @helpers.session
-def dummytoken(**kwargs):
+def dummytoken(token, **kwargs):
     """Create a dummy token for dev."""
     session = context.get('session')
-    Token.delete().where(Token.access_token == 'token').execute()
-    Token.create(session=session.pk, access_token="token", expires_in=3600*24)
-    reporter.notice('Created token', 'token')
+    Token.delete().where(Token.access_token == token).execute()
+    Token.create(session=session.pk, access_token=token, expires_in=3600*24,
+                 token_type='Bearer', scope='*')
+    reporter.notice('Created token', token)
 
 
 @command

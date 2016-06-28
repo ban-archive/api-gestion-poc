@@ -15,5 +15,7 @@ def authorize(func):
         # Subtly plug in authenticated user.
         if 'client' in kwargs:
             kwargs['client'].before(attach)
+        elif 'get' in kwargs:
+            kwargs['get'].__self__.before(attach)
         return func(*args, **kwargs)
     return inner

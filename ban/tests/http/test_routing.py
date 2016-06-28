@@ -3,6 +3,8 @@ import pytest
 import falcon
 from ban import http
 
+from .utils import authorize
+
 
 @pytest.mark.parametrize('name,kwargs,expected', [
     ['position-resource', {"identifier": 1}, '/position/1'],
@@ -47,6 +49,7 @@ def test_reverse_uri_are_attached_to_resource():
     assert hasattr(http.Municipality, 'versions_uri')
 
 
+@authorize
 def test_invalid_identifier_returns_404(get):
     resp = get('/position/invalid:22')
     assert resp.status == falcon.HTTP_404

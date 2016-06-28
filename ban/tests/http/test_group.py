@@ -8,6 +8,12 @@ from ..factories import HouseNumberFactory, MunicipalityFactory, GroupFactory
 from .utils import authorize
 
 
+def test_cannot_get_group_without_auth(get, url):
+    resp = get(url('group-resource', id=123, identifier="id"))
+    assert resp.status == falcon.HTTP_401
+
+
+@authorize
 def test_get_group(get, url):
     street = GroupFactory(name="Rue des Boulets")
     resp = get(url('group-resource', id=street.id, identifier="id"))
@@ -15,6 +21,7 @@ def test_get_group(get, url):
     assert resp.json['name'] == "Rue des Boulets"
 
 
+@authorize
 def test_get_group_without_explicit_identifier(get, url):
     street = GroupFactory(name="Rue des Boulets")
     resp = get(url('group-resource', identifier=street.id))
@@ -22,6 +29,7 @@ def test_get_group_without_explicit_identifier(get, url):
     assert resp.json['name'] == "Rue des Boulets"
 
 
+@authorize
 def test_get_group_with_fantoir(get, url):
     street = GroupFactory(name="Rue des Boulets", fantoir='1234')
     resp = get(url('group-resource', id=street.fantoir, identifier="fantoir"))
@@ -29,6 +37,7 @@ def test_get_group_with_fantoir(get, url):
     assert resp.json['name'] == "Rue des Boulets"
 
 
+@authorize
 def test_get_group_with_pk(get, url):
     street = GroupFactory(name="Rue des Boulets")
     resp = get(url('group-resource', id=street.pk, identifier="pk"))
@@ -36,6 +45,7 @@ def test_get_group_with_pk(get, url):
     assert resp.json['name'] == "Rue des Boulets"
 
 
+@authorize
 def test_get_group_housenumbers(get, url):
     street = GroupFactory()
     hn1 = HouseNumberFactory(number="1", parent=street)
@@ -147,6 +157,7 @@ def test_create_group_with_invalid_municipality_identifier(client):
     assert not models.Group.select().count()
 
 
+@authorize
 def test_get_group_versions(get, url):
     street = GroupFactory(name="Rue de la Paix")
     street.version = 2
@@ -161,6 +172,7 @@ def test_get_group_versions(get, url):
     assert resp.json['collection'][1]['name'] == 'Rue de la Guerre'
 
 
+@authorize
 def test_get_group_version(get, url):
     street = GroupFactory(name="Rue de la Paix")
     street.version = 2
@@ -178,6 +190,7 @@ def test_get_group_version(get, url):
     assert resp.json['version'] == 2
 
 
+@authorize
 def test_get_group_unknown_version_should_go_in_404(get, url):
     street = GroupFactory(name="Rue de la Paix")
     uri = url('group-version', identifier=street.id, version=2)

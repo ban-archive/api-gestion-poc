@@ -5,6 +5,7 @@ from ..factories import PostCodeFactory, MunicipalityFactory
 from .utils import authorize
 
 
+@authorize
 def test_get_postcode(get, url):
     postcode = PostCodeFactory(code="09350")
     resp = get(url('postcode-resource', identifier=postcode.id))

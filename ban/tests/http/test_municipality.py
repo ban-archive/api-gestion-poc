@@ -8,6 +8,7 @@ from ..factories import MunicipalityFactory, PostCodeFactory, GroupFactory
 from .utils import authorize
 
 
+@authorize
 def test_get_municipality(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     uri = url('municipality-resource', identifier=municipality.id)
@@ -17,6 +18,7 @@ def test_get_municipality(get, url):
     assert resp.json['name'] == 'Cabour'
 
 
+@authorize
 def test_get_municipality_with_postcodes(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     PostCodeFactory(code="33000", municipality=municipality)
@@ -28,6 +30,7 @@ def test_get_municipality_with_postcodes(get, url):
     assert resp.json['postcodes'] == ['33000']
 
 
+@authorize
 def test_get_municipality_without_explicit_identifier(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     uri = url('municipality-resource', identifier=municipality.id)
@@ -37,6 +40,7 @@ def test_get_municipality_without_explicit_identifier(get, url):
     assert resp.json['name'] == 'Cabour'
 
 
+@authorize
 def test_get_municipality_groups_collection(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     street = GroupFactory(municipality=municipality, name="Rue de la Plage")
@@ -48,6 +52,7 @@ def test_get_municipality_groups_collection(get, url):
     assert resp.json['total'] == 1
 
 
+@authorize
 def test_get_municipality_groups_collection_is_paginated(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     GroupFactory.create_batch(6, municipality=municipality)
@@ -71,6 +76,7 @@ def test_get_municipality_groups_collection_is_paginated(get, url):
     assert resp.json == page1
 
 
+@authorize
 def test_get_municipality_versions(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     municipality.version = 2
@@ -85,6 +91,7 @@ def test_get_municipality_versions(get, url):
     assert resp.json['collection'][1]['name'] == 'Cabour2'
 
 
+@authorize
 def test_get_municipality_version(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     municipality.version = 2
@@ -102,6 +109,7 @@ def test_get_municipality_version(get, url):
     assert resp.json['version'] == 2
 
 
+@authorize
 def test_can_retrieve_municipality_with_old_insee(get, url):
     municipality = MunicipalityFactory(insee="12345")
     # This should create a redirect.

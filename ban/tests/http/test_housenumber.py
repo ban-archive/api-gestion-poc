@@ -9,6 +9,12 @@ from ..factories import (GroupFactory, HouseNumberFactory,
 from .utils import authorize
 
 
+def test_cannot_get_housenumber_without_auth(get, url):
+    resp = get(url('housenumber-resource', identifier=123))
+    assert resp.status == falcon.HTTP_401
+
+
+@authorize
 def test_get_housenumber(get, url):
     housenumber = HouseNumberFactory(number="22")
     resp = get(url('housenumber-resource', identifier=housenumber.id))
@@ -19,6 +25,7 @@ def test_get_housenumber(get, url):
     assert resp.json['parent']['name'] == housenumber.parent.name
 
 
+@authorize
 def test_get_housenumber_without_explicit_identifier(get, url):
     housenumber = HouseNumberFactory(number="22")
     resp = get(url('housenumber-resource', identifier=housenumber.id))
@@ -29,11 +36,13 @@ def test_get_housenumber_without_explicit_identifier(get, url):
     assert resp.json['parent']['name'] == housenumber.parent.name
 
 
+@authorize
 def test_get_housenumber_with_unknown_id_is_404(get, url):
     resp = get(url('housenumber-resource', identifier=22))
     assert resp.status == falcon.HTTP_404
 
 
+@authorize
 def test_get_housenumber_with_cia(get, url):
     housenumber = HouseNumberFactory(number="22", ordinal="A",
                                      parent__fantoir="276380011")
@@ -43,6 +52,7 @@ def test_get_housenumber_with_cia(get, url):
     assert resp.json['number'] == "22"
 
 
+@authorize
 def test_get_housenumber_with_districts(get, url):
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
@@ -56,6 +66,7 @@ def test_get_housenumber_with_districts(get, url):
     assert 'version' not in resp.json['ancestors'][0]
 
 
+@authorize
 def test_get_housenumber_collection(get, url):
     objs = HouseNumberFactory.create_batch(5)
     resp = get(url('housenumber'))
@@ -64,6 +75,7 @@ def test_get_housenumber_collection(get, url):
         assert json.loads(dumps(obj.as_resource)) in resp.json['collection']
 
 
+@authorize
 def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
     position = PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
@@ -75,6 +87,7 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
     assert resp.json['collection'][0] == json.loads(dumps(resource))
 
 
+@authorize
 def test_bbox_allows_floats(get, url):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
@@ -83,6 +96,7 @@ def test_bbox_allows_floats(get, url):
     assert resp.json['total'] == 1
 
 
+@authorize
 def test_missing_bbox_param_makes_bbox_ignored(get, url):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
@@ -91,6 +105,7 @@ def test_missing_bbox_param_makes_bbox_ignored(get, url):
     assert resp.json['total'] == 2
 
 
+@authorize
 def test_invalid_bbox_param_returns_bad_request(get, url):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
@@ -99,6 +114,7 @@ def test_invalid_bbox_param_returns_bad_request(get, url):
     assert resp.status == falcon.HTTP_400
 
 
+@authorize
 def test_get_housenumber_collection_filtered_by_bbox_is_paginated(get, url):
     PositionFactory.create_batch(9, center=(1, 1))
     params = dict(north=2, south=0, west=0, east=2, limit=5)
@@ -119,6 +135,7 @@ def test_get_housenumber_collection_filtered_by_bbox_is_paginated(get, url):
     assert resp.json == page1
 
 
+@authorize
 def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get, url):
     position = PositionFactory(center=(1, 1))
     PositionFactory(center=(1.1, 1.1), housenumber=position.housenumber)
@@ -130,6 +147,7 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get, url):
     assert resp.json['collection'][0] == data
 
 
+@authorize
 def test_get_housenumber_with_position(get, url):
     housenumber = HouseNumberFactory()
     PositionFactory(housenumber=housenumber, center=(1, 1))
@@ -137,6 +155,7 @@ def test_get_housenumber_with_position(get, url):
     assert resp.json['center'] == {'coordinates': [1, 1], 'type': 'Point'}
 
 
+@authorize
 def test_get_housenumber_with_postcode(get, url):
     postcode = PostCodeFactory(code="12345")
     housenumber = HouseNumberFactory(postcode=postcode)
@@ -144,6 +163,7 @@ def test_get_housenumber_with_postcode(get, url):
     assert resp.json['postcode'] == json.loads(dumps(postcode.as_relation))
 
 
+@authorize
 def test_get_housenumber_positions(get, url):
     housenumber = HouseNumberFactory()
     pos1 = PositionFactory(housenumber=housenumber, center=(1, 1))
