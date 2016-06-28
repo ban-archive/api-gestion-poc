@@ -182,10 +182,37 @@ class Position(VersionnedResource):
     """Manipulate position resources."""
     model = models.Position
 
+    def get_bbox(self, req):
+        bbox = {}
+        req.get_param_as_float('north', store=bbox)
+        req.get_param_as_float('south', store=bbox)
+        req.get_param_as_float('east', store=bbox)
+        req.get_param_as_float('west', store=bbox)
+        if not len(bbox) == 4:
+            return None
+        return bbox
+
+    def get_collection(self, req, resp, **kwargs):
+        qs = super().get_collection(req, resp, **kwargs)
+        bbox = self.get_bbox(req)
+        if bbox:
+            qs = (qs.where(models.Position.center.in_bbox(**bbox))
+                    .group_by(models.Position.pk)
+                    .order_by(models.Position.pk))
+        return qs
+
+    @app.endpoint('/{identifier}/positions')
+    def on_get_positions(self, req, resp, *args, **kwargs):
+        """Retrieve {resource} positions."""
+        instance = self.get_object(**kwargs)
+        qs = instance.position_set.as_resource_list()
+        self.collection(req, resp, qs)
+
 
 class Housenumber(VersionnedResource):
     model = models.HouseNumber
-    order_by = [peewee.SQL('number ASC NULLS FIRST'), peewee.SQL('ordinal ASC NULLS FIRST')]
+    order_by = [peewee.SQL('number ASC NULLS FIRST'),
+                peewee.SQL('ordinal ASC NULLS FIRST')]
 
     def get_bbox(self, req):
         bbox = {}

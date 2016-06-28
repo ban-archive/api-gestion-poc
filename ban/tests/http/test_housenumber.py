@@ -87,7 +87,7 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
 
 
 @authorize
-def test_bbox_allows_floats(get, url):
+def test_get_housenumber_bbox_allows_floats(get, url):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     bbox = dict(north=2.23, south=0.12, west=0.56, east=2.34)
@@ -96,7 +96,7 @@ def test_bbox_allows_floats(get, url):
 
 
 @authorize
-def test_missing_bbox_param_makes_bbox_ignored(get, url):
+def test_get_housenumber_missing_bbox_param_makes_bbox_ignored(get, url):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     bbox = dict(north=2, south=0, west=0)
@@ -105,7 +105,7 @@ def test_missing_bbox_param_makes_bbox_ignored(get, url):
 
 
 @authorize
-def test_invalid_bbox_param_returns_bad_request(get, url):
+def test_get_housenumber_invalid_bbox_param_returns_bad_request(get, url):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     bbox = dict(north=2, south=0, west=0, east='invalid')
@@ -194,7 +194,7 @@ def test_create_housenumber(client):
     assert resp.status == falcon.HTTP_201
     assert resp.json['id']
     assert resp.json['number'] == '20'
-    assert resp.json['ordinal'] == None
+    assert resp.json['ordinal'] is None
     assert resp.json['parent']['id'] == street.id
     assert models.HouseNumber.select().count() == 1
 
