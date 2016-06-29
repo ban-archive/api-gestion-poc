@@ -31,7 +31,7 @@ def test_get_group_without_explicit_identifier(get, url):
 
 @authorize
 def test_get_group_with_fantoir(get, url):
-    street = GroupFactory(name="Rue des Boulets", fantoir='1234')
+    street = GroupFactory(name="Rue des Boulets", fantoir='900011234')
     resp = get(url('group-resource', id=street.fantoir, identifier="fantoir"))
     assert resp.status == falcon.HTTP_200
     assert resp.json['name'] == "Rue des Boulets"
@@ -66,7 +66,7 @@ def test_create_group(client, url):
     assert not models.Group.select().count()
     data = {
         "name": "Rue de la Plage",
-        "fantoir": "0234H",
+        "fantoir": "900010234",
         "municipality": municipality.id,
         "kind": models.Group.WAY,
     }
@@ -87,7 +87,7 @@ def test_can_create_group_without_kind(client, url):
     assert not models.Group.select().count()
     data = {
         "name": "Rue de la Plage",
-        "fantoir": "0234H",
+        "fantoir": "900010234",
         "municipality": municipality.id,
     }
     resp = client.post('/group', data)
@@ -100,7 +100,7 @@ def test_create_group_with_municipality_insee(client, url):
     assert not models.Group.select().count()
     data = {
         "name": "Rue de la Plage",
-        "fantoir": "0234H",
+        "fantoir": "900010234",
         "municipality": "insee:{}".format(municipality.insee),
         "kind": models.Group.WAY,
     }
@@ -118,7 +118,7 @@ def test_create_group_with_municipality_siren(client):
     assert not models.Group.select().count()
     data = {
         "name": "Rue de la Plage",
-        "fantoir": "0234H",
+        "fantoir": "900010234",
         "municipality": "siren:{}".format(municipality.siren),
         "kind": models.Group.WAY,
     }
@@ -133,7 +133,7 @@ def test_create_group_with_bad_municipality_siren(client):
     assert not models.Group.select().count()
     data = {
         "name": "Rue de la Plage",
-        "fantoir": "0234H",
+        "fantoir": "900010234",
         "municipality": "siren:{}".format('bad'),
         "kind": models.Group.WAY,
     }
@@ -148,7 +148,7 @@ def test_create_group_with_invalid_municipality_identifier(client):
     assert not models.Group.select().count()
     data = {
         "name": "Rue de la Plage",
-        "fantoir": "0234H",
+        "fantoir": "900010234",
         "municipality": "invalid:{}".format(municipality.insee),
         "kind": models.Group.WAY,
     }

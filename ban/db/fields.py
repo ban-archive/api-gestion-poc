@@ -9,7 +9,7 @@ from postgis import Point
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
-           'BooleanField', 'BinaryJSONField', 'PostCodeField',
+           'BooleanField', 'BinaryJSONField', 'PostCodeField', 'FantoirField',
            'ManyToManyField', 'PasswordField']
 
 
@@ -148,6 +148,21 @@ class PostCodeField(CharField):
         value = str(value)
         if not len(value) == 5 or not value.isdigit():
             raise ValueError('Invalid postcode "{}"'.format(value))
+        return value
+
+
+class FantoirField(CharField):
+
+    def __init__(self, *args, **kwargs):
+        kwargs['max_length'] = 9
+        super().__init__(*args, **kwargs)
+
+    def coerce(self, value):
+        value = str(value)
+        if len(value) == 10:
+            value = value[:10]
+        if not len(value) == 9:
+            raise ValueError('Invalid fantoir "{}"'.format(value))
         return value
 
 
