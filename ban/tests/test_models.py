@@ -537,3 +537,70 @@ def test_position_center_coerce(given, expected):
         assert center.coords == expected
     else:
         assert not center
+
+
+def test_municipality_select_use_default_orderby():
+    mun1 = MunicipalityFactory(insee="90002")
+    mun2 = MunicipalityFactory(insee="90001")
+    # Check before data sort
+    assert models.Municipality.select().count() == 2
+    # Check after data sort
+    assert mun1.insee > mun2.insee
+    sel_mun1 = models.Municipality.select().first()
+    assert sel_mun1.insee == mun2.insee
+
+
+def test_postcode_select_use_default_orderby():
+    mun1 = MunicipalityFactory(insee="90002")
+    mun2 = MunicipalityFactory(insee="90001")
+    postcode1 = PostCodeFactory(code="90102", municipality=mun1)
+    postcode2 = PostCodeFactory(code="90102", municipality=mun2)
+    postcode3 = PostCodeFactory(code="90101", municipality=mun2)
+    # Check before data sort
+    assert models.Municipality.select().count() == 2
+    assert models.PostCode.select().count() == 3
+    assert postcode1.code > postcode3.code
+    # Check after data sort
+    sel = models.PostCode.select()
+    assert sel.count() == 3
+    assert sel == [postcode3, postcode2, postcode1]
+    assert sel[0].code == postcode3.code
+    assert sel[1].municipality.insee == mun1.insee
+    assert sel[2].municipality.insee == mun2.insee
+
+
+def test_group_select_use_default_orderby():
+    group1 = GroupFactory(insee="90001", fantoir="900010001")
+    group2 = GroupFactory(insee="90001", fantoir="900010002")
+    # Check before data sort
+    assert models.Group.select().count() == 2
+    # Check after data sort
+    sel = models.Group.select()
+    assert sel.count() == 2
+    assert sel == [group1, group2]
+    assert sel[0].fantoir == "900010001"
+
+
+def test_housenumber_select_use_default_orderby():
+    hn1a = HouseNumberFactory(number="1", ordinal="a")
+    hn1 = HouseNumberFactory(number="1", ordinal="")
+    hn2ter = HouseNumberFactory(number="2", ordinal="ter")
+    hn2 = HouseNumberFactory(number="2", ordinal="")
+    hn2bis = HouseNumberFactory(number="2", ordinal="bis")
+    # Check before data sort
+    assert models.HouseNumber.select().count() == 5
+    # Check after data sort
+    sel = models.HouseNumber.select()
+    assert sel.count() == 5
+    assert sel == [hn1, hn1a, hn2, hn2bis, hn2ter]
+
+
+def test_position_select_use_default_orderby():
+    pos1 = PositionFactory()
+    pos2 = PositionFactory()
+    # Check before data sort
+    assert models.Position.select().count() == 2
+    # Check after data sort
+    sel = models.Position.select()
+    assert sel.count() == 2
+    assert sel == [pos1, pos2]
