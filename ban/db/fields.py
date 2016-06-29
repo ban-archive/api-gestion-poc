@@ -154,13 +154,13 @@ class PostCodeField(CharField):
 class FantoirField(CharField):
 
     def __init__(self, *args, **kwargs):
-        kwargs['max_length'] = 9
+        kwargs['max_length'] = 10
         super().__init__(*args, **kwargs)
 
     def coerce(self, value):
         value = str(value)
         if len(value) == 10:
-            value = value[:10]
+            value = value[:9]
         if not len(value) == 9:
             raise ValueError('Invalid fantoir "{}"'.format(value))
         return value

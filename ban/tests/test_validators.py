@@ -199,6 +199,33 @@ def test_cannot_create_group_without_kind(session):
     assert validator.errors
 
 
+def test_can_create_group_with_fantoir_on_9digits(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality=municipality,
+                                       fantoir='123456789')
+    assert not validator.errors
+
+
+def test_can_create_group_with_fantoir_on_10digits(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality=municipality,
+                                       fantoir='1234567890')
+    assert not validator.errors
+
+
+def test_cannot_create_group_with_fantoir_different_than_9or10_digits(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality=municipality,
+                                       fantoir='1234')
+    assert validator.errors
+
+
 def test_can_create_street_with_municipality_insee(session):
     municipality = MunicipalityFactory(insee="12345")
     validator = models.Group.validator(name='Rue des Girafes',
