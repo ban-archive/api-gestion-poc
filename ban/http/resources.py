@@ -202,6 +202,7 @@ class Position(VersionnedResource, BboxResource):
             qs = (qs.where(models.Position.center.in_bbox(**bbox)))
         return qs
 
+    @auth.protect
     @app.endpoint('/{identifier}/positions')
     def on_get_positions(self, req, resp, *args, **kwargs):
         """Retrieve {resource} positions."""
