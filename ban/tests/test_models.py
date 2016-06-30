@@ -544,10 +544,10 @@ def test_municipality_select_use_default_orderby():
     mun2 = MunicipalityFactory(insee="90001")
     # Check before data sort
     assert models.Municipality.select().count() == 2
-    # Check after data sort
     assert mun1.insee > mun2.insee
-    sel_mun1 = models.Municipality.select().first()
-    assert sel_mun1.insee == mun2.insee
+    # Check after data sort
+    sel = models.Municipality.select()
+    assert sel[0].insee == mun2.insee
 
 
 def test_postcode_select_use_default_orderby():
