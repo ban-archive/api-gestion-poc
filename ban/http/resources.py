@@ -196,9 +196,7 @@ class Position(VersionnedResource):
         qs = super().get_collection(req, resp, **kwargs)
         bbox = self.get_bbox(req)
         if bbox:
-            qs = (qs.where(models.Position.center.in_bbox(**bbox))
-                    .group_by(models.Position.pk)
-                    .order_by(models.Position.pk))
+            qs = (qs.where(models.Position.center.in_bbox(**bbox)))
         return qs
 
     @app.endpoint('/{identifier}/positions')

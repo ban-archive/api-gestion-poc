@@ -2,6 +2,7 @@ import json
 
 import falcon
 from ban.core import models
+from ban.core.encoder import dumps
 
 from ..factories import HouseNumberFactory, PositionFactory
 from .utils import authorize
@@ -384,12 +385,60 @@ def test_cannot_delete_position_if_not_authorized(client, url):
 
 
 @authorize
-def test_position_select_use_default_orderby(get, url):
-    PositionFactory(name="pos1")
-    PositionFactory(name="pos2")
-    uri = url('position')
-    resp = get(uri)
-    assert resp.status == falcon.HTTP_200
+def test_get_position_collection_can_be_filtered_by_bbox(get, url):
+    position = PositionFactory(center=(1, 1))
+    PositionFactory(center=(-1, -1))
+    bbox = dict(north=2, south=0, west=0, east=2)
+    resp = get(url('position', query_string=bbox))
+    assert resp.json['total'] == 1
+    # JSON transform internals tuples to lists.
+    resource = position.as_resource
+    assert resp.json['collection'][0] == json.loads(dumps(resource))
+
+
+@authorize
+def test_get_position_bbox_allows_floats(get, url):
+    PositionFactory(center=(1, 1))
+    PositionFactory(center=(-1, -1))
+    bbox = dict(north=2.23, south=0.12, west=0.56, east=2.34)
+    resp = get(url('position', query_string=bbox))
+    assert resp.json['total'] == 1
+
+
+@authorize
+def test_get_position_missing_bbox_param_makes_bbox_ignored(get, url):
+    PositionFactory(center=(1, 1))
+    PositionFactory(center=(-1, -1))
+    bbox = dict(north=2, south=0, west=0)
+    resp = get(url('position', query_string=bbox))
     assert resp.json['total'] == 2
-    assert resp.json['collection'][0]['name'] == 'pos1'
-    assert resp.json['collection'][1]['name'] == 'pos2'
+
+
+@authorize
+def test_get_position_invalid_bbox_param_returns_bad_request(get, url):
+    PositionFactory(center=(1, 1))
+    PositionFactory(center=(-1, -1))
+    bbox = dict(north=2, south=0, west=0, east='invalid')
+    resp = get(url('position', query_string=bbox))
+    assert resp.status == falcon.HTTP_400
+
+
+@authorize
+def test_get_position_collection_filtered_by_bbox_is_paginated(get, url):
+    PositionFactory.create_batch(9, center=(1, 1))
+    params = dict(north=2, south=0, west=0, east=2, limit=5)
+    PositionFactory(center=(-1, -1))
+    resp = get(url('position', query_string=params))
+    page1 = resp.json
+    assert len(page1['collection']) == 5
+    assert page1['total'] == 9
+    assert 'next' in page1
+    assert 'previous' not in page1
+    resp = get(page1['next'])
+    page2 = resp.json
+    assert len(page2['collection']) == 4
+    assert page2['total'] == 9
+    assert 'next' not in page2
+    assert 'previous' in page2
+    resp = get(page2['previous'])
+    assert resp.json == page1
