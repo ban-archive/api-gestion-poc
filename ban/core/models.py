@@ -65,8 +65,12 @@ class Municipality(NamedModel):
     siren = db.CharField(max_length=9, unique=True, null=True)
 
     @property
-    def postcodes_resource(self):
-        return [p.code for p in self.postcodes]
+    def postcodes_extended(self):
+        return [p.as_relation for p in self.postcodes]
+
+    @property
+    def postcodes_compact(self):
+        return [p.id for p in self.postcodes]
 
 
 class PostCode(NamedModel):
@@ -192,8 +196,12 @@ class HouseNumber(Model):
                 if position and position.center else None)
 
     @property
-    def ancestors_resource(self):
-        return [d.as_list for d in self.ancestors]
+    def ancestors_extended(self):
+        return [d.as_relation for d in self.ancestors]
+
+    @property
+    def ancestors_compact(self):
+        return [d.id for d in self.ancestors]
 
 
 class Position(Model):
@@ -251,9 +259,13 @@ class Position(Model):
         unique_together = ('housenumber', 'source')
 
     @property
-    def center_resource(self):
+    def center_extended(self):
         self.center = self._meta.fields["center"].coerce(self.center)
         return self.center.geojson if self.center else None
+
+    @property
+    def center_compact(self):
+        return self.center_extended
 
     @classmethod
     def validate(cls, validator, document, instance):

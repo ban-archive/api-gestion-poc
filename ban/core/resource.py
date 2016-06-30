@@ -18,7 +18,7 @@ class ResourceListQueryResultWrapper(peewee.ModelQueryResultWrapper):
 
     def process_row(self, row):
         instance = super().process_row(row)
-        return instance.as_list
+        return instance.as_relation
 
 
 class SelectQuery(db.SelectQuery):
@@ -34,8 +34,9 @@ class SelectQuery(db.SelectQuery):
 
 class BaseResource(peewee.BaseModel):
 
-    def include_field_for_relation(cls, name):
-        if name == "version":
+    def include_field_for_compact(cls, name):
+        if name in ['version', 'created_at', 'created_by', 'modified_at',
+                    'modified_by']:
             return False
         attr = getattr(cls, name, None)
         exclude = (db.ManyToManyField, peewee.ReverseRelationDescriptor,
@@ -57,11 +58,10 @@ class BaseResource(peewee.BaseModel):
             inherited = getattr(cls, 'resource_schema', {})
             resource_schema.update(inherited)
             cls.resource_schema = resource_schema
-        cls.fields_for_resource = cls.resource_fields
-        cls.fields_for_relation = [
-            n for n in cls.fields_for_resource
-            if mcs.include_field_for_relation(cls, n)]
-        cls.fields_for_list = cls.fields_for_relation + ['resource']
+        cls.extended_fields = cls.resource_fields
+        cls.compact_fields = [
+            n for n in cls.extended_fields
+            if mcs.include_field_for_compact(cls, n)] + ['resource']
         cls.build_resource_schema()
         return cls
 
@@ -92,7 +92,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         """Map Peewee models to Cerberus validation schema."""
         schema = dict(cls.resource_schema)
         for name, field in cls._meta.fields.items():
-            if name not in cls.fields_for_resource:
+            if name not in cls.extended_fields:
                 continue
             if field.primary_key:
                 continue
@@ -133,26 +133,25 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     @property
     def as_resource(self):
-        return {f: self.as_resource_field(f) for f in self.fields_for_resource}
-
-    @property
-    def as_list(self):
-        return {f: self.as_list_field(f) for f in self.fields_for_list}
+        """Resource plus relations."""
+        return {f: self.extended_field(f) for f in self.extended_fields}
 
     @property
     def as_relation(self):
-        return {f: self.as_relation_field(f) for f in self.fields_for_relation}
+        """Resources plus relation references without metadata."""
+        return {f: self.compact_field(f) for f in self.compact_fields}
 
-    def as_resource_field(self, name):
-        value = getattr(self, '{}_resource'.format(name), getattr(self, name))
+    @property
+    def as_version(self):
+        """Resources plus relations references and metadata."""
+        return {f: self.compact_field(f) for f in self.extended_fields}
+
+    def extended_field(self, name):
+        value = getattr(self, '{}_extended'.format(name), getattr(self, name))
         return getattr(value, 'as_relation', value)
 
-    def as_relation_field(self, name):
-        value = getattr(self, name)
-        return getattr(value, 'id', value)
-
-    def as_list_field(self, name):
-        value = getattr(self, '{}_resource'.format(name), getattr(self, name))
+    def compact_field(self, name):
+        value = getattr(self, '{}_compact'.format(name), getattr(self, name))
         return getattr(value, 'id', value)
 
     @classmethod

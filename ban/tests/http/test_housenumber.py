@@ -173,7 +173,7 @@ def test_get_housenumber_positions(get, url):
     assert resp.json['total'] == 3
 
     def check(position):
-        data = position.as_list
+        data = position.as_relation
         # postgis uses tuples for coordinates, while json does not know
         # tuple and transforms everything to lists.
         assert json.loads(dumps(data)) in resp.json['collection']

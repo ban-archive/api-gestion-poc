@@ -21,13 +21,19 @@ def test_get_municipality(get, url):
 @authorize
 def test_get_municipality_with_postcodes(get, url):
     municipality = MunicipalityFactory(name="Cabour")
-    PostCodeFactory(code="33000", municipality=municipality)
+    postcode = PostCodeFactory(code="33000", municipality=municipality)
     uri = url('municipality-resource', identifier=municipality.id)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['id']
     assert resp.json['name'] == 'Cabour'
-    assert resp.json['postcodes'] == ['33000']
+    assert resp.json['postcodes'] == [{
+        'id': postcode.id,
+        'attributes': None,
+        'code': '33000',
+        'name': 'Test PostCode Area Name',
+        'municipality': municipality.id,
+        'resource': 'postcode'}]
 
 
 @authorize
@@ -48,7 +54,7 @@ def test_get_municipality_groups_collection(get, url):
     resp = get(uri, query_string='pouet=ah')
     assert resp.status == falcon.HTTP_200
     # loads/dumps to compare date strings to date strings.
-    assert resp.json['collection'][0] == json.loads(dumps(street.as_list))
+    assert resp.json['collection'][0] == json.loads(dumps(street.as_relation))
     assert resp.json['total'] == 1
 
 

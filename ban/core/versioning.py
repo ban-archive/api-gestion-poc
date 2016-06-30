@@ -48,15 +48,12 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         super().__init__(*args, **kwargs)
         self.prepared()
 
-    def serialize(self):
-        return dumps(self.as_resource)
-
     def store_version(self):
         new = Version.create(
             model_name=self.__class__.__name__,
             model_pk=self.pk,
             sequential=self.version,
-            data=self.serialize()
+            data=dumps(self.as_version)
         )
         if Diff.ACTIVE:
             old = None

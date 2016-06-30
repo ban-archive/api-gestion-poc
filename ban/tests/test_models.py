@@ -25,6 +25,25 @@ def test_municipality_is_created_with_version_1():
     assert municipality.version == 1
 
 
+def test_municipality_version():
+    municipality = MunicipalityFactory(insee="12345", name="Lille",
+                                       siren="123456789")
+    postcode = PostCodeFactory(municipality=municipality)
+    assert municipality.as_version == {
+        'postcodes': [postcode.id],
+        'siren': '123456789',
+        'modified_by': municipality.modified_by.id,
+        'attributes': None,
+        'id': municipality.id,
+        'name': 'Lille',
+        'insee': '12345',
+        'created_at': municipality.created_at,
+        'alias': None,
+        'created_by': municipality.created_by.id,
+        'modified_at': municipality.modified_at,
+        'version': 1}
+
+
 def test_municipality_is_versioned():
     municipality = MunicipalityFactory(name="Moret-sur-Loing")
     assert len(municipality.versions) == 1
@@ -77,13 +96,19 @@ def test_municipality_postcodes():
 def test_municipality_as_resource():
     municipality = MunicipalityFactory(name="Montbrun-Bocage", insee="31365",
                                        siren="210100566")
-    PostCodeFactory(code="31310", municipality=municipality)
+    postcode = PostCodeFactory(code="31310", municipality=municipality)
     assert municipality.as_resource['name'] == "Montbrun-Bocage"
     assert municipality.as_resource['insee'] == "31365"
     assert municipality.as_resource['siren'] == "210100566"
     assert municipality.as_resource['version'] == 1
     assert municipality.as_resource['id'] == municipality.id
-    assert municipality.as_resource['postcodes'] == ['31310']
+    assert municipality.as_resource['postcodes'] == [{
+        'code': '31310',
+        'attributes': None,
+        'resource': 'postcode',
+        'name': 'Test PostCode Area Name',
+        'municipality': municipality.id,
+        'id': postcode.id}]
 
 
 def test_municipality_as_relation():
@@ -159,6 +184,28 @@ def test_group_is_versioned():
     assert diff.diff['name']['new'] == "Rue des Poires"
 
 
+def test_group_version():
+    group = GroupFactory(name="Rue de la Princesse Lila", fantoir="123456789",
+                         attributes={'key': 'value'}, laposte='123456',
+                         addressing=models.Group.ANARCHICAL)
+    assert group.as_version == {
+        'kind': 'way',
+        'municipality': group.municipality.id,
+        'addressing': 'anarchical',
+        'fantoir': '123456789',
+        'modified_by': group.modified_by.id,
+        'attributes': {'key': 'value'},
+        'id': group.id,
+        'laposte': '123456',
+        'ign': None,
+        'name': 'Rue de la Princesse Lila',
+        'created_at': group.created_at,
+        'alias': None,
+        'created_by': group.created_by.id,
+        'modified_at': group.modified_at,
+        'version': 1}
+
+
 def test_should_allow_deleting_street_not_linked():
     street = GroupFactory()
     street.delete_instance()
@@ -202,11 +249,11 @@ def test_compute_cia_should_use_locality_if_no_street():
     assert hn.compute_cia() == '93031_1491_84_'
 
 
-def test_group_as_list():
+def test_group_as_relation():
     municipality = MunicipalityFactory()
     street = GroupFactory(municipality=municipality, name="Rue des Fleurs",
                           fantoir="930311491")
-    data = street.as_list
+    data = street.as_relation
     assert data == {
         'id': street.id,
         'municipality': municipality.id,
@@ -219,10 +266,6 @@ def test_group_as_list():
         'attributes': None,
         'laposte': None,
         'addressing': None,
-        'created_at': street.created_at,
-        'created_by': street.created_by.pk,
-        'modified_at': street.modified_at,
-        'modified_by': street.modified_by.pk,
     }
 
 
@@ -247,6 +290,32 @@ def test_housenumber_is_versioned():
     assert version1.ordinal == "b"
     assert version2.ordinal == "bis"
     assert version2.parent == street
+
+
+def test_housenumber_as_version():
+    postcode = PostCodeFactory()
+    street = GroupFactory(fantoir='123456789', municipality__insee='12345')
+    district = GroupFactory()
+    hn = HouseNumberFactory(number="84", ordinal="bis", postcode=postcode,
+                            ancestors=[district], parent=street,
+                            laposte='123456')
+    assert hn.as_version == {
+        'laposte': '123456',
+        'cia': '12345_6789_84_BIS',
+        'version': 1,
+        'ordinal': 'bis',
+        'number': '84',
+        'id': hn.id,
+        'created_by': hn.created_by.id,
+        'ancestors': [district.id],
+        'postcode': postcode.id,
+        'modified_at': hn.modified_at,
+        'ign': None,
+        'created_at': hn.created_at,
+        'parent': street.id,
+        'modified_by': hn.modified_by.id,
+        'center': None,
+        'attributes': None}
 
 
 def test_get_postcode_housenumbers_sorted():
@@ -312,7 +381,7 @@ def test_can_create_two_housenumbers_with_same_number_but_different_streets():
 def test_housenumber_center():
     housenumber = HouseNumberFactory()
     position = PositionFactory(housenumber=housenumber)
-    assert housenumber.center == position.center_resource
+    assert housenumber.center == position.center_extended
 
 
 def test_housenumber_center_without_position():
@@ -407,6 +476,28 @@ def test_position_is_versioned():
     assert version1.center.geojson == {'type': 'Point', 'coordinates': (1, 2)}
     assert version2.center.geojson == {'type': 'Point', 'coordinates': (3, 4)}
     assert version2.housenumber == housenumber
+
+
+def test_position_as_version():
+    position = PositionFactory(ign='123456', attributes={'key': 'value'},
+                               name='Bâtiment A')
+    assert position.as_version == {
+        'created_by': position.created_by.id,
+        'housenumber': position.housenumber.id,
+        'modified_by': position.modified_by.id,
+        'attributes': {'key': 'value'},
+        'created_at': position.created_at,
+        'modified_at': position.modified_at,
+        'source': None,
+        'parent': None,
+        'positioning': 'imagery',
+        'name': 'Bâtiment A',
+        'ign': '123456',
+        'kind': 'entrance',
+        'version': 1,
+        'center': {'coordinates': (-1.1111, 48.8888), 'type': 'Point'},
+        'comment': None,
+        'id': position.id}
 
 
 def test_position_children():

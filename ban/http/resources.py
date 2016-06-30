@@ -222,7 +222,8 @@ class WithHousenumbers(VersionnedResource):
         # `as_resource_list`), and CompoundSelect is hardcoded in peewee
         # SelectQuery, and we'd need to copy-paste code to be able to use
         # a custom CompoundQuery class instead.
-        self.collection(req, resp, [h.as_list for h in instance.housenumbers])
+        self.collection(req, resp, [h.as_relation
+                                    for h in instance.housenumbers])
 
 
 class Group(WithHousenumbers):

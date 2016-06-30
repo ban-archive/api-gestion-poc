@@ -55,9 +55,9 @@ def test_get_group_housenumbers(get, url):
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 3
     # loads/dumps to compare string dates to string dates.
-    assert resp.json['collection'][0] == json.loads(dumps(hn1.as_list))
-    assert resp.json['collection'][1] == json.loads(dumps(hn2.as_list))
-    assert resp.json['collection'][2] == json.loads(dumps(hn3.as_list))
+    assert resp.json['collection'][0] == json.loads(dumps(hn1.as_relation))
+    assert resp.json['collection'][1] == json.loads(dumps(hn2.as_relation))
+    assert resp.json['collection'][2] == json.loads(dumps(hn3.as_relation))
 
 
 @authorize
