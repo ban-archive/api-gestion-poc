@@ -125,6 +125,9 @@ class Group(NamedModel):
     ign = db.CharField(max_length=24, null=True, unique=True)
     municipality = db.ForeignKeyField(Municipality, related_name='groups')
 
+    class Meta:
+        order_by = ['pk']
+
     @property
     def tmp_fantoir(self):
         return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
