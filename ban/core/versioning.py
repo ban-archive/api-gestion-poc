@@ -85,10 +85,15 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             Version.model_name == self.__class__.__name__,
             Version.model_pk == self.pk).order_by(Version.sequential)
 
-    def load_version(self, id=None):
-        if id is None:
-            id = self.version
-        return self.versions.where(Version.sequential == id).first()
+    def load_version(self, ref=None):
+        qs = self.versions
+        if ref is None:
+            ref = self.version
+        if isinstance(ref, datetime):
+            qs = qs.where(Version.period.contains(ref))
+        else:
+            qs = qs.where(Version.sequential == ref)
+        return qs.first()
 
     @property
     def locked_version(self):

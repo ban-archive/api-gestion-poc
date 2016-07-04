@@ -110,42 +110,36 @@ def test_get_municipality_versions_by_datetime(get, url):
     Version.update(period=period).where(Version.sequential == 1).execute()
     period = [datetime(2016, 1, 1), None]
     Version.update(period=period).where(Version.sequential == 2).execute()
-    uri = url('municipality-versions', identifier=municipality.id)
     # Should work with a simple datetime.
-    resp = get(uri, query_string={'at': '2015-06-01 01:02:03'})
+    resp = get(url('municipality-version', identifier=municipality.id,
+                   ref='2015-06-01 01:02:03'))
     assert resp.status == falcon.HTTP_200
-    assert len(resp.json['collection']) == 1
-    assert resp.json['total'] == 1
-    assert resp.json['collection'][0]['data']['name'] == 'Cabour'
+    assert resp.json['data']['name'] == 'Cabour'
     # Should work with a simple date too.
-    resp = get(uri, query_string={'at': '2015-06-01 00:00:00'})
+    resp = get(url('municipality-version', identifier=municipality.id,
+                   ref='2015-06-01'))
     assert resp.status == falcon.HTTP_200
-    assert len(resp.json['collection']) == 1
-    assert resp.json['total'] == 1
-    assert resp.json['collection'][0]['data']['name'] == 'Cabour'
+    assert resp.json['data']['name'] == 'Cabour'
     # Now ask in the range of the second version
-    resp = get(uri, query_string={'at': '2016-06-01'})
+    resp = get(url('municipality-version', identifier=municipality.id,
+                   ref='2016-06-01'))
     assert resp.status == falcon.HTTP_200
-    assert len(resp.json['collection']) == 1
-    assert resp.json['total'] == 1
-    assert resp.json['collection'][0]['data']['name'] == 'Cabour2'
-    # Asking for the common bound should only return the new version.
-    resp = get(uri, query_string={'at': '2016-01-01 00:00:00'})
+    assert resp.json['data']['name'] == 'Cabour2'
+    # Asking for the common bound should return the new version.
+    resp = get(url('municipality-version', identifier=municipality.id,
+               ref='2016-01-01 00:00:00'))
     assert resp.status == falcon.HTTP_200
-    assert len(resp.json['collection']) == 1
-    assert resp.json['total'] == 1
-    assert resp.json['collection'][0]['data']['name'] == 'Cabour2'
+    assert resp.json['data']['name'] == 'Cabour2'
 
 
 @authorize
 def test_get_versions_by_datetime_should_raise_if_format_is_invalid(get, url):
     municipality = MunicipalityFactory(name="Cabour")
     # Artificialy change versions periods.
-    uri = url('municipality-versions', identifier=municipality.id)
-    # Should work with a simple datetime.
-    resp = get(uri, query_string={'at': '01:02:03 2015-06-01'})
+    resp = get(url('municipality-version', identifier=municipality.id,
+               ref='01:02:03 2015-06-01'))
     assert resp.status == falcon.HTTP_400
-    assert 'Valid formats' in resp.json['description']
+    assert 'Must be either a version number or a datetime' in resp.json['description']  # noqa
 
 
 @authorize
@@ -154,12 +148,12 @@ def test_get_municipality_version(get, url):
     municipality.version = 2
     municipality.name = "Cabour2"
     municipality.save()
-    uri = url('municipality-version', identifier=municipality.id, version=1)
+    uri = url('municipality-version', identifier=municipality.id, ref=1)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['data']['name'] == 'Cabour'
     assert resp.json['data']['version'] == 1
-    uri = url('municipality-version', identifier=municipality.id, version=2)
+    uri = url('municipality-version', identifier=municipality.id, ref=2)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['data']['name'] == 'Cabour2'

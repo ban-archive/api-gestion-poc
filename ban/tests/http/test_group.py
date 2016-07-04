@@ -179,12 +179,12 @@ def test_get_group_version(get, url):
     street.version = 2
     street.name = "Rue de la Guerre"
     street.save()
-    uri = url('group-version', identifier=street.id, version=1)
+    uri = url('group-version', identifier=street.id, ref=1)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['data']['name'] == 'Rue de la Paix'
     assert resp.json['data']['version'] == 1
-    uri = url('group-version', identifier=street.id, version=2)
+    uri = url('group-version', identifier=street.id, ref=2)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
     assert resp.json['data']['name'] == 'Rue de la Guerre'
@@ -194,7 +194,7 @@ def test_get_group_version(get, url):
 @authorize
 def test_get_group_unknown_version_should_go_in_404(get, url):
     street = GroupFactory(name="Rue de la Paix")
-    uri = url('group-version', identifier=street.id, version=2)
+    uri = url('group-version', identifier=street.id, ref=2)
     resp = get(uri)
     assert resp.status == falcon.HTTP_404
 
