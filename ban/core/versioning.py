@@ -36,7 +36,6 @@ class Versioned(db.Model, metaclass=BaseVersioned):
     modified_by = db.ForeignKeyField(Session)
 
     class Meta:
-        abstract = True
         validate_backrefs = False
         unique_together = ('pk', 'version')
 

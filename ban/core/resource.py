@@ -74,7 +74,6 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     id = db.CharField(max_length=50, unique=True, null=False)
 
     class Meta:
-        abstract = True
         manager = SelectQuery
         validator = ResourceValidator
 

@@ -53,7 +53,6 @@ class NamedModel(Model):
         return self.name
 
     class Meta:
-        abstract = True
         ordering = ('name', )
 
 
