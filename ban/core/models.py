@@ -242,6 +242,9 @@ class Position(Model):
 
     class Meta:
         order_by = ['pk']
+        indexes = (
+            (('housenumber', 'source'), True),
+        )
 
     @property
     def center_extended(self):

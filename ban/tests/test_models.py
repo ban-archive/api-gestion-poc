@@ -604,3 +604,12 @@ def test_position_select_use_default_orderby():
     sel = models.Position.select()
     assert sel.count() == 2
     assert sel == [pos1, pos2]
+
+
+def test_cannot_create_position_with_same_housenumber_and_source():
+    hn1 = HouseNumberFactory()
+    PositionFactory(housenumber=hn1, source="XXX")
+    assert models.Position.select().count() == 1
+    with pytest.raises(peewee.IntegrityError):
+        PositionFactory(housenumber=hn1, source="XXX")
+    assert models.Position.select().count() == 1
