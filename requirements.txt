@@ -1,4 +1,4 @@
-bcrypt==3.0.0
+bcrypt==3.1.0
 Cerberus==0.9.2
 decorator==4.0.10
 falcon==1.0.0
