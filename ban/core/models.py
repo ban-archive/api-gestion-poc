@@ -169,26 +169,9 @@ class HouseNumber(Model):
         return ' '.join([self.number or '', self.ordinal or ''])
 
     def save(self, *args, **kwargs):
-        # if not getattr(self, '_clean_called', False):
-        #     self.clean()
         self.cia = self.compute_cia()
         super().save(*args, **kwargs)
         self._clean_called = False
-
-    def clean(self):
-        if not self.street and not self.locality:
-            raise ValueError('A housenumber number needs to be linked to '
-                             'either a street or a locality.')
-        qs = HouseNumber.select().where(HouseNumber.number == self.number,
-                                        HouseNumber.ordinal == self.ordinal,
-                                        HouseNumber.street == self.street,
-                                        HouseNumber.locality == self.locality)
-        if self.pk:
-            qs = qs.where(HouseNumber.pk != self.pk)
-        if qs.exists():
-            raise ValueError('Row with same number, ordinal, street and '
-                             'locality already exists')
-        self._clean_called = True
 
     def compute_cia(self):
         return compute_cia(str(self.parent.municipality.insee),
