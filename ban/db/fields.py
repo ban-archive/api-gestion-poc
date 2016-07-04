@@ -162,7 +162,8 @@ class FantoirField(CharField):
         if len(value) == 10:
             value = value[:9]
         if not len(value) == 9:
-            raise ValueError('Invalid fantoir "{}"'.format(value))
+            raise ValueError('FANTOIR must be municipality INSEE '
+                             '+ 4 first chars of FANTOIR "{}"'.format(value))
         return value
 
 
