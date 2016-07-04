@@ -537,3 +537,12 @@ def test_position_center_coerce(given, expected):
         assert center.coords == expected
     else:
         assert not center
+
+
+def test_can_create_group_with_fantoir_equal_to_9_or_10_chars():
+    fan1 = "900010123"
+    gp1 = GroupFactory(fantoir=fan1)
+    assert gp1.fantoir == fan1
+    fan2 = "7800101234"
+    gp2 = GroupFactory(fantoir=fan2)
+    assert gp2.fantoir == fan2
