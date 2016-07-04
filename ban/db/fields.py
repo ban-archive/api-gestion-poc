@@ -6,11 +6,12 @@ import peewee
 from playhouse import postgres_ext, fields
 from playhouse.fields import PasswordField as PWDField
 from postgis import Point
+from psycopg2.extras import DateTimeRange
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
            'BooleanField', 'BinaryJSONField', 'PostCodeField', 'FantoirField',
-           'ManyToManyField', 'PasswordField']
+           'ManyToManyField', 'PasswordField', 'DateRangeField']
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
@@ -69,6 +70,28 @@ class PointField(peewee.Field):
 
 postgres_ext.PostgresqlExtDatabase.register_fields({'point':
                                                     'geometry(Point)'})
+
+
+class DateRangeField(peewee.Field):
+    db_field = 'tsrange'
+    schema_type = 'tsrange'
+
+    def db_value(self, value):
+        return self.coerce(value)
+
+    def python_value(self, value):
+        return self.coerce(value)
+
+    def coerce(self, value):
+        if not value:
+            value = [None, None]
+        if isinstance(value, (list, tuple)):
+            # '[)' means include lower bound but not upper.
+            value = DateTimeRange(*value, bounds='[)')
+        return value
+
+    def contains(self, dt):
+        return peewee.Expression(self, peewee.OP.ACONTAINS, dt)
 
 
 class ForeignKeyField(peewee.ForeignKeyField):

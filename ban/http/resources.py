@@ -1,9 +1,12 @@
+from datetime import datetime
+from time import strptime, mktime
 from urllib.parse import urlencode
 
 import falcon
 import peewee
 
 from ban.core import models
+from ban.core.versioning import Version
 from ban.auth import models as amodels
 
 from .wsgi import app
@@ -160,12 +163,35 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
 
 class VersionnedResource(BaseCRUD):
 
+    AT_FORMATS = ['%Y-%m-%d', '%Y-%m-%d %H:%M:%S']
+
+    def get_at(self, req):
+        at = req.params.get('at')
+        if at:
+            for format in self.AT_FORMATS:
+                try:
+                    at = datetime.fromtimestamp(mktime(strptime(at, format)))
+                except ValueError:
+                    continue
+                else:
+                    break
+            else:
+                # at was non null but matched no format
+                # raise an error
+                msg = "Valid formats: {}".format(', '.join(self.AT_FORMATS))
+                raise falcon.HTTPInvalidParam(msg, 'at')
+        return at
+
     @auth.protect
     @app.endpoint('/{identifier}/versions')
     def on_get_versions(self, req, resp, *args, **kwargs):
         """Get resource versions."""
         instance = self.get_object(**kwargs)
-        self.collection(req, resp, instance.versions.as_resource())
+        qs = instance.versions
+        at = self.get_at(req)
+        if at:
+            qs = qs.where(Version.period.contains(at))
+        self.collection(req, resp, qs.as_resource())
 
     @auth.protect
     @app.endpoint('/{identifier}/versions/{version}')

@@ -52,9 +52,12 @@ def test_municipality_is_versioned():
     municipality.increment_version()
     municipality.save()
     assert municipality.version == 2
-    assert len(municipality.versions) == 2
-    version1 = municipality.versions[0].load()
-    version2 = municipality.versions[1].load()
+    versions = municipality.versions
+    assert len(versions) == 2
+    version1 = versions[0].load()
+    version2 = versions[1].load()
+    assert versions[0].period.upper == versions[1].period.lower
+    assert versions[1].period.upper is None
     assert version1.name == "Moret-sur-Loing"
     assert version2.name == "Orvanne"
     assert municipality.versions[0].diff
@@ -64,10 +67,14 @@ def test_municipality_is_versioned():
     municipality.insee = "77316"
     municipality.increment_version()
     municipality.save()
-    assert len(municipality.versions) == 3
-    diff = municipality.versions[2].diff
-    assert diff.old == municipality.versions[1]
-    assert diff.new == municipality.versions[2]
+    versions = municipality.versions
+    assert len(versions) == 3
+    diff = versions[2].diff
+    assert diff.old == versions[1]
+    assert diff.new == versions[2]
+    assert versions[0].period.upper == versions[1].period.lower
+    assert versions[1].period.upper == versions[2].period.lower
+    assert versions[2].period.upper is None
 
 
 def test_municipality_diff_contain_only_changed_data():
