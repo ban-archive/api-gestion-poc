@@ -52,9 +52,6 @@ class NamedModel(Model):
     def __str__(self):
         return self.name
 
-    class Meta:
-        ordering = ('name', )
-
 
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
