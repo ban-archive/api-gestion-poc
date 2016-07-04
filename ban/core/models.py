@@ -263,7 +263,6 @@ class Position(Model):
 
     class Meta:
         order_by = ['pk']
-        unique_together = ('housenumber', 'source')
 
     @property
     def center_extended(self):
