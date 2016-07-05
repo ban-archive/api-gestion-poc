@@ -1,4 +1,5 @@
 import json
+import pytest
 
 import falcon
 from ban.core import models
@@ -238,3 +239,27 @@ def test_create_district_with_json_string_as_attribute(client, url):
     resp = client.post(url('group'), data)
     assert resp.status == falcon.HTTP_201
     assert resp.json['attributes'] == {"key": "value"}
+
+
+@authorize
+def test_can_create_group_with_fantoir_equal_to_9_or_10_chars(get, url):
+    # 9char fantoir check
+    fantoir9c = "900010123"
+    groupe1 = GroupFactory(fantoir=fantoir9c)
+    resp = get(url('group-resource', id=groupe1.id, identifier="id"))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['fantoir'] == fantoir9c
+    # 10char fantoir check
+    fantoir10c = "7800101234"
+    groupe2 = GroupFactory(fantoir=fantoir10c)
+    resp = get(url('group-resource', id=groupe2.id, identifier="id"))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['fantoir'] == fantoir10c[:9]
+
+
+@authorize
+def test_cannot_create_group_with_fantoir_different_than_9_or_10_chars():
+    # 12char fantoir check
+    fantoir12c = "900010123456"
+    with pytest.raises(ValueError):
+        GroupFactory(fantoir=fantoir12c)

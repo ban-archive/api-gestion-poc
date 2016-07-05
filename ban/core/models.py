@@ -116,7 +116,7 @@ class Group(NamedModel):
 
     kind = db.CharField(max_length=64, choices=KIND)
     addressing = db.CharField(max_length=16, choices=ADDRESSING, null=True)
-    fantoir = db.FantoirField(max_length=9, null=True, unique=True)
+    fantoir = db.FantoirField(null=True, unique=True)
     laposte = db.CharField(max_length=10, null=True, unique=True)
     ign = db.CharField(max_length=24, null=True, unique=True)
 

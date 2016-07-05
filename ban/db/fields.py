@@ -154,6 +154,7 @@ class PostCodeField(CharField):
 class FantoirField(CharField):
 
     def __init__(self, *args, **kwargs):
+        kwargs['max_length'] = 9
         super().__init__(*args, **kwargs)
 
     def coerce(self, value):
