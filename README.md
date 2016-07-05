@@ -115,6 +115,9 @@ Create a dummy token for development:
 
 You will need to use it for any request to the API, passing the header `Authorization: Bearer blablablabla`.
 Replace `blablablabla` both on the command line and header value by any other value you can remember easily.
+
+    http 'http://localhost:5959/' Authorization: 'Bearer blablablabla'
+
 This is **just** for development, never user this command in production servers.
 
 For development:
