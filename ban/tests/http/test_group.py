@@ -260,8 +260,14 @@ def test_can_create_group_with_fantoir_equal_to_10_chars(get, url):
 
 
 @authorize
-def test_cannot_create_group_with_fantoir_different_than_9_or_10_chars():
-    # 12char fantoir check
-    fantoir12c = "900010123456"
+def test_cannot_create_group_with_fantoir_less_than_9_or_10_chars():
+    fantoir = "90001012"
     with pytest.raises(ValueError):
-        GroupFactory(fantoir=fantoir12c)
+        GroupFactory(fantoir=fantoir)
+
+
+@authorize
+def test_cannot_create_group_with_fantoir_greater_than_9_or_10_chars():
+    fantoir = "900010123456"
+    with pytest.raises(ValueError):
+        GroupFactory(fantoir=fantoir)
