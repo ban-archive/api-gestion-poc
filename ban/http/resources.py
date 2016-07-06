@@ -243,7 +243,7 @@ class Postcode(WithHousenumbers):
 
 class Municipality(VersionnedResource):
     model = models.Municipality
-    order_by = model.insee
+    order_by = [model.insee]
 
     @auth.protect
     @app.endpoint('/{identifier}/groups')
