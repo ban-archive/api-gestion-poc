@@ -140,9 +140,7 @@ class BooleanField(peewee.BooleanField):
 
 class PostCodeField(CharField):
 
-    def __init__(self, *args, **kwargs):
-        kwargs['max_length'] = 5
-        super().__init__(*args, **kwargs)
+    max_length = 5
 
     def coerce(self, value):
         value = str(value)
@@ -153,9 +151,7 @@ class PostCodeField(CharField):
 
 class FantoirField(CharField):
 
-    def __init__(self, *args, **kwargs):
-        kwargs['max_length'] = 9
-        super().__init__(*args, **kwargs)
+    max_length = 9
 
     def coerce(self, value):
         value = str(value)
