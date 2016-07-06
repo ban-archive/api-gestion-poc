@@ -237,3 +237,14 @@ def test_delete_unknown_municipality_should_return_not_found(client, url):
     uri = url('municipality-resource', identifier=11)
     resp = client.delete(uri)
     assert resp.status == falcon.HTTP_404
+
+
+@authorize
+def test_municipality_select_use_default_orderby(get, url):
+    MunicipalityFactory(insee="90002")
+    MunicipalityFactory(insee="90001")
+    uri = url('municipality')
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['insee'] == '90001'

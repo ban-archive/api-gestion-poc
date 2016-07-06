@@ -242,6 +242,7 @@ def test_create_district_with_json_string_as_attribute(client, url):
 
 
 @authorize
+<<<<<<< 7024d6181f7b06e9a59630024557cb3286371cd3
 def test_can_create_group_with_fantoir_equal_to_9_chars(get, url):
     fantoir = "900010123"
     groupe = GroupFactory(fantoir=fantoir)
@@ -271,3 +272,15 @@ def test_cannot_create_group_with_fantoir_greater_than_9_or_10_chars():
     fantoir = "900010123456"
     with pytest.raises(ValueError):
         GroupFactory(fantoir=fantoir)
+
+
+@authorize
+def test_groupe_select_use_default_orderby(get, url):
+    GroupFactory(insee="90001", fantoir="900010002")
+    GroupFactory(insee="90001", fantoir="900010001")
+    uri = url('group')
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['fantoir'] == '900010002'
+    assert resp.json['collection'][1]['fantoir'] == '900010001'

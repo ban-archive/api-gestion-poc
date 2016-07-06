@@ -336,3 +336,26 @@ def test_cannot_delete_housenumber_if_linked_to_position(client, url):
     resp = client.delete(uri)
     assert resp.status == falcon.HTTP_409
     assert models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
+
+
+@authorize
+def test_housenumber_select_use_default_orderby(get, url):
+    HouseNumberFactory(number="1", ordinal="a")
+    HouseNumberFactory(number="1", ordinal="")
+    HouseNumberFactory(number="2", ordinal="ter")
+    HouseNumberFactory(number="2", ordinal="")
+    HouseNumberFactory(number="2", ordinal="bis")
+    uri = url('housenumber')
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 5
+    assert resp.json['collection'][0]['number'] == '1'
+    assert resp.json['collection'][0]['ordinal'] is None
+    assert resp.json['collection'][1]['number'] == '1'
+    assert resp.json['collection'][1]['ordinal'] == 'a'
+    assert resp.json['collection'][2]['number'] == '2'
+    assert resp.json['collection'][2]['ordinal'] is None
+    assert resp.json['collection'][3]['number'] == '2'
+    assert resp.json['collection'][3]['ordinal'] == 'bis'
+    assert resp.json['collection'][4]['number'] == '2'
+    assert resp.json['collection'][4]['ordinal'] == 'ter'
