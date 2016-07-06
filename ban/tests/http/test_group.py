@@ -242,7 +242,6 @@ def test_create_district_with_json_string_as_attribute(client, url):
 
 
 @authorize
-<<<<<<< 7024d6181f7b06e9a59630024557cb3286371cd3
 def test_can_create_group_with_fantoir_equal_to_9_chars(get, url):
     fantoir = "900010123"
     groupe = GroupFactory(fantoir=fantoir)
