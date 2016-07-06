@@ -9,7 +9,7 @@ from postgis import Point
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
-           'BooleanField', 'BinaryJSONField', 'PostCodeField',
+           'BooleanField', 'BinaryJSONField', 'PostCodeField', 'FantoirField',
            'ManyToManyField', 'PasswordField']
 
 
@@ -140,14 +140,26 @@ class BooleanField(peewee.BooleanField):
 
 class PostCodeField(CharField):
 
-    def __init__(self, *args, **kwargs):
-        kwargs['max_length'] = 5
-        super().__init__(*args, **kwargs)
+    max_length = 5
 
     def coerce(self, value):
         value = str(value)
         if not len(value) == 5 or not value.isdigit():
             raise ValueError('Invalid postcode "{}"'.format(value))
+        return value
+
+
+class FantoirField(CharField):
+
+    max_length = 9
+
+    def coerce(self, value):
+        value = str(value)
+        if len(value) == 10:
+            value = value[:9]
+        if not len(value) == 9:
+            raise ValueError('FANTOIR must be municipality INSEE '
+                             '+ 4 first chars of FANTOIR "{}"'.format(value))
         return value
 
 

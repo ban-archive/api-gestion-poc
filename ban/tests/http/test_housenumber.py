@@ -44,8 +44,7 @@ def test_get_housenumber_with_unknown_id_is_404(get, url):
 
 @authorize
 def test_get_housenumber_with_cia(get, url):
-    housenumber = HouseNumberFactory(number="22", ordinal="A",
-                                     parent__fantoir="276380011")
+    housenumber = HouseNumberFactory(number="22", parent__fantoir="900011234")
     resp = get(url('housenumber-resource', id=housenumber.cia,
                    identifier="cia"))
     assert resp.status == falcon.HTTP_200
@@ -202,7 +201,7 @@ def test_create_housenumber(client):
 
 @authorize
 def test_create_housenumber_with_street_fantoir(client):
-    street = GroupFactory(name="Rue de Bonbons", fantoir="1234")
+    street = GroupFactory(name="Rue de Bonbons", fantoir="900011234")
     assert not models.HouseNumber.select().count()
     data = {
         "number": 20,
