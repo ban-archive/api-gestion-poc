@@ -242,19 +242,21 @@ def test_create_district_with_json_string_as_attribute(client, url):
 
 
 @authorize
-def test_can_create_group_with_fantoir_equal_to_9_or_10_chars(get, url):
-    # 9char fantoir check
-    fantoir9c = "900010123"
-    groupe1 = GroupFactory(fantoir=fantoir9c)
-    resp = get(url('group-resource', id=groupe1.id, identifier="id"))
+def test_can_create_group_with_fantoir_equal_to_9_chars(get, url):
+    fantoir = "900010123"
+    groupe = GroupFactory(fantoir=fantoir)
+    resp = get(url('group-resource', id=groupe.id, identifier="id"))
     assert resp.status == falcon.HTTP_200
-    assert resp.json['fantoir'] == fantoir9c
-    # 10char fantoir check
-    fantoir10c = "7800101234"
-    groupe2 = GroupFactory(fantoir=fantoir10c)
-    resp = get(url('group-resource', id=groupe2.id, identifier="id"))
+    assert resp.json['fantoir'] == fantoir
+
+
+@authorize
+def test_can_create_group_with_fantoir_equal_to_10_chars(get, url):
+    fantoir = "7800101234"
+    groupe = GroupFactory(fantoir=fantoir)
+    resp = get(url('group-resource', id=groupe.id, identifier="id"))
     assert resp.status == falcon.HTTP_200
-    assert resp.json['fantoir'] == fantoir10c[:9]
+    assert resp.json['fantoir'] == fantoir[:9]
 
 
 @authorize
