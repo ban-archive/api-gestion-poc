@@ -199,7 +199,7 @@ class Position(VersionnedResource, BboxResource):
         qs = super().get_collection(req, resp, **kwargs)
         bbox = self.get_bbox(req)
         if bbox:
-            qs = (qs.where(models.Position.center.in_bbox(**bbox)))
+            qs = qs.where(models.Position.center.in_bbox(**bbox))
         return qs
 
     @auth.protect
