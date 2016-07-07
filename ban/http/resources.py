@@ -297,6 +297,13 @@ class Postcode(WithHousenumbers):
     model = models.PostCode
     order_by = [model.code, model.municipality]
 
+    @auth.protect
+    @app.endpoint('/code/{identifier}')
+    def on_get_code(self, req, resp, *args, **kwargs):
+        """Retrieve {resource} postcode by code."""
+        instance = self.get_object(**kwargs)
+        self.collection(req, resp, instance.postcode.as_resource_list())
+
 
 class Municipality(VersionnedResource):
     model = models.Municipality
