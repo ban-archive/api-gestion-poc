@@ -18,7 +18,6 @@ class BaseTestModel(PeeweeModelFactory):
 
     class Meta:
         database = models.db
-        abstract = True
 
 
 class UserFactory(BaseTestModel):
@@ -68,9 +67,6 @@ class TokenFactory(BaseTestModel):
 class BaseFactory(BaseTestModel):
     created_by = factory.SubFactory(SessionFactory)
     modified_by = factory.SubFactory(SessionFactory)
-
-    class Meta:
-        abstract = True
 
 
 class MunicipalityFactory(BaseFactory):

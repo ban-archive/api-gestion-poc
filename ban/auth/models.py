@@ -16,13 +16,13 @@ class User(ResourceModel):
     identifiers = ['email']
     resource_fields = ['username', 'email', 'company']
 
-    username = db.CharField(max_length=100)
+    username = db.CharField(max_length=100, index=True)
     email = db.CharField(max_length=100, unique=True)
     company = db.CharField(max_length=100, null=True)
     # Allow null, because password is not a resource field, and thus cannot be
     # passed to validators.
     password = db.PasswordField(null=True)
-    is_staff = db.BooleanField(default=False)
+    is_staff = db.BooleanField(default=False, index=True)
 
     class Meta:
         database = db.default

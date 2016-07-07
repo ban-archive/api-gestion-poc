@@ -1,6 +1,7 @@
 from urllib.parse import urlencode
 
 import falcon
+import peewee
 
 from ban.core import models
 from ban.auth import models as amodels
@@ -64,6 +65,8 @@ class WithURL(type):
 
 class BaseCRUD(BaseCollection, metaclass=WithURL):
 
+    order_by = None
+
     def get_object(self, identifier, **kwargs):
         try:
             return self.model.coerce(identifier)
@@ -71,7 +74,9 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
             raise falcon.HTTPNotFound()
 
     def get_collection(self, req, resp, **params):
-        return self.model.select()
+        order_by = (self.order_by if self.order_by is not None
+                    else [self.model.pk])
+        return self.model.select().order_by(*order_by)
 
     @auth.protect
     @app.endpoint()
@@ -180,6 +185,7 @@ class Position(VersionnedResource):
 
 class Housenumber(VersionnedResource):
     model = models.HouseNumber
+    order_by = [peewee.SQL('number ASC NULLS FIRST'), peewee.SQL('ordinal ASC NULLS FIRST')]
 
     def get_bbox(self, req):
         bbox = {}
@@ -232,10 +238,12 @@ class Group(WithHousenumbers):
 
 class Postcode(WithHousenumbers):
     model = models.PostCode
+    order_by = [model.code, model.municipality]
 
 
 class Municipality(VersionnedResource):
     model = models.Municipality
+    order_by = [model.insee]
 
     @auth.protect
     @app.endpoint('/{identifier}/groups')

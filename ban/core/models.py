@@ -52,10 +52,6 @@ class NamedModel(Model):
     def __str__(self):
         return self.name
 
-    class Meta:
-        abstract = True
-        ordering = ('name', )
-
 
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
@@ -119,7 +115,6 @@ class Group(NamedModel):
     fantoir = db.FantoirField(null=True, unique=True)
     laposte = db.CharField(max_length=10, null=True, unique=True)
     ign = db.CharField(max_length=24, null=True, unique=True)
-
     municipality = db.ForeignKeyField(Municipality, related_name='groups')
 
     @property
@@ -154,7 +149,6 @@ class HouseNumber(Model):
     postcode = db.ForeignKeyField(PostCode, null=True)
 
     class Meta:
-        order_by = ('number', 'ordinal')
         indexes = (
             (('parent', 'number', 'ordinal'), True),
         )
@@ -163,26 +157,9 @@ class HouseNumber(Model):
         return ' '.join([self.number or '', self.ordinal or ''])
 
     def save(self, *args, **kwargs):
-        # if not getattr(self, '_clean_called', False):
-        #     self.clean()
         self.cia = self.compute_cia()
         super().save(*args, **kwargs)
         self._clean_called = False
-
-    def clean(self):
-        if not self.street and not self.locality:
-            raise ValueError('A housenumber number needs to be linked to '
-                             'either a street or a locality.')
-        qs = HouseNumber.select().where(HouseNumber.number == self.number,
-                                        HouseNumber.ordinal == self.ordinal,
-                                        HouseNumber.street == self.street,
-                                        HouseNumber.locality == self.locality)
-        if self.pk:
-            qs = qs.where(HouseNumber.pk != self.pk)
-        if qs.exists():
-            raise ValueError('Row with same number, ordinal, street and '
-                             'locality already exists')
-        self._clean_called = True
 
     def compute_cia(self):
         return compute_cia(str(self.parent.municipality.insee),
@@ -256,7 +233,9 @@ class Position(Model):
     comment = peewee.TextField(null=True)
 
     class Meta:
-        unique_together = ('housenumber', 'source')
+        indexes = (
+            (('housenumber', 'source'), True),
+        )
 
     @property
     def center_extended(self):

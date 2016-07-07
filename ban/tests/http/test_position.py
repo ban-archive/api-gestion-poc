@@ -381,3 +381,15 @@ def test_cannot_delete_position_if_not_authorized(client, url):
     resp = client.delete(uri)
     assert resp.status == falcon.HTTP_401
     assert models.Position.get(models.Position.id == position.id)
+
+
+@authorize
+def test_position_select_use_default_orderby(get, url):
+    PositionFactory(name="pos1")
+    PositionFactory(name="pos2")
+    uri = url('position')
+    resp = get(uri)
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['name'] == 'pos1'
+    assert resp.json['collection'][1]['name'] == 'pos2'

@@ -22,7 +22,6 @@ class Model(peewee.Model):
     class Meta:
         database = default
         manager = SelectQuery
-        order_by = ['pk']
 
     # TODO find a way not to override the peewee.Model select classmethod.
     @classmethod

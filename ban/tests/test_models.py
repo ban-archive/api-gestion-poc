@@ -537,3 +537,12 @@ def test_position_center_coerce(given, expected):
         assert center.coords == expected
     else:
         assert not center
+
+
+def test_cannot_create_position_with_same_housenumber_and_source():
+    hn1 = HouseNumberFactory()
+    PositionFactory(housenumber=hn1, source="XXX")
+    assert models.Position.select().count() == 1
+    with pytest.raises(peewee.IntegrityError):
+        PositionFactory(housenumber=hn1, source="XXX")
+    assert models.Position.select().count() == 1
