@@ -1,3 +1,5 @@
+from datetime import datetime
+from time import strptime, mktime
 from urllib.parse import urlencode
 
 import falcon
@@ -160,6 +162,29 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
 
 class VersionnedResource(BaseCRUD):
 
+    AT_FORMATS = ['%Y-%m-%d', '%Y-%m-%d %H:%M:%S']
+
+    def _parse_ref(self, ref):
+        if ref.isdigit():
+            ref = int(ref)
+        else:
+            for format in self.AT_FORMATS:
+                try:
+                    ref = datetime.fromtimestamp(mktime(strptime(ref, format)))
+                except ValueError:
+                    continue
+                else:
+                    break
+            else:
+                # ref was not a digit and matched no datetime format
+                # raise an error
+                description = ("Must be either a version number or a datetime "
+                               "with format: "
+                               "{}".format(', '.join(self.AT_FORMATS)))
+                title = "Unparsable version reference."
+                raise falcon.HTTPBadRequest(title, description)
+        return ref
+
     @auth.protect
     @app.endpoint('/{identifier}/versions')
     def on_get_versions(self, req, resp, *args, **kwargs):
@@ -168,31 +193,32 @@ class VersionnedResource(BaseCRUD):
         self.collection(req, resp, instance.versions.as_resource())
 
     @auth.protect
-    @app.endpoint('/{identifier}/versions/{version}')
-    def on_get_version(self, req, resp, version, **kwargs):
-        """Get {resource} version corresponding to 'version' number."""
+    @app.endpoint('/{identifier}/versions/{ref}')
+    def on_get_version(self, req, resp, ref, **kwargs):
+        """Get {resource} version corresponding to 'ref' number or datetime."""
         instance = self.get_object(**kwargs)
-        version = instance.load_version(version)
+        ref = self._parse_ref(ref)
+        version = instance.load_version(ref)
         if not version:
             raise falcon.HTTPNotFound()
         resp.json(**version.as_resource)
 
     @auth.protect  # TODO, manage scope.
-    @app.endpoint('/{identifier}/versions/{version}/flag')
-    def on_post_flag_version(self, req, resp, version, **kwargs):
+    @app.endpoint('/{identifier}/versions/{ref}/flag')
+    def on_post_flag_version(self, req, resp, ref, **kwargs):
         """Flag a version."""
         instance = self.get_object(**kwargs)
-        version = instance.load_version(version)
+        version = instance.load_version(ref)
         if not version:
             raise falcon.HTTPNotFound()
         version.flag()
 
     @auth.protect  # TODO, manage scope.
-    @app.endpoint('/{identifier}/versions/{version}/unflag')
-    def on_post_unflag_version(self, req, resp, version, **kwargs):
+    @app.endpoint('/{identifier}/versions/{ref}/unflag')
+    def on_post_unflag_version(self, req, resp, ref, **kwargs):
         """Unflag a version."""
         instance = self.get_object(**kwargs)
-        version = instance.load_version(version)
+        version = instance.load_version(ref)
         if not version:
             raise falcon.HTTPNotFound()
         version.unflag()
@@ -221,14 +247,6 @@ class Position(VersionnedResource, BboxResource):
         if bbox:
             qs = qs.where(models.Position.center.in_bbox(**bbox))
         return qs
-
-    @auth.protect
-    @app.endpoint('/{identifier}/positions')
-    def on_get_positions(self, req, resp, *args, **kwargs):
-        """Retrieve {resource} positions."""
-        instance = self.get_object(**kwargs)
-        qs = instance.position_set.as_resource_list()
-        self.collection(req, resp, qs)
 
 
 class Housenumber(VersionnedResource, BboxResource):

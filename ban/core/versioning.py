@@ -72,22 +72,28 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             sequential=self.version,
             raw=dumps(self.as_version)
         )
+        old = None
+        if self.version > 1:
+            old = self.load_version(self.version - 1)
+            old.close_period(new.period[0])
         if Diff.ACTIVE:
-            old = None
-            if self.version > 1:
-                old = self.load_version(self.version - 1)
             Diff.create(old=old, new=new, created_at=self.modified_at)
 
     @property
     def versions(self):
         return Version.select().where(
             Version.model_name == self.__class__.__name__,
-            Version.model_pk == self.pk)
+            Version.model_pk == self.pk).order_by(Version.sequential)
 
-    def load_version(self, id=None):
-        if id is None:
-            id = self.version
-        return self.versions.where(Version.sequential == id).first()
+    def load_version(self, ref=None):
+        qs = self.versions
+        if ref is None:
+            ref = self.version
+        if isinstance(ref, datetime):
+            qs = qs.where(Version.period.contains(ref))
+        else:
+            qs = qs.where(Version.sequential == ref)
+        return qs.first()
 
     @property
     def locked_version(self):
@@ -154,6 +160,7 @@ class Version(db.Model):
     model_pk = db.IntegerField()
     sequential = db.IntegerField()
     raw = db.BinaryJSONField()
+    period = db.DateRangeField()
 
     class Meta:
         manager = SelectQuery
@@ -200,6 +207,16 @@ class Version(db.Model):
         """Delete current version's flags made by current session client."""
         Flag.delete().where(Flag.version == self,
                             Flag.client == session.client).execute()
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.period = [datetime.now(), None]
+        return super().save(*args, **kwargs)
+
+    def close_period(self, bound):
+        # DateTimeRange is immutable, so create new one.
+        self.period = [self.period.lower, bound]
+        self.save()
 
 
 class Diff(db.Model):
