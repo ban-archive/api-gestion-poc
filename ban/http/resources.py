@@ -185,7 +185,8 @@ class Position(VersionnedResource):
 
 class Housenumber(VersionnedResource):
     model = models.HouseNumber
-    order_by = [peewee.SQL('number ASC NULLS FIRST'), peewee.SQL('ordinal ASC NULLS FIRST')]
+    order_by = [peewee.SQL('number ASC NULLS FIRST'),
+                peewee.SQL('ordinal ASC NULLS FIRST')]
 
     def get_bbox(self, req):
         bbox = {}
@@ -239,6 +240,13 @@ class Group(WithHousenumbers):
 class Postcode(WithHousenumbers):
     model = models.PostCode
     order_by = [model.code, model.municipality]
+
+    @auth.protect
+    @app.endpoint('/code/{identifier}')
+    def on_get_code(self, req, resp, *args, **kwargs):
+        """Retrieve {resource} postcode by code."""
+        instance = self.get_object(**kwargs)
+        self.collection(req, resp, instance.postcode.as_resource_list())
 
 
 class Municipality(VersionnedResource):
