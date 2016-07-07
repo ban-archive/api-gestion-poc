@@ -178,14 +178,7 @@ class VersionnedResource(BaseCRUD):
         resp.json(**version.as_resource)
 
 
-class Position(VersionnedResource):
-    """Manipulate position resources."""
-    model = models.Position
-
-
-class Housenumber(VersionnedResource):
-    model = models.HouseNumber
-    order_by = [peewee.SQL('number ASC NULLS FIRST'), peewee.SQL('ordinal ASC NULLS FIRST')]
+class BboxResource:
 
     def get_bbox(self, req):
         bbox = {}
@@ -196,6 +189,32 @@ class Housenumber(VersionnedResource):
         if not len(bbox) == 4:
             return None
         return bbox
+
+
+class Position(VersionnedResource, BboxResource):
+    """Manipulate position resources."""
+    model = models.Position
+
+    def get_collection(self, req, resp, **kwargs):
+        qs = super().get_collection(req, resp, **kwargs)
+        bbox = self.get_bbox(req)
+        if bbox:
+            qs = qs.where(models.Position.center.in_bbox(**bbox))
+        return qs
+
+    @auth.protect
+    @app.endpoint('/{identifier}/positions')
+    def on_get_positions(self, req, resp, *args, **kwargs):
+        """Retrieve {resource} positions."""
+        instance = self.get_object(**kwargs)
+        qs = instance.position_set.as_resource_list()
+        self.collection(req, resp, qs)
+
+
+class Housenumber(VersionnedResource, BboxResource):
+    model = models.HouseNumber
+    order_by = [peewee.SQL('number ASC NULLS FIRST'),
+                peewee.SQL('ordinal ASC NULLS FIRST')]
 
     def get_collection(self, req, resp, **kwargs):
         qs = super().get_collection(req, resp, **kwargs)
