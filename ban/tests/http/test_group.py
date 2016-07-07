@@ -169,8 +169,8 @@ def test_get_group_versions(get, url):
     assert resp.status == falcon.HTTP_200
     assert len(resp.json['collection']) == 2
     assert resp.json['total'] == 2
-    assert resp.json['collection'][0]['name'] == 'Rue de la Paix'
-    assert resp.json['collection'][1]['name'] == 'Rue de la Guerre'
+    assert resp.json['collection'][0]['data']['name'] == 'Rue de la Paix'
+    assert resp.json['collection'][1]['data']['name'] == 'Rue de la Guerre'
 
 
 @authorize
@@ -182,13 +182,13 @@ def test_get_group_version(get, url):
     uri = url('group-version', identifier=street.id, version=1)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
-    assert resp.json['name'] == 'Rue de la Paix'
-    assert resp.json['version'] == 1
+    assert resp.json['data']['name'] == 'Rue de la Paix'
+    assert resp.json['data']['version'] == 1
     uri = url('group-version', identifier=street.id, version=2)
     resp = get(uri)
     assert resp.status == falcon.HTTP_200
-    assert resp.json['name'] == 'Rue de la Guerre'
-    assert resp.json['version'] == 2
+    assert resp.json['data']['name'] == 'Rue de la Guerre'
+    assert resp.json['data']['version'] == 2
 
 
 @authorize

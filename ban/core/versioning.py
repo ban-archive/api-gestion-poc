@@ -1,14 +1,32 @@
 from datetime import datetime
 import json
 
+import decorator
 import peewee
 
 from ban import db
-from ban.auth.models import Session
+from ban.auth.models import Client, Session
 from ban.core.encoder import dumps
 from ban.utils import make_diff
 
 from . import context
+
+
+@decorator.decorator
+def flag_id_required(func, self, *args, **kwargs):
+    session = context.get('session')
+    if not session:
+        raise ValueError('Must be logged in.')
+    if not session.client:
+        raise ValueError('Token must be linked to a client.')
+    if not session.client.flag_id:
+        raise ValueError('Client must have a valid flag_id.')
+
+    # Even if session is declared as kwarg, "decorator" helper injects it
+    # as arg. Bad.
+    args = list(args)
+    args[0] = session
+    func(self, *args, **kwargs)
 
 
 class ForcedVersionError(Exception):
@@ -52,7 +70,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             model_name=self.__class__.__name__,
             model_pk=self.pk,
             sequential=self.version,
-            data=dumps(self.as_version)
+            raw=dumps(self.as_version)
         )
         if Diff.ACTIVE:
             old = None
@@ -66,7 +84,9 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             Version.model_name == self.__class__.__name__,
             Version.model_pk == self.pk)
 
-    def load_version(self, id):
+    def load_version(self, id=None):
+        if id is None:
+            id = self.version
         return self.versions.where(Version.sequential == id).first()
 
     @property
@@ -133,7 +153,7 @@ class Version(db.Model):
     model_name = db.CharField(max_length=64)
     model_pk = db.IntegerField()
     sequential = db.IntegerField()
-    data = db.BinaryJSONField()
+    raw = db.BinaryJSONField()
 
     class Meta:
         manager = SelectQuery
@@ -146,20 +166,40 @@ class Version(db.Model):
                                                self.model_name, self.model_pk)
 
     @property
+    def data(self):
+        return json.loads(self.raw)
+
+    @property
     def as_resource(self):
-        return json.loads(self.data)
+        return {
+            'data': self.data,
+            'flags': list(self.flags.as_resource())
+        }
 
     @property
     def model(self):
         return BaseVersioned.registry[self.model_name]
 
     def load(self):
-        validator = self.model.validator(**self.as_resource)
+        validator = self.model.validator(**self.data)
         return self.model(**validator.document)
 
     @property
     def diff(self):
         return Diff.first(Diff.new == self.pk)
+
+    @flag_id_required
+    def flag(self, session=None):
+        """Flag current version with current client."""
+        if not Flag.where(Flag.version == self,
+                          Flag.client == session.client).exists():
+            Flag.create(version=self, session=session, client=session.client)
+
+    @flag_id_required
+    def unflag(self, session=None):
+        """Delete current version's flags made by current session client."""
+        Flag.delete().where(Flag.version == self,
+                            Flag.client == session.client).execute()
 
 
 class Diff(db.Model):
@@ -181,8 +221,8 @@ class Diff(db.Model):
 
     def save(self, *args, **kwargs):
         if not self.diff:
-            old = self.old.as_resource if self.old else {}
-            new = self.new.as_resource if self.new else {}
+            old = self.old.data if self.old else {}
+            new = self.new.data if self.new else {}
             self.diff = make_diff(old, new)
         super().save(*args, **kwargs)
         IdentifierRedirect.from_diff(self)
@@ -192,8 +232,8 @@ class Diff(db.Model):
         version = self.new or self.old
         return {
             'increment': self.pk,
-            'old': self.old.as_resource if self.old else None,
-            'new': self.new.as_resource if self.new else None,
+            'old': self.old.data if self.old else None,
+            'new': self.new.data if self.new else None,
             'diff': self.diff,
             'resource': version.model_name.lower(),
             'resource_pk': version.model_pk,
@@ -236,3 +276,25 @@ class IdentifierRedirect(db.Model):
         cls.update(new=new).where(cls.new == old,
                                   cls.model_name == model.__name__,
                                   cls.identifier == identifier).execute()
+
+
+class Flag(db.Model):
+    version = db.ForeignKeyField(Version, related_name='flags')
+    client = db.ForeignKeyField(Client)
+    session = db.ForeignKeyField(Session)
+    created_at = db.DateTimeField()
+
+    class Meta:
+        manager = SelectQuery
+
+    def save(self, *args, **kwargs):
+        if not self.created_at:
+            self.created_at = datetime.now()
+        super().save(*args, **kwargs)
+
+    @property
+    def as_resource(self):
+        return {
+            'at': self.created_at,
+            'by': self.client.flag_id
+        }
