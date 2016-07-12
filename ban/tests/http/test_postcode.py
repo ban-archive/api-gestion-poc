@@ -50,10 +50,43 @@ def test_postcode_select_use_default_orderby(get, url):
 
 
 @authorize
-def test_get_postcode_collection_can_be_filtered_by_code(get, url):
+def test_get_postcode_collection_filtered_by_1_code_param(get, url):
     PostCodeFactory(code='90000')
     PostCodeFactory(code='91000')
     code = dict(code='90000')
     resp = get(url('postcode', query_string=code))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 1
+
+
+@authorize
+def test_get_postcode_collection_filtered_by_2_equals_codes_param(get, url):
+    PostCodeFactory(code='90000')
+    PostCodeFactory(code='91000')
+    # 2 same code given = 1 code for filter.
+    param = dict({'code': '90000', 'code': '90000'})
+    resp = get(url('postcode', query_string=param))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 1
+
+
+@authorize
+def test_get_postcode_collection_filtered_by_2_diff_codes_param(get, url):
+    PostCodeFactory(code='90000')
+    PostCodeFactory(code='91000')
+    # 2 differents code given, the 1st one is taken to filter.
+    param = dict({'code': '90000', 'code': '91000'})
+    resp = get(url('postcode', query_string=param))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 1
+
+
+@authorize
+def test_get_postcode_collection_can_be_filtered_by_1_code_and_1_pk(get, url):
+    PostCodeFactory(code='90000')
+    PostCodeFactory(code='91000')
+    # Only Code param is taken to filter, no pk one.
+    param = dict({'code': '90000', 'pk': '405'})
+    resp = get(url('postcode', query_string=param))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 1
