@@ -85,6 +85,14 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
     def on_get(self, req, resp, **params):
         """Get {resource} collection."""
         qs = self.get_collection(req, resp, **params)
+        for param in set(list(req.params)):
+            if any(i == param for i in self.model.identifiers):
+                if type(req.params.get(param)) is list:
+                    qs = qs.where(getattr(self.model, param) ==
+                                  req.params.get(param)[0])
+                if type(req.params.get(param)) is str:
+                    qs = qs.where(getattr(self.model, param) ==
+                                  req.params.get(param))
         self.collection(req, resp, qs.as_resource())
 
     @auth.protect

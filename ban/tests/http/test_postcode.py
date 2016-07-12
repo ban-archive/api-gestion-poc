@@ -47,3 +47,13 @@ def test_postcode_select_use_default_orderby(get, url):
     assert resp.json['collection'][0]['code'] == '90101'
     assert resp.json['collection'][1]['municipality']['insee'] == "90002"
     assert resp.json['collection'][2]['municipality']['insee'] == "90001"
+
+
+@authorize
+def test_get_postcode_collection_can_be_filtered_by_code(get, url):
+    PostCodeFactory(code='90000')
+    PostCodeFactory(code='91000')
+    code = dict(code='90000')
+    resp = get(url('postcode', query_string=code))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 1
