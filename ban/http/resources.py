@@ -68,6 +68,7 @@ class WithURL(type):
 class BaseCRUD(BaseCollection, metaclass=WithURL):
 
     order_by = None
+    param_whitelist = None
 
     def get_object(self, identifier, **kwargs):
         try:
@@ -299,11 +300,10 @@ class Postcode(WithHousenumbers):
     param_whitelist = ['code']
 
     def get_where_clause(self, req, qs):
-        if hasattr(self, 'param_whitelist'):
-            for param in self.param_whitelist:
-                if req.get_param_as_list(param):
-                    qs = qs.where(getattr(self.model, param) ==
-                                  req.get_param_as_list(param)[0])
+        for param in self.param_whitelist:
+            param_value = req.get_param_as_list(param)
+            if param_value:
+                qs = qs.where(getattr(self.model, param) << param_value)
         return qs
 
     @auth.protect
