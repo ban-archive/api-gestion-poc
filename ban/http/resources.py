@@ -85,14 +85,6 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
     def on_get(self, req, resp, **params):
         """Get {resource} collection."""
         qs = self.get_collection(req, resp, **params)
-        for param in set(list(req.params)):
-            if any(i == param for i in self.model.identifiers):
-                if type(req.params.get(param)) is list:
-                    qs = qs.where(getattr(self.model, param) ==
-                                  req.params.get(param)[0])
-                if type(req.params.get(param)) is str:
-                    qs = qs.where(getattr(self.model, param) ==
-                                  req.params.get(param))
         self.collection(req, resp, qs.as_resource())
 
     @auth.protect
@@ -304,6 +296,23 @@ class Group(WithHousenumbers):
 class Postcode(WithHousenumbers):
     model = models.PostCode
     order_by = [model.code, model.municipality]
+    param_whitelist = ['code']
+
+    def get_where_clause(self, req, qs):
+        if hasattr(self, 'param_whitelist'):
+            for param in self.param_whitelist:
+                if req.get_param_as_list(param):
+                    qs = qs.where(getattr(self.model, param) ==
+                                  req.get_param_as_list(param)[0])
+        return qs
+
+    @auth.protect
+    @app.endpoint()
+    def on_get(self, req, resp, **params):
+        """Get {resource} collection."""
+        qs = self.get_collection(req, resp, **params)
+        qs = self.get_where_clause(req, qs)
+        self.collection(req, resp, qs.as_resource())
 
 
 class Municipality(VersionnedResource):

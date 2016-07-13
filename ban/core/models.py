@@ -70,7 +70,6 @@ class Municipality(NamedModel):
 
 
 class PostCode(NamedModel):
-    identifiers = ['code']
     resource_fields = ['code', 'name', 'municipality']
 
     code = db.PostCodeField(index=True)
