@@ -35,8 +35,7 @@ class SelectQuery(db.SelectQuery):
 class BaseResource(peewee.BaseModel):
 
     def include_field_for_compact(cls, name):
-        if name in ['version', 'created_at', 'created_by', 'modified_at',
-                    'modified_by']:
+        if name in cls.exclude_for_compact:
             return False
         attr = getattr(cls, name, None)
         exclude = (db.ManyToManyField, peewee.ReverseRelationDescriptor,
@@ -49,6 +48,7 @@ class BaseResource(peewee.BaseModel):
         # Inherit and extend instead of replacing.
         resource_fields = attrs.pop('resource_fields', None)
         resource_schema = attrs.pop('resource_schema', None)
+        exclude_for_compact = attrs.pop('exclude_for_compact', None)
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
         if resource_fields is not None:
             inherited = getattr(cls, 'resource_fields', {})
@@ -58,6 +58,10 @@ class BaseResource(peewee.BaseModel):
             inherited = getattr(cls, 'resource_schema', {})
             resource_schema.update(inherited)
             cls.resource_schema = resource_schema
+        if exclude_for_compact is not None:
+            inherited = getattr(cls, 'exclude_for_compact', [])
+            exclude_for_compact.extend(inherited)
+            cls.exclude_for_compact = exclude_for_compact
         cls.extended_fields = cls.resource_fields
         cls.compact_fields = [
             n for n in cls.extended_fields
@@ -70,6 +74,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     resource_fields = ['id']
     identifiers = []
     resource_schema = {'id': {'readonly': True}}
+    exclude_for_compact = []
 
     id = db.CharField(max_length=50, unique=True, null=False)
 

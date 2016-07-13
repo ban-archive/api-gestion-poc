@@ -94,7 +94,7 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
         """Get {resource} collection."""
         qs = self.get_collection(req, resp, **params)
         qs = self.get_where_clause(req, qs)
-        self.collection(req, resp, qs.as_resource())
+        self.collection(req, resp, qs.as_resource_list())
 
     @auth.protect
     @app.endpoint(path='/{identifier}')
@@ -279,7 +279,7 @@ class Housenumber(VersionnedResource, BboxResource):
     def on_get_positions(self, req, resp, *args, **kwargs):
         """Retrieve {resource} positions."""
         instance = self.get_object(**kwargs)
-        qs = instance.position_set.as_resource_list()
+        qs = instance.positions.as_resource_list()
         self.collection(req, resp, qs)
 
 

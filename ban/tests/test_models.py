@@ -321,7 +321,7 @@ def test_housenumber_as_version():
         'created_at': hn.created_at,
         'parent': street.id,
         'modified_by': hn.modified_by.id,
-        'center': None,
+        'positions': [],
         'attributes': None}
 
 
@@ -385,21 +385,15 @@ def test_can_create_two_housenumbers_with_same_number_but_different_streets():
     HouseNumberFactory(parent=street2, ordinal="b", number="10")
 
 
-def test_housenumber_center():
+def test_housenumber_positions():
     housenumber = HouseNumberFactory()
     position = PositionFactory(housenumber=housenumber)
-    assert housenumber.center == position.center_extended
+    assert housenumber.positions == [position.as_relation]
 
 
-def test_housenumber_center_without_position():
+def test_housenumber_positions_without_linked_positions():
     housenumber = HouseNumberFactory()
-    assert housenumber.center is None
-
-
-def test_housenumber_center_with_position_without_center():
-    housenumber = HouseNumberFactory()
-    PositionFactory(housenumber=housenumber, name="bâtiment A", center=None)
-    assert housenumber.center is None
+    assert housenumber.positions == []
 
 
 def test_create_housenumber_with_district():
@@ -453,7 +447,7 @@ def test_housenumber_as_resource():
         'ancestors': [],
         'cia': '21892_1234_90_BIS',
         'parent': housenumber.parent.as_relation,
-        'center': None,
+        'positions': [],
         'laposte': None,
         'ign': None,
         'attributes': {'source': 'openbar'},
@@ -466,6 +460,25 @@ def test_housenumber_as_resource():
         'created_at': housenumber.created_at,
         'modified_by': housenumber.modified_by.as_relation,
         'modified_at': housenumber.modified_at,
+    }
+
+
+def test_housenumber_as_relation():
+    housenumber = HouseNumberFactory(number="90", ordinal="bis",
+                                     attributes={"source": "openbar"},
+                                     parent__municipality__insee="21892",
+                                     parent__fantoir="218921234")
+    assert housenumber.as_relation == {
+        'cia': '21892_1234_90_BIS',
+        'parent': housenumber.parent.id,
+        'laposte': None,
+        'ign': None,
+        'attributes': {'source': 'openbar'},
+        'id': housenumber.id,
+        'number': '90',
+        'postcode': None,
+        'ordinal': 'bis',
+        'resource': 'housenumber'
     }
 
 

@@ -346,7 +346,7 @@ def test_giving_wrong_version_should_patch_if_possible(session):
     resource = housenumber.as_resource
     resource['number'] = "19"
     resource['version'] = 2
-    del resource['center']  # This is not a real resource field.
+    del resource['positions']  # This is not a real resource field.
     del resource['cia']  # Readonly field.
     validator = models.HouseNumber.validator(instance=housenumber, **resource)
     assert not validator.errors
