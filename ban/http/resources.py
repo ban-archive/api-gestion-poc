@@ -241,6 +241,7 @@ class BboxResource:
 class Position(VersionnedResource, BboxResource):
     """Manipulate position resources."""
     model = models.Position
+    allowed_params = ['kind']
 
     def get_collection(self, req, resp, **kwargs):
         qs = super().get_collection(req, resp, **kwargs)
