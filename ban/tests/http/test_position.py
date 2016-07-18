@@ -448,8 +448,7 @@ def test_get_position_collection_filtered_by_bbox_is_paginated(get, url):
 def test_get_position_collection_filtered_by_1_kind_param(get, url):
     PositionFactory(kind='entrance')
     PositionFactory(kind='exit')
-    param = dict(kind='entrance')
-    resp = get(url('position', query_string=param))
+    resp = get(url('position', query_string={'kind': 'entrance'}))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 1
 
@@ -458,9 +457,9 @@ def test_get_position_collection_filtered_by_1_kind_param(get, url):
 def test_get_position_collection_filtered_by_2_equals_kind_params(get, url):
     PositionFactory(kind='entrance')
     PositionFactory(kind='exit')
-    # 2 same kind given = 1 kind for filter.
-    param = dict({'kind': 'entrance', 'kind': 'entrance'})
-    resp = get(url('position', query_string=param))
+    # 'kind' given by the user is used twice but with the same value.
+    params = (('kind', 'entrance'), ('kind', 'entrance'))
+    resp = get(url('position', query_string=params))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 1
 
@@ -469,19 +468,19 @@ def test_get_position_collection_filtered_by_2_equals_kind_params(get, url):
 def test_get_position_collection_filtered_by_2_diff_kind_params(get, url):
     PositionFactory(kind='entrance')
     PositionFactory(kind='exit')
-    # 2 differents kind given, the 1st one is taken to filter.
-    param = dict({'kind': 'entrance', 'kind': 'exit'})
-    resp = get(url('position', query_string=param))
+    # 'kind' given by the user is used with 2 differents values.
+    params = (('kind', 'entrance'), ('kind', 'exit'))
+    resp = get(url('position', query_string=params))
     assert resp.status == falcon.HTTP_200
-    assert resp.json['total'] == 1
+    assert resp.json['total'] == 2
 
 
 @authorize
 def test_get_position_collection_can_be_filtered_by_1_kind_and_1_pk(get, url):
     PositionFactory(kind='entrance')
     PositionFactory(kind='exit')
-    # Only kind param is taken to filter, not pk one.
-    param = dict({'kind': 'entrance', 'pk': '405'})
-    resp = get(url('position', query_string=param))
+    # Only 'kind' param will be used to filter, not 'pk' one.
+    params = (('kind', 'entrance'), ('pk', '405'))
+    resp = get(url('position', query_string=params))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 1
