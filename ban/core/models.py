@@ -219,7 +219,6 @@ class Position(Model):
         (OTHER, _('other')),
     )
 
-    identifiers = ['kind']
     resource_fields = ['center', 'source', 'housenumber', 'kind', 'comment',
                        'parent', 'positioning', 'name', 'ign']
 
