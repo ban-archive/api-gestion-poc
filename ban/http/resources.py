@@ -68,6 +68,7 @@ class WithURL(type):
 class BaseCRUD(BaseCollection, metaclass=WithURL):
 
     order_by = None
+    allowed_params = []
 
     def get_object(self, identifier, **kwargs):
         try:
@@ -296,6 +297,22 @@ class Group(WithHousenumbers):
 class Postcode(WithHousenumbers):
     model = models.PostCode
     order_by = [model.code, model.municipality]
+    allowed_params = ['code']
+
+    def get_where_clause(self, req, qs):
+        for param in self.allowed_params:
+            values = req.get_param_as_list(param)
+            if values:
+                qs = qs.where(getattr(self.model, param) << values)
+        return qs
+
+    @auth.protect
+    @app.endpoint()
+    def on_get(self, req, resp, **params):
+        """Get {resource} collection."""
+        qs = self.get_collection(req, resp, **params)
+        qs = self.get_where_clause(req, qs)
+        self.collection(req, resp, qs.as_resource())
 
 
 class Municipality(VersionnedResource):
