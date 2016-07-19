@@ -2,8 +2,8 @@ import pytest
 
 from ban.core import models
 
-from .factories import (GroupFactory, HouseNumberFactory,
-                        MunicipalityFactory, PositionFactory)
+from .factories import (GroupFactory, HouseNumberFactory, MunicipalityFactory,
+                        PositionFactory)
 
 
 def test_can_create_municipality(session):

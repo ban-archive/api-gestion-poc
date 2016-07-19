@@ -23,8 +23,8 @@ class BaseModel(BaseResource, BaseVersioned):
 class Model(ResourceModel, Versioned, metaclass=BaseModel):
     resource_fields = ['version', 'created_at', 'created_by', 'modified_at',
                        'modified_by', 'attributes']
-    exclude_for_compact = ['version', 'created_at', 'created_by',
-                           'modified_at', 'modified_by']
+    exclude_for_collection = ['version', 'created_at', 'created_by',
+                              'modified_at', 'modified_by']
     # 'version' is validated by us.
     resource_schema = {'version': {'required': False},
                        'created_at': {'readonly': True},
@@ -58,6 +58,7 @@ class NamedModel(Model):
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
     resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
+    exclude_for_version = ['postcodes']
 
     insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9, unique=True, null=True)

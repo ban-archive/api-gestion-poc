@@ -37,7 +37,7 @@ def make_diff(old, new, update=False):
         new_value = new.get(key)
         if new_value != old_value:
             diff[key] = {
-                'old': str(old_value),
-                'new': str(new_value)
+                'old': old_value,
+                'new': new_value
             }
     return diff

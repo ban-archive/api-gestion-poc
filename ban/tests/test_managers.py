@@ -1,6 +1,6 @@
 from ban.core import models
 
-from .factories import MunicipalityFactory, GroupFactory
+from .factories import GroupFactory, MunicipalityFactory
 
 
 def test_municipality_as_resource():
