@@ -442,3 +442,50 @@ def test_get_position_collection_filtered_by_bbox_is_paginated(get, url):
     assert 'previous' in page2
     resp = get(page2['previous'])
     assert resp.json == page1
+
+
+@authorize
+def test_get_position_collection_filtered_by_1_kind_param(get, url):
+    PositionFactory(kind='entrance')
+    PositionFactory(kind='exit')
+    resp = get(url('position', query_string={'kind': 'entrance'}))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 1
+    assert resp.json['collection'][0]['kind'] == 'entrance'
+
+
+@authorize
+def test_get_position_collection_filtered_by_2_equals_kind_params(get, url):
+    PositionFactory(kind='entrance')
+    PositionFactory(kind='exit')
+    # 'kind' given by the user is used twice but with the same value.
+    params = (('kind', 'entrance'), ('kind', 'entrance'))
+    resp = get(url('position', query_string=params))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 1
+    assert resp.json['collection'][0]['kind'] == 'entrance'
+
+
+@authorize
+def test_get_position_collection_filtered_by_2_diff_kind_params(get, url):
+    PositionFactory(kind='entrance')
+    PositionFactory(kind='exit')
+    # 'kind' given by the user is used with 2 differents values.
+    params = (('kind', 'entrance'), ('kind', 'exit'))
+    resp = get(url('position', query_string=params))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['kind'] == 'entrance'
+    assert resp.json['collection'][1]['kind'] == 'exit'
+
+
+@authorize
+def test_get_position_collection_can_be_filtered_by_1_kind_and_1_pk(get, url):
+    PositionFactory(kind='entrance')
+    PositionFactory(kind='exit')
+    # Only 'kind' param will be used to filter, not 'pk' one.
+    params = (('kind', 'entrance'), ('pk', '405'))
+    resp = get(url('position', query_string=params))
+    assert resp.status == falcon.HTTP_200
+    assert resp.json['total'] == 1
+    assert resp.json['collection'][0]['kind'] == 'entrance'

@@ -56,6 +56,7 @@ def test_get_postcode_collection_filtered_by_1_code_param(get, url):
     resp = get(url('postcode', query_string={'code': '90000'}))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 1
+    assert resp.json['collection'][0]['code'] == '90000'
 
 
 @authorize
@@ -67,6 +68,7 @@ def test_get_postcode_collection_filtered_by_2_equals_codes_param(get, url):
     resp = get(url('postcode', query_string=params))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 1
+    assert resp.json['collection'][0]['code'] == '90000'
 
 
 @authorize
@@ -78,6 +80,8 @@ def test_get_postcode_collection_filtered_by_2_diff_codes_param(get, url):
     resp = get(url('postcode', query_string=params))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['code'] == '90000'
+    assert resp.json['collection'][1]['code'] == '91000'
 
 
 @authorize
@@ -89,3 +93,4 @@ def test_get_postcode_collection_can_be_filtered_by_1_code_and_1_pk(get, url):
     resp = get(url('postcode', query_string=params))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 1
+    assert resp.json['collection'][0]['code'] == '90000'
