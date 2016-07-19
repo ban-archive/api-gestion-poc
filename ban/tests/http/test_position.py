@@ -451,6 +451,7 @@ def test_get_position_collection_filtered_by_1_kind_param(get, url):
     resp = get(url('position', query_string={'kind': 'entrance'}))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 1
+    assert resp.json['collection'][0]['kind'] == 'entrance'
 
 
 @authorize
@@ -462,6 +463,7 @@ def test_get_position_collection_filtered_by_2_equals_kind_params(get, url):
     resp = get(url('position', query_string=params))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 1
+    assert resp.json['collection'][0]['kind'] == 'entrance'
 
 
 @authorize
@@ -473,6 +475,8 @@ def test_get_position_collection_filtered_by_2_diff_kind_params(get, url):
     resp = get(url('position', query_string=params))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['kind'] == 'entrance'
+    assert resp.json['collection'][1]['kind'] == 'exit'
 
 
 @authorize
@@ -484,3 +488,4 @@ def test_get_position_collection_can_be_filtered_by_1_kind_and_1_pk(get, url):
     resp = get(url('position', query_string=params))
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 1
+    assert resp.json['collection'][0]['kind'] == 'entrance'
