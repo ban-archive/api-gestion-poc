@@ -230,7 +230,7 @@ class Position(Model):
     kind = db.CharField(max_length=64, choices=KIND)
     positioning = db.CharField(max_length=32, choices=POSITIONING)
     ign = db.CharField(max_length=24, null=True, unique=True)
-    comment = peewee.TextField(null=True)
+    comment = db.TextField(null=True)
 
     class Meta:
         indexes = (

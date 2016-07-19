@@ -75,7 +75,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         old = None
         if self.version > 1:
             old = self.load_version(self.version - 1)
-            old.close_period(new.period[0])
+            old.close_period(new.period.lower)
         if Diff.ACTIVE:
             Diff.create(old=old, new=new, created_at=self.modified_at)
 

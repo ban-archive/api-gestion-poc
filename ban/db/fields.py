@@ -11,7 +11,7 @@ from psycopg2.extras import DateTimeRange
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
            'BooleanField', 'BinaryJSONField', 'PostCodeField', 'FantoirField',
-           'ManyToManyField', 'PasswordField', 'DateRangeField']
+           'ManyToManyField', 'PasswordField', 'DateRangeField', 'TextField']
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
@@ -99,6 +99,8 @@ class ForeignKeyField(peewee.ForeignKeyField):
     schema_type = 'foreignkey'
 
     def coerce(self, value):
+        if not value:
+            return None
         if isinstance(value, peewee.Model):
             value = value.pk
         elif isinstance(value, dict):
@@ -117,10 +119,19 @@ class ForeignKeyField(peewee.ForeignKeyField):
 class CharField(peewee.CharField):
     schema_type = 'string'
 
-    def db_value(self, value):
+    def coerce(self, value):
         if self.null and not value:
             return None
-        return super().db_value(value)
+        return super().coerce(value)
+
+
+class TextField(peewee.TextField):
+    schema_type = 'string'
+
+    def coerce(self, value):
+        if self.null and not value:
+            return None
+        return super().coerce(value)
 
 
 class IntegerField(peewee.IntegerField):
@@ -177,6 +188,8 @@ class FantoirField(CharField):
     max_length = 9
 
     def coerce(self, value):
+        if not value:
+            return None
         value = str(value)
         if len(value) == 10:
             value = value[:9]
