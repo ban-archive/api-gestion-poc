@@ -34,9 +34,8 @@ class SelectQuery(db.SelectQuery):
 
 class BaseResource(peewee.BaseModel):
 
-    def include_field_for_compact(cls, name):
-        if name in ['version', 'created_at', 'created_by', 'modified_at',
-                    'modified_by']:
+    def include_field_for_collection(cls, name):
+        if name in cls.exclude_for_collection:
             return False
         attr = getattr(cls, name, None)
         exclude = (db.ManyToManyField, peewee.ReverseRelationDescriptor,
@@ -49,6 +48,8 @@ class BaseResource(peewee.BaseModel):
         # Inherit and extend instead of replacing.
         resource_fields = attrs.pop('resource_fields', None)
         resource_schema = attrs.pop('resource_schema', None)
+        exclude_for_collection = attrs.pop('exclude_for_collection', None)
+        exclude_for_version = attrs.pop('exclude_for_version', None)
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
         if resource_fields is not None:
             inherited = getattr(cls, 'resource_fields', {})
@@ -58,10 +59,20 @@ class BaseResource(peewee.BaseModel):
             inherited = getattr(cls, 'resource_schema', {})
             resource_schema.update(inherited)
             cls.resource_schema = resource_schema
-        cls.extended_fields = cls.resource_fields
-        cls.compact_fields = [
-            n for n in cls.extended_fields
-            if mcs.include_field_for_compact(cls, n)] + ['resource']
+        if exclude_for_collection is not None:
+            inherited = getattr(cls, 'exclude_for_collection', [])
+            exclude_for_collection.extend(inherited)
+            cls.exclude_for_collection = exclude_for_collection
+        if exclude_for_version is not None:
+            inherited = getattr(cls, 'exclude_for_version', [])
+            exclude_for_version.extend(inherited)
+            cls.exclude_for_version = exclude_for_version
+        cls.collection_fields = [
+            n for n in cls.resource_fields
+            if mcs.include_field_for_collection(cls, n)] + ['resource']
+        cls.versioned_fields = [
+            n for n in cls.resource_fields
+            if n not in cls.exclude_for_version]
         cls.build_resource_schema()
         return cls
 
@@ -70,6 +81,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     resource_fields = ['id']
     identifiers = []
     resource_schema = {'id': {'readonly': True}}
+    exclude_for_collection = []
+    exclude_for_version = []
 
     id = db.CharField(max_length=50, unique=True, null=False)
 
@@ -91,7 +104,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         """Map Peewee models to Cerberus validation schema."""
         schema = dict(cls.resource_schema)
         for name, field in cls._meta.fields.items():
-            if name not in cls.extended_fields:
+            if name not in cls.resource_fields:
                 continue
             if field.primary_key:
                 continue
@@ -133,17 +146,17 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     @property
     def as_resource(self):
         """Resource plus relations."""
-        return {f: self.extended_field(f) for f in self.extended_fields}
+        return {f: self.extended_field(f) for f in self.resource_fields}
 
     @property
     def as_relation(self):
         """Resources plus relation references without metadata."""
-        return {f: self.compact_field(f) for f in self.compact_fields}
+        return {f: self.compact_field(f) for f in self.collection_fields}
 
     @property
     def as_version(self):
         """Resources plus relations references and metadata."""
-        return {f: self.compact_field(f) for f in self.extended_fields}
+        return {f: self.compact_field(f) for f in self.versioned_fields}
 
     def extended_field(self, name):
         value = getattr(self, '{}_extended'.format(name), getattr(self, name))

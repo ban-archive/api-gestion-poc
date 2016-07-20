@@ -45,8 +45,8 @@ def test_postcode_select_use_default_orderby(get, url):
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 3
     assert resp.json['collection'][0]['code'] == '90101'
-    assert resp.json['collection'][1]['municipality']['insee'] == "90002"
-    assert resp.json['collection'][2]['municipality']['insee'] == "90001"
+    assert resp.json['collection'][1]['municipality'] == mun1.id
+    assert resp.json['collection'][2]['municipality'] == mun2.id
 
 
 @authorize

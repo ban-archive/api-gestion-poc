@@ -23,6 +23,8 @@ class BaseModel(BaseResource, BaseVersioned):
 class Model(ResourceModel, Versioned, metaclass=BaseModel):
     resource_fields = ['version', 'created_at', 'created_by', 'modified_at',
                        'modified_by', 'attributes']
+    exclude_for_collection = ['version', 'created_at', 'created_by',
+                              'modified_at', 'modified_by']
     # 'version' is validated by us.
     resource_schema = {'version': {'required': False},
                        'created_at': {'readonly': True},
@@ -56,6 +58,7 @@ class NamedModel(Model):
 class Municipality(NamedModel):
     identifiers = ['siren', 'insee']
     resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
+    exclude_for_version = ['postcodes']
 
     insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9, unique=True, null=True)
@@ -135,9 +138,9 @@ class Group(NamedModel):
 class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
-                       'ancestors', 'center', 'ign', 'postcode']
+                       'ancestors', 'positions', 'ign', 'postcode']
     resource_schema = {'cia': {'readonly': True},
-                       'center': {'readonly': True}}
+                       'positions': {'readonly': True}}
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
@@ -167,10 +170,8 @@ class HouseNumber(Model):
                            self.number, self.ordinal)
 
     @property
-    def center(self):
-        position = self.position_set.first()
-        return (position.center.geojson
-                if position and position.center else None)
+    def positions_extended(self):
+        return list(self.positions.as_resource_list())
 
     @property
     def ancestors_extended(self):
@@ -224,13 +225,13 @@ class Position(Model):
 
     name = db.CharField(max_length=200, null=True)
     center = db.PointField(verbose_name=_("center"), null=True, index=True)
-    housenumber = db.ForeignKeyField(HouseNumber)
+    housenumber = db.ForeignKeyField(HouseNumber, related_name='positions')
     parent = db.ForeignKeyField('self', related_name='children', null=True)
     source = db.CharField(max_length=64, null=True)
     kind = db.CharField(max_length=64, choices=KIND)
     positioning = db.CharField(max_length=32, choices=POSITIONING)
     ign = db.CharField(max_length=24, null=True, unique=True)
-    comment = peewee.TextField(null=True)
+    comment = db.TextField(null=True)
 
     class Meta:
         indexes = (

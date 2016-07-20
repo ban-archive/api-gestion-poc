@@ -20,6 +20,11 @@ class ResourceValidator(Validator):
         if not isinstance(value, (str, list, tuple, Point)):
             self._error(field, 'Invalid Point: {}'.format(value))
 
+    def _validate_type_string(self, field, value):
+        if value is None and not self.schema[field].get('required'):
+            return True
+        return super()._validate_type_string(field, value)
+
     def _validate_type_foreignkey(self, field, value):
         if not isinstance(value, int):
             self._error(field, 'No matching resource for {}'.format(value))

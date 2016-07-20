@@ -392,7 +392,7 @@ def test_get_position_collection_can_be_filtered_by_bbox(get, url):
     resp = get(url('position', query_string=bbox))
     assert resp.json['total'] == 1
     # JSON transform internals tuples to lists.
-    resource = position.as_resource
+    resource = position.as_relation
     assert resp.json['collection'][0] == json.loads(dumps(resource))
 
 

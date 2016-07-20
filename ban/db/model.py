@@ -44,3 +44,9 @@ class Model(peewee.Model):
             qs = qs.where(*expressions)
         # See https://github.com/coleifer/peewee/commit/eeb6d4d727da8536906a00c490f94352465e90bb  # noqa
         return qs.limit(1).first()
+
+    def __setattr__(self, name, value):
+        attr = getattr(self.__class__, name, None)
+        if attr and hasattr(attr, 'coerce'):
+            value = attr.coerce(value)
+        return super().__setattr__(name, value)

@@ -71,7 +71,7 @@ def test_get_housenumber_collection(get, url):
     resp = get(url('housenumber'))
     assert resp.json['total'] == 5
     for obj in objs:
-        assert json.loads(dumps(obj.as_resource)) in resp.json['collection']
+        assert json.loads(dumps(obj.as_relation)) in resp.json['collection']
 
 
 @authorize
@@ -82,7 +82,7 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
     resp = get(url('housenumber', query_string=bbox))
     assert resp.json['total'] == 1
     # JSON transform internals tuples to lists.
-    resource = position.housenumber.as_resource
+    resource = position.housenumber.as_relation
     assert resp.json['collection'][0] == json.loads(dumps(resource))
 
 
@@ -142,16 +142,16 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get, url):
     resp = get(url('housenumber', query_string=bbox))
     assert resp.json['total'] == 1
     # JSON transform internals tuples to lists.
-    data = json.loads(dumps(position.housenumber.as_resource))
+    data = json.loads(dumps(position.housenumber.as_relation))
     assert resp.json['collection'][0] == data
 
 
 @authorize
 def test_get_housenumber_with_position(get, url):
     housenumber = HouseNumberFactory()
-    PositionFactory(housenumber=housenumber, center=(1, 1))
+    position = PositionFactory(housenumber=housenumber, center=(1, 1))
     resp = get(url('housenumber-resource', identifier=housenumber.id))
-    assert resp.json['center'] == {'coordinates': [1, 1], 'type': 'Point'}
+    assert resp.json['positions'] == [json.loads(dumps(position.as_relation))]
 
 
 @authorize
