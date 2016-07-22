@@ -103,7 +103,7 @@ class Session(db.Model):
     user = db.ForeignKeyField(User, null=True)
     client = db.ForeignKeyField(Client, null=True)
     ip = db.CharField(null=True)  # TODO IPField
-    email = db.CharField(null=True)  # TODO EmailField
+    email = db.EmailField(null=True)
 
     @property
     def as_relation(self):
