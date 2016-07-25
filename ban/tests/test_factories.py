@@ -42,3 +42,8 @@ def test_housenumber_can_be_instanciated():
 def test_position_can_be_instanciated():
     position = factories.PositionFactory()
     assert position.center
+
+
+def test_session_can_be_instanciated():
+    session = factories.SessionFactory()
+    assert session.ip == '127.0.0.1'
