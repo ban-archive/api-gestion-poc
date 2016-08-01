@@ -228,8 +228,7 @@ def test_create_municipality_with_list_of_aliases(client, url):
         "siren": '123456789',
         "alias": ['Moret-sur-Loing', 'Another-Name']
     }
-    headers = {'Content-Type': 'application/json'}
-    resp = client.post(url('municipality'), json.dumps(data), headers=headers)
+    resp = client.post(url('municipality'), data)
     assert resp.status == falcon.HTTP_201
     municipality = models.Municipality.first()
     assert 'Moret-sur-Loing' in municipality.alias
@@ -244,7 +243,7 @@ def test_patch_municipality_with_alias(client, url):
         "alias": ['Moret-sur-Loing']
     }
     uri = url('municipality-resource', identifier=municipality.id)
-    resp = client.patch(uri, json.dumps(data))
+    resp = client.patch(uri, data)
     assert resp.status == falcon.HTTP_200
     municipality = models.Municipality.first()
     assert 'Moret-sur-Loing' in municipality.alias

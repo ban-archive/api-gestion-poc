@@ -235,8 +235,7 @@ def test_create_housenumber_with_postcode_id(client):
         "parent": street.id,
         "postcode": postcode.id
     }
-    headers = {'Content-Type': 'application/json'}
-    resp = client.post('/housenumber', data, headers=headers)
+    resp = client.post('/housenumber', data)
     assert resp.status == falcon.HTTP_201
     assert models.HouseNumber.select().count() == 1
     assert models.HouseNumber.first().postcode == postcode
@@ -253,7 +252,7 @@ def test_replace_housenumber(client, url):
         "ordinal": 'bis',
         "parent": housenumber.parent.id,
     }
-    resp = client.put(uri, body=json.dumps(data))
+    resp = client.put(uri, body=data)
     assert resp.status == falcon.HTTP_200
     assert resp.json['id']
     assert resp.json['version'] == 2
@@ -273,7 +272,7 @@ def test_replace_housenumber_with_missing_field_fails(client, url):
         "ordinal": 'bis',
         "street": housenumber.parent.id,
     }
-    resp = client.put(uri, body=json.dumps(data))
+    resp = client.put(uri, body=data)
     assert resp.status == falcon.HTTP_422
     assert 'errors' in resp.json
     assert models.HouseNumber.select().count() == 1
@@ -289,7 +288,7 @@ def test_patch_housenumber_with_districts(client, url):
         "ancestors": [district.id],
     }
     uri = url('housenumber-resource', identifier=housenumber.id)
-    resp = client.patch(uri, body=json.dumps(data))
+    resp = client.patch(uri, body=data)
     assert resp.status == falcon.HTTP_200
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
     assert district in hn.ancestors
@@ -303,9 +302,8 @@ def test_patch_housenumber_with_postcode(client, url):
         "version": 2,
         "postcode": postcode.id,
     }
-    headers = {'Content-Type': 'application/json'}
     uri = url('housenumber-resource', identifier=housenumber.id)
-    resp = client.patch(uri, body=data, headers=headers)
+    resp = client.patch(uri, body=data)
     assert resp.status == falcon.HTTP_200
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
     assert hn.postcode == postcode
