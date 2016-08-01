@@ -176,7 +176,7 @@ def test_replace_position(client, url):
         "positioning": models.Position.IMAGERY,
         "housenumber": position.housenumber.id
     }
-    resp = client.put(uri, body=json.dumps(data))
+    resp = client.put(uri, body=data)
     assert resp.status == falcon.HTTP_200
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 2
@@ -196,7 +196,7 @@ def test_replace_position_with_housenumber_cia(client, url):
         "positioning": models.Position.IMAGERY,
         "housenumber": 'cia:{}'.format(position.housenumber.cia)
     }
-    resp = client.put(uri, body=json.dumps(data))
+    resp = client.put(uri, body=data)
     assert resp.status == falcon.HTTP_200
     assert models.Position.select().count() == 1
 
@@ -213,7 +213,7 @@ def test_replace_position_with_existing_version_fails(client, url):
         "positioning": models.Position.IMAGERY,
         "housenumber": position.housenumber.id
     }
-    resp = client.put(uri, body=json.dumps(data))
+    resp = client.put(uri, body=data)
     assert resp.status == falcon.HTTP_409
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 1
@@ -233,7 +233,7 @@ def test_replace_position_with_non_incremental_version_fails(client, url):
         "positioning": models.Position.IMAGERY,
         "housenumber": position.housenumber.id
     }
-    resp = client.put(uri, body=json.dumps(data))
+    resp = client.put(uri, body=data)
     assert resp.status == falcon.HTTP_409
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 1
@@ -318,7 +318,7 @@ def test_patch_position_should_allow_to_update_only_some_fields(client, url):
         "version": 2,
         "center": "(3.4, 5.678)",
     }
-    resp = client.patch(uri, body=json.dumps(data))
+    resp = client.patch(uri, body=data)
     assert resp.status == falcon.HTTP_200
     assert resp.json['id'] == position.id
     assert resp.json['center']['coordinates'] == [3.4, 5.678]
@@ -334,7 +334,7 @@ def test_patch_without_version_should_fail(client, url):
     data = {
         "center": "(3.4, 5.678)",
     }
-    resp = client.patch(uri, body=json.dumps(data))
+    resp = client.patch(uri, body=data)
     assert resp.status == falcon.HTTP_422
 
 
@@ -347,7 +347,7 @@ def test_patch_with_wrong_version_should_fail(client, url):
         "version": 1,
         "center": "(3.4, 5.678)",
     }
-    resp = client.patch(uri, body=json.dumps(data))
+    resp = client.patch(uri, body=data)
     assert resp.status == falcon.HTTP_409
 
 
@@ -361,7 +361,7 @@ def test_cannot_remove_center_and_name(client, url):
         "center": "",
         "name": ""
     }
-    resp = client.patch(uri, body=json.dumps(data))
+    resp = client.patch(uri, body=data)
     assert resp.status == falcon.HTTP_422
     assert "center" in resp.json["errors"]
     assert "name" in resp.json["errors"]

@@ -46,6 +46,6 @@ def test_cannot_create_user_if_not_authenticated(client):
     resp = client.post('/user', {
         'username': 'newuser',
         'email': 'test@test.com',
-    })
+    }, content_type='application/json')
     assert resp.status == falcon.HTTP_401
     assert not models.User.select().count()

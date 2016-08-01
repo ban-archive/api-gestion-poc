@@ -108,34 +108,32 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
     def on_post_resource(self, req, resp, *args, **params):
         """Patch {resource} with 'identifier'."""
         instance = self.get_object(**params)
-        self.save_object(req.params, req, resp, instance, **params)
+        self.save_object(req, resp, instance, **params)
 
     @auth.protect
     @app.endpoint()
     def on_post(self, req, resp, *args, **params):
         """Create {resource}"""
-        self.save_object(req.params, req, resp, **params)
+        self.save_object(req, resp, **params)
 
     @auth.protect
     @app.endpoint(path='/{identifier}')
     def on_put_resource(self, req, resp, *args, **params):
         """Update {resource}"""
         instance = self.get_object(**params)
-        data = req.json
-        self.save_object(data, req, resp, instance, **params)
+        self.save_object(req, resp, instance, **params)
 
     @auth.protect
     @app.endpoint(path='/{identifier}')
     def on_patch_resource(self, req, resp, *args, **params):
         """Patch {resource}"""
         instance = self.get_object(**params)
-        data = req.json
-        self.save_object(data, req, resp, instance, **params)
+        self.save_object(req, resp, instance, **params)
 
-    def save_object(self, data, req, resp, instance=None, **kwargs):
+    def save_object(self, req, resp, instance=None, **kwargs):
         update = instance and req.method != 'PUT'
         validator = self.model.validator(update=update, instance=instance,
-                                         **data)
+                                         **req.params)
         if not validator.errors:
             try:
                 instance = validator.save()

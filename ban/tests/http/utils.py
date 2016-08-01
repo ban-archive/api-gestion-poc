@@ -16,9 +16,13 @@ def authorize(func):
             kwargs['headers']['Authorization'] = 'Bearer {}'.format(token.access_token)  # noqa
 
         # Subtly plug in authenticated user.
+        client = None
         if 'client' in kwargs:
-            kwargs['client'].before(attach)
+            client = kwargs['client']
         elif 'get' in kwargs:
-            kwargs['get'].__self__.before(attach)
+            client = kwargs['get'].__self__
+        if client:
+            client.content_type = 'application/json'
+            client.before(attach)
         return func(*args, **kwargs)
     return inner
