@@ -12,6 +12,15 @@ class SelectQuery(peewee.SelectQuery):
     def __len__(self):
         return self.count()
 
+    def __getitem__(self, value):
+        if isinstance(value, slice):
+            # When doing a slice, Peewee execute the whole query and do a slice
+            # on the result, which obviously is suboptimal.
+            self._offset = value.start
+            self._limit = value.stop - value.start
+            value = slice(0, None)
+        return super().__getitem__(value)
+
 
 class Model(peewee.Model):
 
