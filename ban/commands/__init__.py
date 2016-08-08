@@ -9,7 +9,7 @@ from .reporter import Reporter
 
 
 NO_DEFAULT = object()
-NARGS = '*'
+NARGS = ...
 
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(title='Available commands', metavar='')
