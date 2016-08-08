@@ -7,7 +7,7 @@ import peewee
 from ban import db
 from ban.auth.models import Client, Session
 from ban.core.encoder import dumps
-from ban.utils import make_diff
+from ban.utils import make_diff, utcnow
 
 from . import context
 
@@ -127,7 +127,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
                 # defined.
                 self.created_by = session
             self.modified_by = session
-        now = datetime.now()
+        now = utcnow()
         if not self.created_at:
             self.created_at = now
         self.modified_at = now
@@ -210,7 +210,7 @@ class Version(db.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.period = [datetime.now(), None]
+            self.period = [utcnow(), None]
         return super().save(*args, **kwargs)
 
     def close_period(self, bound):
@@ -306,7 +306,7 @@ class Flag(db.Model):
 
     def save(self, *args, **kwargs):
         if not self.created_at:
-            self.created_at = datetime.now()
+            self.created_at = utcnow()
         super().save(*args, **kwargs)
 
     @property

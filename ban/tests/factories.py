@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from random import Random
 
 import factory
@@ -7,6 +7,7 @@ from factory_peewee import PeeweeModelFactory
 
 from ban.auth import models as auth_models
 from ban.core import models
+from ban.utils import utcnow
 
 
 class BaseTestModel(PeeweeModelFactory):
@@ -59,7 +60,7 @@ class TokenFactory(BaseTestModel):
     refresh_token = FuzzyText(length=50)
     scope = 'contrib'
     expires = factory.LazyAttribute(
-                            lambda x: datetime.now() + timedelta(minutes=50))
+                            lambda x: utcnow() + timedelta(minutes=50))
 
     class Meta:
         model = auth_models.Token

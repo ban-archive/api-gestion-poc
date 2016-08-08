@@ -1,3 +1,4 @@
+from datetime import timezone
 import json
 import re
 
@@ -6,7 +7,7 @@ import peewee
 from playhouse import postgres_ext, fields
 from playhouse.fields import PasswordField as PWDField
 from postgis import Point
-from psycopg2.extras import DateTimeRange
+from psycopg2.extras import DateTimeTZRange
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
@@ -73,8 +74,8 @@ postgres_ext.PostgresqlExtDatabase.register_fields({'point':
 
 
 class DateRangeField(peewee.Field):
-    db_field = 'tsrange'
-    schema_type = 'tsrange'
+    db_field = 'tstzrange'
+    schema_type = 'tstzrange'
 
     def db_value(self, value):
         return self.coerce(value)
@@ -87,7 +88,7 @@ class DateRangeField(peewee.Field):
             value = [None, None]
         if isinstance(value, (list, tuple)):
             # '[)' means include lower bound but not upper.
-            value = DateTimeRange(*value, bounds='[)')
+            value = DateTimeTZRange(*value, bounds='[)')
         return value
 
     def contains(self, dt):
@@ -164,8 +165,15 @@ class ArrayField(postgres_ext.ArrayField):
         return value
 
 
-class DateTimeField(peewee.DateTimeField):
+class DateTimeField(postgres_ext.DateTimeTZField):
     schema_type = 'datetime'
+
+    def python_value(self, value):
+        value = super().python_value(value)
+        if value:
+            # PSQL store dates in the server timezone, but we only want to
+            # deal with UTC ones.
+            return value.astimezone(timezone.utc)
 
 
 class BooleanField(peewee.BooleanField):

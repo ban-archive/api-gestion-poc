@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from time import strptime, mktime
 from urllib.parse import urlencode
 
 import falcon
 import peewee
+from dateutil.parser import parse as date_parse
 
 from ban.core import models
 from ban.auth import models as amodels
@@ -169,27 +170,23 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
 
 class VersionnedResource(BaseCRUD):
 
-    AT_FORMATS = ['%Y-%m-%d', '%Y-%m-%d %H:%M:%S']
-
     def _parse_ref(self, ref):
         if ref.isdigit():
             ref = int(ref)
         else:
-            for format in self.AT_FORMATS:
-                try:
-                    ref = datetime.fromtimestamp(mktime(strptime(ref, format)))
-                except ValueError:
-                    continue
-                else:
-                    break
-            else:
+            try:
+                ref = date_parse(ref)
+            except ValueError:
                 # ref was not a digit and matched no datetime format
                 # raise an error
-                description = ("Must be either a version number or a datetime "
-                               "with format: "
-                               "{}".format(', '.join(self.AT_FORMATS)))
+                description = "Must be either a version number or a datetime"
                 title = "Unparsable version reference."
                 raise falcon.HTTPBadRequest(title, description)
+            else:
+                # Be smart, imply that naive dt are in the same tz the API
+                # exposes, which is UTC.
+                if not ref.tzinfo:
+                    ref = ref.replace(tzinfo=timezone.utc)
         return ref
 
     @auth.protect
