@@ -21,12 +21,15 @@ def test_create_postcode(client, url):
     data = {
         "code": "09350",
         "name": "Fornex",
-        "municipality": municipality.id
+        "municipality": municipality.id,
+        "alias": ['Fornex_alias']
     }
     resp = client.post(url('postcode'), data)
     assert resp.status == falcon.HTTP_201
     assert resp.json['id']
     assert resp.json['code'] == '09350'
+    assert resp.json['name'] == 'Fornex'
+    assert resp.json['alias'] == ['Fornex_alias']
     assert models.PostCode.select().count() == 1
     uri = "https://falconframework.org{}".format(url('postcode-resource',
                                                  identifier=resp.json['id']))
