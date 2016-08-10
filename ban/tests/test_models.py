@@ -44,12 +44,21 @@ def test_municipality_as_resource():
     assert municipality.as_resource['siren'] == "210100566"
     assert municipality.as_resource['version'] == 1
     assert municipality.as_resource['id'] == municipality.id
-    assert municipality.as_resource['postcodes'][0]['code'] == '31310'
-    assert municipality.as_resource['postcodes'][0]['attributes'] == None
-    assert municipality.as_resource['postcodes'][0]['resource'] == 'postcode'
-    assert municipality.as_resource['postcodes'][0]['name'] == 'Test PostCode Area Name'  # noqa
-    assert municipality.as_resource['postcodes'][0]['municipality'] == municipality.id  # noqa
-    assert municipality.as_resource['postcodes'][0]['id'] == postcode.id
+    assert municipality.as_resource['postcodes'] == [{
+        'code': '31310',
+        'attributes': None,
+        'resource': 'postcode',
+        'name': 'Test PostCode Area Name',
+        'municipality': municipality.id,
+        'id': postcode.id,
+        'alias': None
+    }]
+    # assert municipality.as_resource['postcodes'][0]['code'] == '31310'
+    # assert municipality.as_resource['postcodes'][0]['attributes'] == None
+    # assert municipality.as_resource['postcodes'][0]['resource'] == 'postcode'
+    # assert municipality.as_resource['postcodes'][0]['name'] == 'Test PostCode Area Name'  # noqa
+    # assert municipality.as_resource['postcodes'][0]['municipality'] == municipality.id  # noqa
+    # assert municipality.as_resource['postcodes'][0]['id'] == postcode.id
 
 
 def test_municipality_as_relation():

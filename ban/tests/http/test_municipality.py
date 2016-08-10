@@ -29,12 +29,15 @@ def test_get_municipality_with_postcodes(get, url):
     assert resp.status == falcon.HTTP_200
     assert resp.json['id']
     assert resp.json['name'] == 'Cabour'
-    assert resp.json['postcodes'][0]['id'] == postcode.id
-    assert resp.json['postcodes'][0]['attributes'] == None
-    assert resp.json['postcodes'][0]['code'] == '33000'
-    assert resp.json['postcodes'][0]['name'] == 'Test PostCode Area Name'
-    assert resp.json['postcodes'][0]['municipality'] == municipality.id
-    assert resp.json['postcodes'][0]['resource'] == 'postcode'
+    assert resp.json['postcodes'] == [{
+        'id': postcode.id,
+        'attributes': None,
+        'code': '33000',
+        'name': 'Test PostCode Area Name',
+        'municipality': municipality.id,
+        'resource': 'postcode',
+        'alias': None
+    }]
 
 
 @authorize
