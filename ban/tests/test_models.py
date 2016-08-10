@@ -53,12 +53,6 @@ def test_municipality_as_resource():
         'id': postcode.id,
         'alias': None
     }]
-    # assert municipality.as_resource['postcodes'][0]['code'] == '31310'
-    # assert municipality.as_resource['postcodes'][0]['attributes'] == None
-    # assert municipality.as_resource['postcodes'][0]['resource'] == 'postcode'
-    # assert municipality.as_resource['postcodes'][0]['name'] == 'Test PostCode Area Name'  # noqa
-    # assert municipality.as_resource['postcodes'][0]['municipality'] == municipality.id  # noqa
-    # assert municipality.as_resource['postcodes'][0]['id'] == postcode.id
 
 
 def test_municipality_as_relation():
