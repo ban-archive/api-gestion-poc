@@ -30,17 +30,12 @@ def test_api_url(name, kwargs, expected, url):
 
 def test_root_url_returns_api_help(get):
     resp = get('/')
-    assert 'contact' in resp.json
+    assert 'swagger' in resp.json
 
 
 def test_404_returns_help_as_body(get):
     resp = get('/invalid')
-    assert 'contact' in resp.json
-
-
-def test_help_querystring_returns_endpoint_help(get):
-    resp = get('/municipality?help')
-    assert 'help' in resp.json
+    assert 'swagger' in resp.json
 
 
 def test_reverse_uri_are_attached_to_resource():
@@ -53,4 +48,3 @@ def test_reverse_uri_are_attached_to_resource():
 def test_invalid_identifier_returns_404(get):
     resp = get('/position/invalid:22')
     assert resp.status == falcon.HTTP_404
-    assert 'endpoints' in resp.json

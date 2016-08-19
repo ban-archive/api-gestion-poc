@@ -146,12 +146,26 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     @property
     def as_resource(self):
         """Resource plus relations."""
-        return {f: self.extended_field(f) for f in self.resource_fields}
+        out = {}
+        for name in self.resource_fields:
+            value = self.extended_field(name)
+            # Filter None values to make Swagger happy.
+            # See: https://github.com/OAI/OpenAPI-Specification/issues/229
+            if value is not None:
+                out[name] = value
+        return out
 
     @property
     def as_relation(self):
         """Resources plus relation references without metadata."""
-        return {f: self.compact_field(f) for f in self.collection_fields}
+        out = {}
+        for name in self.collection_fields:
+            value = self.compact_field(name)
+            # Filter None values to make Swagger happy.
+            # See: https://github.com/OAI/OpenAPI-Specification/issues/229
+            if value is not None:
+                out[name] = value
+        return out
 
     @property
     def as_version(self):

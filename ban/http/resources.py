@@ -8,12 +8,17 @@ from dateutil.parser import parse as date_parse
 
 from ban.core import models
 from ban.auth import models as amodels
+from ban.core.versioning import Version, Flag
 
 from .wsgi import app
 from .auth import auth
 
 
-__all__ = ['Municipality', 'Group', 'Postcode', 'Housenumber', 'Position']
+__all__ = ['Municipality', 'Group', 'PostCode', 'HouseNumber', 'Position']
+
+
+app.schema.register_model(Version)
+app.schema.register_model(Flag)
 
 
 class BaseCollection:
@@ -92,7 +97,24 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
     @auth.protect
     @app.endpoint()
     def on_get(self, req, resp, **params):
-        """Get {resource} collection."""
+        """Get {resource} collection.
+
+        responses:
+            200:
+                description: Get {resource} collection.
+                schema:
+                    type: object
+                    properties:
+                      collection:
+                        name: collection
+                        type: array
+                        items:
+                          $ref: '#/definitions/{resource}'
+                      total:
+                        name: total
+                        type: integer
+                        description: total resources available
+        """
         qs = self.get_collection(req, resp, **params)
         qs = self.get_where_clause(req, qs)
         self.collection(req, resp, qs.as_resource_list())
@@ -100,34 +122,112 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
     @auth.protect
     @app.endpoint(path='/{identifier}')
     def on_get_resource(self, req, resp, **params):
-        """Get {resource} with 'identifier'."""
+        """Get {resource} with 'identifier'.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Get {resource} instance.
+                schema:
+                    $ref: '#/definitions/{resource}'
+        """
         instance = self.get_object(**params)
         resp.json(**instance.as_resource)
 
     @auth.protect
     @app.endpoint(path='/{identifier}')
     def on_post_resource(self, req, resp, *args, **params):
-        """Patch {resource} with 'identifier'."""
+        """Patch {resource} with 'identifier'.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Instance has been updated successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            419:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            422:
+                description: Invalid data.
+                schema:
+                    $ref: '#/definitions/Error'
+        """
         instance = self.get_object(**params)
         self.save_object(req, resp, instance, **params)
 
     @auth.protect
     @app.endpoint()
     def on_post(self, req, resp, *args, **params):
-        """Create {resource}"""
+        """Create {resource}
+
+
+        responses:
+            201:
+                description: Instance has been created successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            419:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            422:
+                description: Invalid data.
+                schema:
+                    $ref: '#/definitions/Error'
+        """
         self.save_object(req, resp, **params)
 
     @auth.protect
     @app.endpoint(path='/{identifier}')
     def on_put_resource(self, req, resp, *args, **params):
-        """Update {resource}"""
+        """Replace {resource}.
+
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Instance has been replaced successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            419:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            422:
+                description: Invalid data.
+                schema:
+                    $ref: '#/definitions/Error'
+        """
         instance = self.get_object(**params)
         self.save_object(req, resp, instance, **params)
 
     @auth.protect
     @app.endpoint(path='/{identifier}')
     def on_patch_resource(self, req, resp, *args, **params):
-        """Patch {resource}"""
+        """Patch {resource}
+
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Instance has been updated successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            419:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            422:
+                description: Invalid data.
+                schema:
+                    $ref: '#/definitions/Error'
+        """
         instance = self.get_object(**params)
         self.save_object(req, resp, instance, **params)
 
@@ -158,7 +258,21 @@ class BaseCRUD(BaseCollection, metaclass=WithURL):
     @auth.protect
     @app.endpoint(path='/{identifier}')
     def on_delete_resource(self, req, resp, *args, **params):
-        """Delete {resource}."""
+        """Delete {resource}.
+
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            204:
+                description: Instance has been deleted successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            419:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+        """
         instance = self.get_object(**params)
         try:
             instance.delete_instance()
@@ -192,14 +306,39 @@ class VersionnedResource(BaseCRUD):
     @auth.protect
     @app.endpoint('/{identifier}/versions')
     def on_get_versions(self, req, resp, *args, **kwargs):
-        """Get resource versions."""
+        """Get resource versions.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Version collection for resource {resource}.
+                schema:
+                    type: array
+                    items:
+                        $ref: '#/definitions/Version'
+        """
         instance = self.get_object(**kwargs)
         self.collection(req, resp, instance.versions.as_resource())
 
     @auth.protect
     @app.endpoint('/{identifier}/versions/{ref}')
     def on_get_version(self, req, resp, ref, **kwargs):
-        """Get {resource} version corresponding to 'ref' number or datetime."""
+        """Get {resource} version corresponding to 'ref' number or datetime.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: ref
+              in: path
+              type: string
+              required: true
+              description: version reference, either a date or an increment.
+        responses:
+            200:
+                description: get specific Version for resource {resource}.
+                schema:
+                    $ref: '#/definitions/Version'
+        """
         instance = self.get_object(**kwargs)
         ref = self._parse_ref(ref)
         version = instance.load_version(ref)
@@ -210,7 +349,19 @@ class VersionnedResource(BaseCRUD):
     @auth.protect  # TODO, manage scope.
     @app.endpoint('/{identifier}/versions/{ref}/flag')
     def on_post_flag_version(self, req, resp, ref, **kwargs):
-        """Flag a version."""
+        """Flag a version.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: ref
+              in: path
+              type: string
+              required: true
+              description: version reference, either a date or an increment.
+        responses:
+            204:
+                description: version has been flagged.
+        """
         instance = self.get_object(**kwargs)
         version = instance.load_version(ref)
         if not version:
@@ -220,7 +371,19 @@ class VersionnedResource(BaseCRUD):
     @auth.protect  # TODO, manage scope.
     @app.endpoint('/{identifier}/versions/{ref}/unflag')
     def on_post_unflag_version(self, req, resp, ref, **kwargs):
-        """Unflag a version."""
+        """Unflag a version.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: ref
+              in: path
+              type: string
+              required: true
+              description: version reference, either a date or an increment.
+        responses:
+            204:
+                description: version has been unflagged.
+        """
         instance = self.get_object(**kwargs)
         version = instance.load_version(ref)
         if not version:
@@ -254,7 +417,7 @@ class Position(VersionnedResource, BboxResource):
         return qs
 
 
-class Housenumber(VersionnedResource, BboxResource):
+class HouseNumber(VersionnedResource, BboxResource):
     model = models.HouseNumber
     order_by = [peewee.SQL('number ASC NULLS FIRST'),
                 peewee.SQL('ordinal ASC NULLS FIRST')]
@@ -272,7 +435,18 @@ class Housenumber(VersionnedResource, BboxResource):
     @auth.protect
     @app.endpoint('/{identifier}/positions')
     def on_get_positions(self, req, resp, *args, **kwargs):
-        """Retrieve {resource} positions."""
+        """Retrieve {resource} positions.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Positions collection for resource {resource}.
+                schema:
+                    type: array
+                    items:
+                        $ref: '#/definitions/Position'
+        """
         instance = self.get_object(**kwargs)
         qs = instance.positions.as_resource_list()
         self.collection(req, resp, qs)
@@ -283,7 +457,19 @@ class WithHousenumbers(VersionnedResource):
     @auth.protect
     @app.endpoint('/{identifier}/housenumbers')
     def on_get_housenumbers(self, req, resp, *args, **kwargs):
-        """Retrieve {resource} housenumbers."""
+        """Retrieve {resource} housenumbers.
+
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Positions collection for resource {resource}.
+                schema:
+                    type: array
+                    items:
+                        $ref: '#/definitions/Position'
+        """
         instance = self.get_object(**kwargs)
         # We evaluate the qs ourselves here, because it's a CompoundSelect
         # that does not know about our SelectQuery custom methods (like
@@ -298,7 +484,7 @@ class Group(WithHousenumbers):
     model = models.Group
 
 
-class Postcode(WithHousenumbers):
+class PostCode(WithHousenumbers):
     model = models.PostCode
     order_by = [model.code, model.municipality]
     allowed_params = ['code']
@@ -311,7 +497,18 @@ class Municipality(VersionnedResource):
     @auth.protect
     @app.endpoint('/{identifier}/groups')
     def on_get_groups(self, req, resp, *args, **kwargs):
-        """Retrieve {resource} groups."""
+        """Retrieve {resource} groups.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Group collection for resource {resource}.
+                schema:
+                    type: array
+                    items:
+                        $ref: '#/definitions/Group'
+        """
         instance = self.get_object(**kwargs)
         self.collection(req, resp, instance.groups.as_resource_list())
 

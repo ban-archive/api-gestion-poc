@@ -54,10 +54,17 @@ def grantgetter(client_id, code):
 
 class Token:
 
+    model = models.Session
+
     @auth.token_endpoint
     @app.endpoint()
     def on_post(self, req, resp, *args, **kwargs):
-        """Get a token to use the API."""
+        """Get a token to use the API.
+
+        responses:
+            200:
+                description: get at token.
+        """
         return {}
 
 app.register_resource(Token())

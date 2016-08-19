@@ -140,7 +140,8 @@ class HouseNumber(Model):
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'positions', 'ign', 'postcode']
     resource_schema = {'cia': {'readonly': True},
-                       'positions': {'readonly': True}}
+                       'positions': {'readonly': True, 'type': 'list',
+                                     'model': 'Position'}}
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
