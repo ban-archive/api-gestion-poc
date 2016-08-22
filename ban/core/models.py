@@ -73,7 +73,7 @@ class Municipality(NamedModel):
 
 
 class PostCode(NamedModel):
-    resource_fields = ['code', 'name', 'municipality']
+    resource_fields = ['code', 'name', 'alias', 'municipality']
 
     code = db.PostCodeField(index=True)
     municipality = db.ForeignKeyField(Municipality, related_name='postcodes')

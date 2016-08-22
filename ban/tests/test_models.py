@@ -38,6 +38,7 @@ def test_municipality_as_resource():
     municipality = MunicipalityFactory(name="Montbrun-Bocage", insee="31365",
                                        siren="210100566")
     postcode = PostCodeFactory(code="31310", municipality=municipality)
+
     assert municipality.as_resource['name'] == "Montbrun-Bocage"
     assert municipality.as_resource['insee'] == "31365"
     assert municipality.as_resource['siren'] == "210100566"
@@ -49,7 +50,9 @@ def test_municipality_as_resource():
         'resource': 'postcode',
         'name': 'Test PostCode Area Name',
         'municipality': municipality.id,
-        'id': postcode.id}]
+        'id': postcode.id,
+        'alias': None
+    }]
 
 
 def test_municipality_as_relation():
