@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 
@@ -41,3 +42,7 @@ def make_diff(old, new, update=False):
                 'new': new_value
             }
     return diff
+
+
+def utcnow():
+    return datetime.now(timezone.utc)

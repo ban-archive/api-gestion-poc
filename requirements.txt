@@ -6,6 +6,7 @@ falcon-multipart
 Unidecode==0.4.19
 peewee==2.8.1
 psycopg2==2.6.2
+python-dateutil
 git+https://github.com/yohanboniface/falcon-oauth
 psycopg-postgis
 progressist

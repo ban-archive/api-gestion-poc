@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from ban import db
 from ban.core.resource import ResourceModel
 
+from ban.utils import utcnow
 from .utils import generate_secret
 
 __all__ = ['User', 'Client', 'Grant', 'Token']
@@ -138,7 +139,7 @@ class Token(db.Model):
 
     def __init__(self, **kwargs):
         expires_in = kwargs.pop('expires_in', 60 * 60)
-        kwargs['expires'] = datetime.now() + timedelta(seconds=expires_in)
+        kwargs['expires'] = utcnow() + timedelta(seconds=expires_in)
         super().__init__(**kwargs)
 
     @property
@@ -157,7 +158,7 @@ class Token(db.Model):
         """
         Check token expiration with timezone awareness
         """
-        return datetime.now() >= self.expires
+        return utcnow() >= self.expires
 
     def allow_scopes(self, scopes):
         """

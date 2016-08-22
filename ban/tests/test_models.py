@@ -1,3 +1,5 @@
+import datetime
+
 import peewee
 import pytest
 
@@ -17,6 +19,12 @@ def test_select_first_model_locks_version():
     MunicipalityFactory()
     municipality = models.Municipality.select().first()
     assert municipality._locked_version == 1
+
+
+def test_created_at_is_utc_aware():
+    MunicipalityFactory()
+    municipality = models.Municipality.select().first()
+    assert municipality.created_at.tzinfo == datetime.timezone.utc
 
 
 def test_municipality_is_created_with_version_1():
