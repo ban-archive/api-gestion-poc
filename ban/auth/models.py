@@ -101,6 +101,20 @@ class Session(db.Model):
       a nominative session
     - a client sends us IP and/or email from a remote user we don't know of
     """
+
+    definition = """
+        properties:
+            id:
+                type: string
+                description: primary key of the session
+            client:
+                type: string
+                description: client name
+            user:
+                type: string
+                description: user name
+        """
+
     user = db.ForeignKeyField(User, null=True)
     client = db.ForeignKeyField(Client, null=True)
     ip = db.CharField(null=True)  # TODO IPField

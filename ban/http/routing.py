@@ -1,10 +1,6 @@
-import re
-
 from falcon import HTTP_METHODS, HTTP_404
 from falcon.responders import create_default_options, create_method_not_allowed
 from falcon.routing import DefaultRouter
-
-from ban import __version__
 
 
 class Router(DefaultRouter):
@@ -17,6 +13,7 @@ class Router(DefaultRouter):
 
     def reverse(self, name, **params):
         if not isinstance(name, str):
+            # Allow to pass in a class.
             name = self.cls_name(name)
         if 'id' in params:
             params['identifier'] = '{identifier}:{id}'.format(**params)
@@ -24,7 +21,7 @@ class Router(DefaultRouter):
         return self._index[name].format(**params)
 
     def cls_name(self, cls):
-        return re.sub("([a-z])([A-Z])", "\g<1>-\g<2>", cls.__name__).lower()
+        return cls.__name__.lower()
 
     def index(self, name, template):
         if name in self._index:
@@ -44,17 +41,7 @@ class Router(DefaultRouter):
                                      reverse(name, identifier=instance.id))
 
     def register_route(self, api):
-        api.add_route('/help', self)
-
-    def get_responder_help(self, responder, resource):
-        return (responder.__doc__ or '').format(
-                                        resource=resource.__class__.__name__)
-
-    def register_endpoint(self, path, method_map, resource):
-        self.endpoints[path] = {verb: self.get_responder_help(func, resource)
-                                for verb, func in method_map.items()
-                                if hasattr(func, '_path')}  # Not 405 attached.
-        self.add_route(path, method_map, resource)
+        api.add_route('/schema', self)
 
     def extend_method_map(self, method_map):
         # See https://github.com/falconry/falcon/issues/667
@@ -90,25 +77,13 @@ class Router(DefaultRouter):
                 paths[path][verb.upper()] = responder
         for path, method_map in paths.items():
             self.extend_method_map(method_map)
-            self.register_endpoint(path, method_map, resource)
-
-    @property
-    def help(self):
-        return {
-            'contact': 'contact@ban.somewhere.fr',
-            'licence': 'XXXX',
-            'doc_url': 'https://doc.ban.somewhere.fr',
-            'version': __version__,
-            'endpoints': self.endpoints
-        }
+            self.add_route(path, method_map, resource)
+            self.schema.register_endpoint(path, method_map, resource)
 
     def on_get(self, req, resp, **params):
-        if not req.path == '/help':
+        if not req.path == '/schema':
             resp.status = HTTP_404
-        resp.json(**self.help)
-
-    def on_get_endpoint_help(self, req, resp, responder, resource, **params):
-        resp.json(help=self.get_responder_help(responder, resource))
+        resp.json(**self.schema)
 
 
 class Reverse:

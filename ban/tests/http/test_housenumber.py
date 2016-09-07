@@ -194,7 +194,7 @@ def test_create_housenumber(client):
     assert resp.status == falcon.HTTP_201
     assert resp.json['id']
     assert resp.json['number'] == '20'
-    assert resp.json['ordinal'] is None
+    assert 'ordinal' not in resp.json
     assert resp.json['parent']['id'] == street.id
     assert models.HouseNumber.select().count() == 1
 
@@ -348,11 +348,11 @@ def test_housenumber_select_use_default_orderby(get, url):
     assert resp.status == falcon.HTTP_200
     assert resp.json['total'] == 5
     assert resp.json['collection'][0]['number'] == '1'
-    assert resp.json['collection'][0]['ordinal'] is None
+    assert 'ordinal' not in resp.json['collection'][0]
     assert resp.json['collection'][1]['number'] == '1'
     assert resp.json['collection'][1]['ordinal'] == 'a'
     assert resp.json['collection'][2]['number'] == '2'
-    assert resp.json['collection'][2]['ordinal'] is None
+    assert 'ordinal' not in resp.json['collection'][2]
     assert resp.json['collection'][3]['number'] == '2'
     assert resp.json['collection'][3]['ordinal'] == 'bis'
     assert resp.json['collection'][4]['number'] == '2'

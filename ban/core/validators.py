@@ -14,6 +14,8 @@ class ResourceValidator(Validator):
     def __init__(self, model, *args, **kwargs):
         self.model = model
         kwargs['purge_unknown'] = True
+        # Allow unknown schema keys for Swagger.
+        kwargs['transparent_schema_rules'] = True
         super().__init__(model.resource_schema, *args, **kwargs)
 
     def _validate_type_point(self, field, value):

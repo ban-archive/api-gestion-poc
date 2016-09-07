@@ -54,12 +54,10 @@ def test_municipality_as_resource():
     assert municipality.as_resource['id'] == municipality.id
     assert municipality.as_resource['postcodes'] == [{
         'code': '31310',
-        'attributes': None,
         'resource': 'postcode',
         'name': 'Test PostCode Area Name',
         'municipality': municipality.id,
         'id': postcode.id,
-        'alias': None
     }]
 
 
@@ -157,13 +155,8 @@ def test_group_as_relation():
         'municipality': municipality.id,
         'kind': 'way',
         'fantoir': '930311491',
-        'alias': None,
-        'ign': None,
         'name': 'Rue des Fleurs',
         'resource': 'group',
-        'attributes': None,
-        'laposte': None,
-        'addressing': None,
     }
 
 
@@ -297,13 +290,10 @@ def test_housenumber_as_resource():
         'cia': '21892_1234_90_BIS',
         'parent': housenumber.parent.as_relation,
         'positions': [],
-        'laposte': None,
-        'ign': None,
         'attributes': {'source': 'openbar'},
         'version': 1,
         'id': housenumber.id,
         'number': '90',
-        'postcode': None,
         'ordinal': 'bis',
         'created_by': housenumber.created_by.as_relation,
         'created_at': housenumber.created_at,
@@ -320,12 +310,9 @@ def test_housenumber_as_relation():
     assert housenumber.as_relation == {
         'cia': '21892_1234_90_BIS',
         'parent': housenumber.parent.id,
-        'laposte': None,
-        'ign': None,
         'attributes': {'source': 'openbar'},
         'id': housenumber.id,
         'number': '90',
-        'postcode': None,
         'ordinal': 'bis',
         'resource': 'housenumber'
     }
