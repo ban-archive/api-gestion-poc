@@ -82,6 +82,9 @@ def process_group(row):
     attributes = row.get('attributes', {})
     attributes['source'] = source
     data['attributes'] = attributes
+    if 'addressing' in row:
+        if hasattr(Group, row['addressing'].upper()):
+            data['addressing'] = row['addressing']
     update = False
     instance = Group.first(Group.fantoir == fantoir)
     if instance:
