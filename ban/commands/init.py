@@ -194,8 +194,7 @@ def process_housenumber(row):
 
 
 def process_position(row):
-    kind = row.get('kind')
-    name = row.get('name')
+    kind = row.get('kind', '')
     if not hasattr(Position, kind.upper()):
         kind = Position.UNKNOWN
     positioning = row.get('positionning')  # two "n" in the data.
@@ -203,7 +202,6 @@ def process_position(row):
         positioning = Position.OTHER
     source = row.get('source')
     cia = row.get('housenumber:cia').upper()
-    center = row.get('geometry')
     housenumber = HouseNumber.first(HouseNumber.cia == cia)
     if not housenumber:
         reporter.error('Position housenumber does not exist', cia)
@@ -211,11 +209,16 @@ def process_position(row):
     instance = Position.first(Position.housenumber == housenumber,
                               Position.kind == kind, Position.source == source)
     version = instance.version + 1 if instance else 1
-    data = dict(kind=kind, source=source, housenumber=housenumber, name=name,
-                center=center, positioning=positioning, version=version)
+    data = dict(kind=kind, source=source, housenumber=housenumber,
+                positioning=positioning, version=version)
     if 'ref:ign' in row:
         data['ign'] = row.get('ref:ign')
-    validator = Position.validator(instance=instance, **data)
+    if 'name' in row:
+        data['name'] = row.get('name')
+    if 'geometry' in row:
+        data['center'] = row.get('geometry')
+    validator = Position.validator(instance=instance, update=bool(instance),
+                                   **data)
     if validator.errors:
         reporter.error('Position error', validator.errors)
     else:

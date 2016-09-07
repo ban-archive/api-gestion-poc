@@ -190,6 +190,36 @@ def test_process_positions_from_oldban(session):
     assert position.name == "Bâtiment A"
 
 
+def test_process_positions_does_not_reset_name_key_if_not_given(session):
+    data = {"type": "position", "kind": "entrance",
+            "housenumber:cia": "90001_0005_5_"}
+    factories.PositionFactory(
+        housenumber__number='5',
+        housenumber__ordinal='',
+        housenumber__parent__municipality__insee='90001',
+        housenumber__parent__fantoir='900010005',
+        name='Bâtiment A')
+    process_row(data)
+    position = models.Position.first()
+    assert position.name == "Bâtiment A"
+    assert position.version == 2
+
+
+def test_process_positions_reset_name_key_if_null(session):
+    data = {"type": "position", "kind": "entrance", "name": None,
+            "housenumber:cia": "90001_0005_5_"}
+    factories.PositionFactory(
+        housenumber__number='5',
+        housenumber__ordinal='',
+        housenumber__parent__municipality__insee='90001',
+        housenumber__parent__fantoir='900010005',
+        name='Bâtiment A')
+    process_row(data)
+    position = models.Position.first()
+    assert position.name is None
+    assert position.version == 2
+
+
 # File: 09x_positions_sga-ign.json
 def test_process_positions_from_sga_ign(session):
     data = {'type': 'position', 'kind': 'segment',

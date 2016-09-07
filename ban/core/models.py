@@ -250,7 +250,11 @@ class Position(Model):
     @classmethod
     def validate(cls, validator, document, instance):
         errors = super().validate(validator, document, instance)
-        if not document.get('name') and not document.get('center'):
+        default = instance and validator.update and instance.name
+        name = document.get('name', default)
+        default = instance and validator.update and instance.center
+        center = document.get('center', default)
+        if not name and not center:
             msg = 'A position must have either a center or a name.'
             errors['center'] = msg
             errors['name'] = msg
