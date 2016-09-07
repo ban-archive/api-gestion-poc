@@ -195,6 +195,7 @@ def process_housenumber(row):
 
 def process_position(row):
     kind = row.get('kind')
+    name = row.get('name')
     if not hasattr(Position, kind.upper()):
         kind = Position.UNKNOWN
     positioning = row.get('positionning')  # two "n" in the data.
@@ -210,7 +211,7 @@ def process_position(row):
     instance = Position.first(Position.housenumber == housenumber,
                               Position.kind == kind, Position.source == source)
     version = instance.version + 1 if instance else 1
-    data = dict(kind=kind, source=source, housenumber=housenumber,
+    data = dict(kind=kind, source=source, housenumber=housenumber, name=name,
                 center=center, positioning=positioning, version=version)
     if 'ref:ign' in row:
         data['ign'] = row.get('ref:ign')
