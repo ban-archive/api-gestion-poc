@@ -4,7 +4,7 @@ decorator==4.0.10
 falcon==1.0.0
 falcon-multipart
 Unidecode==0.4.19
-peewee==2.8.1
+peewee==2.8.3
 psycopg2==2.6.2
 python-dateutil
 git+https://github.com/yohanboniface/falcon-oauth
