@@ -62,7 +62,6 @@ def test_get_housenumber_with_districts(get, url):
     assert 'ancestors' in resp.json
     assert resp.json['ancestors'][0]['id'] == district.id
     assert resp.json['ancestors'][0]['name'] == district.name
-    assert 'version' not in resp.json['ancestors'][0]
 
 
 @authorize

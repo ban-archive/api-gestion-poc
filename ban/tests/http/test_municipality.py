@@ -36,7 +36,8 @@ def test_get_municipality_with_postcodes(get, url):
         'name': 'Test PostCode Area Name',
         'municipality': municipality.id,
         'resource': 'postcode',
-        'alias': None
+        'alias': None,
+        'version': 1,
     }]
 
 

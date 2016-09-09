@@ -23,7 +23,7 @@ class BaseModel(BaseResource, BaseVersioned):
 class Model(ResourceModel, Versioned, metaclass=BaseModel):
     resource_fields = ['version', 'created_at', 'created_by', 'modified_at',
                        'modified_by', 'attributes']
-    exclude_for_collection = ['version', 'created_at', 'created_by',
+    exclude_for_collection = ['created_at', 'created_by',
                               'modified_at', 'modified_by']
     # 'version' is validated by us.
     resource_schema = {'version': {'required': False},

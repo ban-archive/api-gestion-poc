@@ -59,7 +59,8 @@ def test_municipality_as_resource():
         'name': 'Test PostCode Area Name',
         'municipality': municipality.id,
         'id': postcode.id,
-        'alias': None
+        'alias': None,
+        'version': 1,
     }]
 
 
@@ -72,7 +73,6 @@ def test_municipality_as_relation():
     assert municipality.as_relation['siren'] == "210100566"
     assert municipality.as_relation['id'] == municipality.id
     assert 'postcodes' not in municipality.as_relation
-    assert 'version' not in municipality.as_relation
 
 
 def test_municipality_str():
@@ -164,6 +164,7 @@ def test_group_as_relation():
         'attributes': None,
         'laposte': None,
         'addressing': None,
+        'version': 1
     }
 
 
@@ -327,7 +328,8 @@ def test_housenumber_as_relation():
         'number': '90',
         'postcode': None,
         'ordinal': 'bis',
-        'resource': 'housenumber'
+        'resource': 'housenumber',
+        'version': 1,
     }
 
 
