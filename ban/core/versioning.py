@@ -70,7 +70,8 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             model_name=self.__class__.__name__,
             model_pk=self.pk,
             sequential=self.version,
-            raw=dumps(self.as_version)
+            raw=dumps(self.as_version),
+            period=[self.modified_at, None]
         )
         old = None
         if self.version > 1:
@@ -207,11 +208,6 @@ class Version(db.Model):
         """Delete current version's flags made by current session client."""
         Flag.delete().where(Flag.version == self,
                             Flag.client == session.client).execute()
-
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.period = [utcnow(), None]
-        return super().save(*args, **kwargs)
 
     def close_period(self, bound):
         # DateTimeRange is immutable, so create new one.
