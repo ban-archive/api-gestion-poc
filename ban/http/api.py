@@ -17,13 +17,24 @@ def json(data, code, headers):
 
 
 class Collection(Resource):
+
+    filters = []
+
     def get(self):
         offset = request.args.get('offset', 20)
         limit = request.args.get('limit', 20) + offset
-        qs = self.model.select().as_resource_list()[offset:limit]
+        qs = self.model.select()
+        for key in self.filters:
+            values = request.args.getlist(key)
+            if values:
+                field = getattr(self.model, key)
+                values = list(map(field.coerce, values))
+                qs = qs.where(field << values)
+        count = qs.count()
+        qs = qs.as_resource_list()[offset:limit]
         return {
             'collection': qs,
-            'total': len(qs),
+            'total': count,
         }
 
 
@@ -34,6 +45,7 @@ class MunicipalityCollection(Collection):
 
 @api.route('/group/')
 class GroupCollection(Collection):
+    filters = ['municipality']
     model = models.Group
 
 
@@ -55,7 +67,7 @@ class CRUD(Resource):
 
     def save_object(self, instance=None, identifier=None, update=True):
         validator = self.model.validator(update=update, instance=instance,
-                                         **request.form.to_dict(flat=True))
+                                         **request.json)
         if validator.errors:
             abort(422, **validator.errors)
         try:
