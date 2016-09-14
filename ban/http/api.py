@@ -15,6 +15,19 @@ app = Flask(__name__)
 api = Api(app)
 
 
+def instance_or_404(func):
+    def wrapper(self, **kwargs):
+        if kwargs.get('identifier'):
+            try:
+                instance = self.model.coerce(kwargs['identifier'])
+            except self.model.DoesNotExist:
+                # TODO Flask changes the 404 message, which we don't want.
+                abort(404, message='Resource not found')
+            kwargs['instance'] = instance
+        return func(self, **kwargs)
+    return wrapper
+
+
 class DateTimeConverter(BaseConverter):
 
     def to_python(self, value):
@@ -127,12 +140,27 @@ class GroupVersionCollection(BaseVersionCollection):
 
 
 class BaseVersion(Resource):
-    def get(self, identifier, ref=None):
+    @instance_or_404
+    def get(self, identifier, ref, instance):
         instance = self.model.coerce(identifier)
         version = instance.load_version(ref)
         if not version:
             abort(404)
         return version.as_resource
+
+    @instance_or_404
+    def post(self, identifier, ref, instance):
+        instance = self.model.coerce(identifier)
+        version = instance.load_version(ref)
+        if not version:
+            abort(404)
+        flag = request.json.get('flag')
+        if flag is True:
+            version.flag()
+        elif flag is False:
+            version.unflag()
+        else:
+            abort(400, message='Body should contain a "flag" boolean key')
 
 
 @api.route('/municipality/<identifier>/versions/<int:ref>/')
@@ -148,22 +176,8 @@ class GroupVersion(BaseVersion):
 
 
 class BaseResource(Resource):
-    def get(self, identifier):
-        instance = self.model.coerce(identifier)
-        return instance.as_resource
 
-    def post(self, identifier):
-        instance = self.model.coerce(identifier)
-        instance = self.save_object(instance, identifier)
-        return instance.as_resource, 200
-
-    def put(self, identifier):
-        instance = self.model.coerce(identifier)
-        instance = self.save_object(instance, identifier, update=False)
-        headers = {'Location': api.url_for(self, identifier=instance.id)}
-        return instance.as_resource, 201, headers
-
-    def save_object(self, instance=None, identifier=None, update=True):
+    def save_object(self, instance=None, update=True):
         validator = self.model.validator(update=update, instance=instance,
                                          **request.json)
         if validator.errors:
@@ -174,13 +188,48 @@ class BaseResource(Resource):
             abort(409, str(e))
         return instance
 
+    @instance_or_404
+    def get(self, identifier, instance):
+        return instance.as_resource
 
+    @instance_or_404
+    def post(self, identifier=None, instance=None):
+        if instance:
+            return self.patch(instance)
+        instance = self.save_object()
+        headers = {'Location': api.url_for(self, identifier=instance.id)}
+        return instance.as_resource, 201, headers
+
+    @instance_or_404
+    def patch(self, identifier, instance):
+        instance = self.save_object(instance)
+        return instance.as_resource
+
+    @instance_or_404
+    def put(self, identifier, instance):
+        instance = self.save_object(instance, update=False)
+        return instance.as_resource
+
+    @instance_or_404
+    def delete(self, identifier, instance):
+        try:
+            instance.delete_instance()
+        except peewee.IntegrityError:
+            # This model was still pointed by a FK.
+            abort(409)
+        return {'resource_id': identifier}
+
+
+# Keep the path with identifier first to make it the URL for reverse.
 @api.route('/municipality/<string:identifier>/')
+@api.route('/municipality/')
 class Municipality(BaseResource):
     model = models.Municipality
 
 
+# Keep the path with identifier first to make it the URL for reverse.
 @api.route('/group/<string:identifier>/')
+@api.route('/group/')
 class Group(BaseResource):
     model = models.Group
 
