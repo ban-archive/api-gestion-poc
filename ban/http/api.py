@@ -28,6 +28,19 @@ def instance_or_404(func):
     return wrapper
 
 
+def get_bbox(args):
+    bbox = {}
+    params = ['north', 'south', 'east', 'west']
+    for param in params:
+        try:
+            bbox[param] = float(args.get(param))
+        except (ValueError, TypeError):
+            continue
+    if not len(bbox) == 4:
+        return None
+    return bbox
+
+
 class DateTimeConverter(BaseConverter):
 
     def to_python(self, value):
@@ -95,11 +108,27 @@ class BaseCollection(Resource):
 
 
 class BaseResourceCollection(BaseCollection):
+    order_by = None
+
     def get(self):
+        qs = self.get_queryset()
+        if qs is None:
+            return self.collection([])
+        if not isinstance(qs, list):
+            order_by = (self.order_by if self.order_by is not None
+                        else [self.model.pk])
+            qs = qs.order_by(*order_by).as_resource_list()
+        return self.collection(qs)
+
+    def get_queryset(self):
         qs = self.model.select()
         for key in self.filters:
             values = request.args.getlist(key)
             if values:
+                func = 'filter_{}'.format(key)
+                if hasattr(self, func):
+                    qs = getattr(self, func)(qs)
+                    continue
                 field = getattr(self.model, key)
                 try:
                     values = list(map(field.coerce, values))
@@ -107,20 +136,87 @@ class BaseResourceCollection(BaseCollection):
                     abort('400', 'Invalid value for filter {}'.format(key))
                 except peewee.DoesNotExist:
                     # Return an empty collection as the fk is not found.
-                    return self.collection([])
+                    return None
                 qs = qs.where(field << values)
-        return self.collection(qs.as_resource_list())
+        return qs
 
 
 @api.route('/municipality/')
 class MunicipalityCollection(BaseResourceCollection):
     model = models.Municipality
+    order_by = [model.insee]
+
+
+@api.route('/postcode/')
+class PostCodeCollection(BaseResourceCollection):
+    model = models.PostCode
+    order_by = [model.code, model.municipality]
+    filters = ['code', 'municipality']
 
 
 @api.route('/group/')
 class GroupCollection(BaseResourceCollection):
     filters = ['municipality']
     model = models.Group
+
+
+@api.route('/housenumber/')
+class HouseNumberCollection(BaseResourceCollection):
+    filters = ['parent', 'postcode', 'ancestors', 'group']
+    model = models.HouseNumber
+    order_by = [peewee.SQL('number ASC NULLS FIRST'),
+                peewee.SQL('ordinal ASC NULLS FIRST')]
+
+    def filter_ancestors_and_group(self, qs):
+        # ancestors is a m2m so we cannot use the basic filtering
+        # from self.filters.
+        ancestors = request.args.getlist('ancestors')
+        group = request.args.getlist('group')  # Means parent + ancestors.
+        values = group or ancestors
+        values = list(map(self.model.ancestors.coerce, values))
+        parent_qs = qs.where(self.model.parent << values) if group else None
+        if values:
+            m2m = self.model.ancestors.get_through_model()
+            qs = (qs.join(m2m, on=(m2m.housenumber == self.model.pk))
+                    .where(m2m.group << values))
+            if parent_qs:
+                qs = (parent_qs | qs)
+            # We evaluate the qs ourselves here, because it's a CompoundSelect
+            # that does not know about our SelectQuery custom methods (like
+            # `as_resource_list`), and CompoundSelect is hardcoded in peewee
+            # SelectQuery, and we'd need to copy-paste code to be able to use
+            # a custom CompoundQuery class instead.
+            qs = [h.as_relation for h in qs]
+        return qs
+
+    def filter_ancestors(self, qs):
+        return self.filter_ancestors_and_group(qs)
+
+    def filter_group(self, qs):
+        return self.filter_ancestors_and_group(qs)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        bbox = get_bbox(request.args)
+        if bbox:
+            qs = (qs.join(models.Position)
+                    .where(models.Position.center.in_bbox(**bbox))
+                    .group_by(models.HouseNumber.pk)
+                    .order_by(models.HouseNumber.pk))
+        return qs
+
+
+@api.route('/position/')
+class PositionCollection(BaseResourceCollection):
+    model = models.Position
+    filters = ['kind', 'housenumber']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        bbox = get_bbox(request.args)
+        if bbox:
+            qs = qs.where(models.Position.center.in_bbox(**bbox))
+        return qs
 
 
 class BaseVersionCollection(BaseCollection):
@@ -173,6 +269,24 @@ class MunicipalityVersion(BaseVersion):
 @api.route('/group/<identifier>/versions/<datetime:ref>/')
 class GroupVersion(BaseVersion):
     model = models.Group
+
+
+@api.route('/postcode/<identifier>/versions/<int:ref>/')
+@api.route('/postcode/<identifier>/versions/<datetime:ref>/')
+class PostCodeVersion(BaseVersion):
+    model = models.PostCode
+
+
+@api.route('/housenumber/<identifier>/versions/<int:ref>/')
+@api.route('/housenumber/<identifier>/versions/<datetime:ref>/')
+class HouseNumberVersion(BaseVersion):
+    model = models.HouseNumber
+
+
+@api.route('/position/<identifier>/versions/<int:ref>/')
+@api.route('/position/<identifier>/versions/<datetime:ref>/')
+class PositionVersion(BaseVersion):
+    model = models.Position
 
 
 class BaseResource(Resource):
@@ -228,10 +342,31 @@ class Municipality(BaseResource):
 
 
 # Keep the path with identifier first to make it the URL for reverse.
+@api.route('/postcode/<string:identifier>/')
+@api.route('/postcode/')
+class PostCode(BaseResource):
+    model = models.PostCode
+
+
+# Keep the path with identifier first to make it the URL for reverse.
 @api.route('/group/<string:identifier>/')
 @api.route('/group/')
 class Group(BaseResource):
     model = models.Group
+
+
+# Keep the path with identifier first to make it the URL for reverse.
+@api.route('/housenumber/<string:identifier>/')
+@api.route('/housenumber/')
+class HouseNumber(BaseResource):
+    model = models.HouseNumber
+
+
+# Keep the path with identifier first to make it the URL for reverse.
+@api.route('/position/<string:identifier>/')
+@api.route('/position/')
+class Position(BaseResource):
+    model = models.Position
 
 
 if __name__ == '__main__':

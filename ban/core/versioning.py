@@ -49,9 +49,9 @@ class Versioned(db.Model, metaclass=BaseVersioned):
 
     version = db.IntegerField(default=1)
     created_at = db.DateTimeField()
-    created_by = db.ForeignKeyField(Session)
+    created_by = db.ForeignKeyField(Session, null=True)  # TODO remove null.
     modified_at = db.DateTimeField()
-    modified_by = db.ForeignKeyField(Session)
+    modified_by = db.ForeignKeyField(Session, null=True)  # TODO remove null.
 
     class Meta:
         validate_backrefs = False
@@ -120,7 +120,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
 
     def update_meta(self):
         session = context.get('session')
-        if session:
+        if session:  # TODO remove this if, session should be mandatory.
             try:
                 getattr(self, 'created_by', None)
             except Session.DoesNotExist:
