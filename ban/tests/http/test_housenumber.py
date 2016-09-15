@@ -1,6 +1,5 @@
 import json
 
-import falcon
 from ban.core import models
 from ban.core.encoder import dumps
 
@@ -11,14 +10,14 @@ from .utils import authorize
 
 def test_cannot_get_housenumber_without_auth(get, url):
     resp = get(url('housenumber-resource', identifier=123))
-    assert resp.status == falcon.HTTP_401
+    assert resp.status_code == 401
 
 
 @authorize
 def test_get_housenumber(get, url):
     housenumber = HouseNumberFactory(number="22")
     resp = get(url('housenumber-resource', identifier=housenumber.id))
-    assert resp.status == falcon.HTTP_200
+    assert resp.status_code == 200
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
@@ -29,7 +28,7 @@ def test_get_housenumber(get, url):
 def test_get_housenumber_without_explicit_identifier(get, url):
     housenumber = HouseNumberFactory(number="22")
     resp = get(url('housenumber-resource', identifier=housenumber.id))
-    assert resp.status == falcon.HTTP_200
+    assert resp.status_code == 200
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
@@ -39,7 +38,7 @@ def test_get_housenumber_without_explicit_identifier(get, url):
 @authorize
 def test_get_housenumber_with_unknown_id_is_404(get, url):
     resp = get(url('housenumber-resource', identifier=22))
-    assert resp.status == falcon.HTTP_404
+    assert resp.status_code == 404
 
 
 @authorize
@@ -47,7 +46,7 @@ def test_get_housenumber_with_cia(get, url):
     housenumber = HouseNumberFactory(number="22", parent__fantoir="900011234")
     resp = get(url('housenumber-resource', id=housenumber.cia,
                    identifier="cia"))
-    assert resp.status == falcon.HTTP_200
+    assert resp.status_code == 200
     assert resp.json['number'] == "22"
 
 
@@ -58,7 +57,7 @@ def test_get_housenumber_with_districts(get, url):
     housenumber = HouseNumberFactory(ancestors=[district],
                                      municipality=municipality)
     resp = get(url('housenumber-resource', identifier=housenumber.id))
-    assert resp.status == falcon.HTTP_200
+    assert resp.status_code == 200
     assert 'ancestors' in resp.json
     assert resp.json['ancestors'][0]['id'] == district.id
     assert resp.json['ancestors'][0]['name'] == district.name
@@ -67,7 +66,7 @@ def test_get_housenumber_with_districts(get, url):
 @authorize
 def test_get_housenumber_collection(get, url):
     objs = HouseNumberFactory.create_batch(5)
-    resp = get(url('housenumber'))
+    resp = get(url('housenumber-collection'))
     assert resp.json['total'] == 5
     for obj in objs:
         assert json.loads(dumps(obj.as_relation)) in resp.json['collection']
@@ -78,7 +77,7 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get, url):
     position = PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     bbox = dict(north=2, south=0, west=0, east=2)
-    resp = get(url('housenumber', query_string=bbox))
+    resp = get(url('housenumber-collection', **bbox))
     assert resp.json['total'] == 1
     # JSON transform internals tuples to lists.
     resource = position.housenumber.as_relation
@@ -90,7 +89,7 @@ def test_get_housenumber_bbox_allows_floats(get, url):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     bbox = dict(north=2.23, south=0.12, west=0.56, east=2.34)
-    resp = get(url('housenumber', query_string=bbox))
+    resp = get(url('housenumber-collection', **bbox))
     assert resp.json['total'] == 1
 
 
@@ -99,7 +98,7 @@ def test_get_housenumber_missing_bbox_param_makes_bbox_ignored(get, url):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     bbox = dict(north=2, south=0, west=0)
-    resp = get(url('housenumber', query_string=bbox))
+    resp = get(url('housenumber-collection', **bbox))
     assert resp.json['total'] == 2
 
 
@@ -108,8 +107,8 @@ def test_get_housenumber_invalid_bbox_param_returns_bad_request(get, url):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     bbox = dict(north=2, south=0, west=0, east='invalid')
-    resp = get(url('housenumber', query_string=bbox))
-    assert resp.status == falcon.HTTP_400
+    resp = get(url('housenumber-collection', **bbox))
+    assert resp.status_code == 400
 
 
 @authorize
@@ -117,7 +116,7 @@ def test_get_housenumber_collection_filtered_by_bbox_is_paginated(get, url):
     PositionFactory.create_batch(9, center=(1, 1))
     params = dict(north=2, south=0, west=0, east=2, limit=5)
     PositionFactory(center=(-1, -1))
-    resp = get(url('housenumber', query_string=params))
+    resp = get(url('housenumber-collection', **params))
     page1 = resp.json
     assert len(page1['collection']) == 5
     assert page1['total'] == 9
@@ -138,7 +137,7 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get, url):
     position = PositionFactory(center=(1, 1))
     PositionFactory(center=(1.1, 1.1), housenumber=position.housenumber)
     bbox = dict(north=2, south=0, west=0, east=2)
-    resp = get(url('housenumber', query_string=bbox))
+    resp = get(url('housenumber-collection', **bbox))
     assert resp.json['total'] == 1
     # JSON transform internals tuples to lists.
     data = json.loads(dumps(position.housenumber.as_relation))
@@ -167,7 +166,7 @@ def test_get_housenumber_positions(get, url):
     pos1 = PositionFactory(housenumber=housenumber, center=(1, 1))
     pos2 = PositionFactory(housenumber=housenumber, center=(2, 2))
     pos3 = PositionFactory(housenumber=housenumber, center=(3, 3))
-    resp = get(url('housenumber-positions', identifier=housenumber.id))
+    resp = get(url('position', housenumber=housenumber.id))
     assert resp.json['total'] == 3
 
     def check(position):
@@ -182,15 +181,15 @@ def test_get_housenumber_positions(get, url):
 
 
 @authorize
-def test_create_housenumber(client):
+def test_create_housenumber(client, url):
     street = GroupFactory(name="Rue de Bonbons")
     assert not models.HouseNumber.select().count()
     data = {
         "number": 20,
         "parent": street.id,
     }
-    resp = client.post('/housenumber', data)
-    assert resp.status == falcon.HTTP_201
+    resp = client.post(url('housenumber-post'), data)
+    assert resp.status_code == 201
     assert resp.json['id']
     assert resp.json['number'] == '20'
     assert resp.json['ordinal'] is None
@@ -199,34 +198,34 @@ def test_create_housenumber(client):
 
 
 @authorize
-def test_create_housenumber_with_street_fantoir(client):
+def test_create_housenumber_with_street_fantoir(client, url):
     street = GroupFactory(name="Rue de Bonbons", fantoir="900011234")
     assert not models.HouseNumber.select().count()
     data = {
         "number": 20,
         "parent": 'fantoir:{}'.format(street.fantoir),
     }
-    resp = client.post('/housenumber', data)
-    assert resp.status == falcon.HTTP_201
+    resp = client.post(url('housenumber-post'), data)
+    assert resp.status_code == 201
     assert models.HouseNumber.select().count() == 1
 
 
 @authorize
-def test_create_housenumber_does_not_honour_version_field(client):
+def test_create_housenumber_does_not_honour_version_field(client, url):
     street = GroupFactory(name="Rue de Bonbons")
     data = {
         "version": 3,
         "number": 20,
         "parent": street.id,
     }
-    resp = client.post('/housenumber', data=data)
-    assert resp.status == falcon.HTTP_201
+    resp = client.post(url('housenumber-post'), data=data)
+    assert resp.status_code == 201
     assert resp.json['id']
     assert resp.json['version'] == 1
 
 
 @authorize
-def test_create_housenumber_with_postcode_id(client):
+def test_create_housenumber_with_postcode_id(client, url):
     postcode = PostCodeFactory(code="12345")
     street = GroupFactory(name="Rue de Bonbons")
     data = {
@@ -234,8 +233,8 @@ def test_create_housenumber_with_postcode_id(client):
         "parent": street.id,
         "postcode": postcode.id
     }
-    resp = client.post('/housenumber', data)
-    assert resp.status == falcon.HTTP_201
+    resp = client.post(url('housenumber-post'), data)
+    assert resp.status_code == 201
     assert models.HouseNumber.select().count() == 1
     assert models.HouseNumber.first().postcode == postcode
 
@@ -251,8 +250,8 @@ def test_replace_housenumber(client, url):
         "ordinal": 'bis',
         "parent": housenumber.parent.id,
     }
-    resp = client.put(uri, body=data)
-    assert resp.status == falcon.HTTP_200
+    resp = client.put(uri, data=data)
+    assert resp.status_code == 200
     assert resp.json['id']
     assert resp.json['version'] == 2
     assert resp.json['number'] == '22'
@@ -271,8 +270,8 @@ def test_replace_housenumber_with_missing_field_fails(client, url):
         "ordinal": 'bis',
         "street": housenumber.parent.id,
     }
-    resp = client.put(uri, body=data)
-    assert resp.status == falcon.HTTP_422
+    resp = client.put(uri, data=data)
+    assert resp.status_code == 422
     assert 'errors' in resp.json
     assert models.HouseNumber.select().count() == 1
 
@@ -287,8 +286,8 @@ def test_patch_housenumber_with_districts(client, url):
         "ancestors": [district.id],
     }
     uri = url('housenumber-resource', identifier=housenumber.id)
-    resp = client.patch(uri, body=data)
-    assert resp.status == falcon.HTTP_200
+    resp = client.patch(uri, data=data)
+    assert resp.status_code == 200
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
     assert district in hn.ancestors
 
@@ -302,8 +301,8 @@ def test_patch_housenumber_with_postcode(client, url):
         "postcode": postcode.id,
     }
     uri = url('housenumber-resource', identifier=housenumber.id)
-    resp = client.patch(uri, body=data)
-    assert resp.status == falcon.HTTP_200
+    resp = client.patch(uri, data=data)
+    assert resp.status_code == 200
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
     assert hn.postcode == postcode
 
@@ -313,7 +312,8 @@ def test_delete_housenumber(client, url):
     housenumber = HouseNumberFactory()
     uri = url('housenumber-resource', identifier=housenumber.id)
     resp = client.delete(uri)
-    assert resp.status == falcon.HTTP_204
+    assert resp.status_code == 200
+    assert resp.json['resource_id'] == housenumber.id
     assert not models.HouseNumber.select().count()
 
 
@@ -321,7 +321,7 @@ def test_cannot_delete_housenumber_if_not_authorized(client, url):
     housenumber = HouseNumberFactory()
     uri = url('housenumber-resource', identifier=housenumber.id)
     resp = client.delete(uri)
-    assert resp.status == falcon.HTTP_401
+    assert resp.status_code == 401
     assert models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
 
 
@@ -331,7 +331,7 @@ def test_cannot_delete_housenumber_if_linked_to_position(client, url):
     PositionFactory(housenumber=housenumber)
     uri = url('housenumber-resource', identifier=housenumber.id)
     resp = client.delete(uri)
-    assert resp.status == falcon.HTTP_409
+    assert resp.status_code == 409
     assert models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
 
 
@@ -342,9 +342,9 @@ def test_housenumber_select_use_default_orderby(get, url):
     HouseNumberFactory(number="2", ordinal="ter")
     HouseNumberFactory(number="2", ordinal="")
     HouseNumberFactory(number="2", ordinal="bis")
-    uri = url('housenumber')
+    uri = url('housenumber-collection')
     resp = get(uri)
-    assert resp.status == falcon.HTTP_200
+    assert resp.status_code == 200
     assert resp.json['total'] == 5
     assert resp.json['collection'][0]['number'] == '1'
     assert resp.json['collection'][0]['ordinal'] is None

@@ -1,7 +1,7 @@
 from datetime import timezone
 from urllib.parse import urlencode
 
-from flask import Flask, request, make_response
+from flask import request, make_response
 from flask_restplus import Api, Resource, abort
 from werkzeug.routing import BaseConverter, ValidationError
 from dateutil.parser import parse as parse_date
@@ -35,7 +35,11 @@ def get_bbox(args):
     for param in params:
         try:
             bbox[param] = float(args.get(param))
-        except (ValueError, TypeError):
+        except ValueError:
+            abort(400, 'Invalid value for {}: {}'.format(param,
+                                                         args.get(param)))
+        except TypeError:
+            # None (param not set).
             continue
     if not len(bbox) == 4:
         return None
@@ -161,7 +165,7 @@ class GroupCollection(BaseResourceCollection):
     model = models.Group
 
 
-@api.route('/housenumber/')
+@api.route('/housenumber/', endpoint='housenumber-collection')
 class HouseNumberCollection(BaseResourceCollection):
     filters = ['parent', 'postcode', 'ancestors', 'group']
     model = models.HouseNumber
@@ -298,17 +302,19 @@ class BaseResource(Resource):
         validator = self.model.validator(update=update, instance=instance,
                                          **request.json)
         if validator.errors:
-            abort(422, **validator.errors)
+            abort(422, errors=validator.errors)
         try:
             instance = validator.save()
         except models.Model.ForcedVersionError as e:
             abort(409, str(e))
         return instance
 
+    @auth.require_oauth()
     @instance_or_404
     def get(self, identifier, instance):
         return instance.as_resource
 
+    @auth.require_oauth()
     @instance_or_404
     def post(self, identifier=None, instance=None):
         if instance:
@@ -317,18 +323,20 @@ class BaseResource(Resource):
         headers = {'Location': api.url_for(self, identifier=instance.id)}
         return instance.as_resource, 201, headers
 
+    @auth.require_oauth()
     @instance_or_404
     def patch(self, identifier, instance):
         instance = self.save_object(instance)
         return instance.as_resource
 
+    @auth.require_oauth()
     @instance_or_404
     def put(self, identifier, instance):
         instance = self.save_object(instance, update=False)
         return instance.as_resource
 
-    @instance_or_404
     @auth.require_oauth()
+    @instance_or_404
     def delete(self, identifier, instance):
         try:
             instance.delete_instance()
@@ -361,8 +369,9 @@ class Group(BaseResource):
 
 
 # Keep the path with identifier first to make it the URL for reverse.
-@api.route('/housenumber/<string:identifier>/')
-@api.route('/housenumber/')
+@api.route('/housenumber/<string:identifier>/',
+           endpoint='housenumber-resource')
+@api.route('/housenumber/', endpoint='housenumber-post')
 class HouseNumber(BaseResource):
     model = models.HouseNumber
 

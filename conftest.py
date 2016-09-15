@@ -107,6 +107,10 @@ application.test_client_class = Client
 @pytest.fixture()
 def url():
     def _(endpoint, **kwargs):
+        if 'id' in kwargs:
+            # Allow to create "id:value" identifiers from kwargs.
+            kwargs['identifier'] = '{identifier}:{id}'.format(**kwargs)
+            del kwargs['id']
         if not isinstance(endpoint, str):  # Passing the resource.
             endpoint = endpoint.endpoint
         uri = url_for(endpoint, **kwargs)

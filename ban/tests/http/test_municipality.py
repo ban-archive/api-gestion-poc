@@ -207,8 +207,9 @@ def test_cannot_duplicate_municipality(post, url):
     }
     resp = post(url('municipality-post'), data)
     assert resp.status_code == 422
-    assert resp.json['insee']
-    assert '12345' in resp.json['insee']
+    assert 'errors' in resp.json
+    assert resp.json['errors']['insee']
+    assert '12345' in resp.json['errors']['insee']
 
 
 @authorize
