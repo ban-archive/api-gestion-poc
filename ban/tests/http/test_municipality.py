@@ -1,7 +1,6 @@
 import json
 from datetime import datetime
 
-import falcon
 from ban.core import models
 from ban.core.encoder import dumps
 from ban.core.versioning import Version
@@ -256,10 +255,10 @@ def test_patch_municipality_with_alias(patch, url):
 
 
 @authorize
-def test_delete_municipality(client, url):
+def test_delete_municipality(test_client, url):
     municipality = MunicipalityFactory()
     uri = url(api.Municipality, identifier=municipality.id)
-    resp = client.delete(uri)
+    resp = test_client.delete(uri)
     assert resp.status_code == 200
     assert resp.json['resource_id'] == municipality.id
     assert not models.Municipality.select().count()

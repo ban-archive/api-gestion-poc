@@ -7,11 +7,12 @@ from werkzeug.routing import BaseConverter, ValidationError
 from dateutil.parser import parse as parse_date
 import peewee
 
-
 from ban.core import models
 from ban.core.encoder import dumps
 
-app = application = Flask(__name__)
+from ban.http.wsgi import app
+from ban.http.auth import auth
+
 api = Api(app)
 
 
@@ -327,6 +328,7 @@ class BaseResource(Resource):
         return instance.as_resource
 
     @instance_or_404
+    @auth.require_oauth()
     def delete(self, identifier, instance):
         try:
             instance.delete_instance()

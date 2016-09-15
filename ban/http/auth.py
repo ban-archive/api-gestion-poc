@@ -1,12 +1,12 @@
-import falcon
-from falcon_oauth.provider.oauth2 import OAuthProvider
-from ban.auth import models
+from flask_oauthlib.provider import OAuth2Provider
 
+from ban.auth import models
 from ban.core import context
 from ban.utils import is_uuid4
+
 from .wsgi import app
 
-auth = OAuthProvider()
+auth = OAuth2Provider(app)
 
 
 @auth.clientgetter
@@ -31,7 +31,10 @@ def tokengetter(access_token=None, refresh_token=None):
         token = models.Token.first(models.Token.access_token == access_token)
         if token:
             context.set('session', token.session)
+            # We use TZ aware datetime while Flask Oauthlib wants naive ones.
+            token.expires = token.expires.replace(tzinfo=None)
             return token
+    raise HTTPBadRequest('tokengetter')
 
 
 @auth.tokensetter
@@ -41,7 +44,7 @@ def tokensetter(metadata, req, *args, **kwargs):
     metadata['client'] = req.client_id
     token = models.Token.create_with_session(**metadata)
     if not token:
-        raise falcon.HTTPBadRequest('Missing payload', 'Missing payload')
+        raise HTTPBadRequest('Missing payload', 'Missing payload')
 
 
 @auth.grantgetter
@@ -52,12 +55,14 @@ def grantgetter(client_id, code):
                               models.Grant.code == code)
 
 
-class Token:
+@auth.grantsetter
+def grantsetter(client_id, code, request, *args, **kwargs):
+    print('#TODO grantsetter()')
+    die()
 
-    @auth.token_endpoint
-    @app.endpoint()
-    def on_post(self, req, resp, *args, **kwargs):
-        """Get a token to use the API."""
-        return {}
 
-app.register_resource(Token())
+@app.route('/token/', methods=['POST'])
+@auth.authorize_handler
+def authorize(*args, **kwargs):
+    """Get a token to use the API."""
+    return True

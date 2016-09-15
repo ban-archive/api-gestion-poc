@@ -10,8 +10,7 @@ from ban.commands.db import truncate as truncatedb
 from ban.commands.db import models
 from ban.commands.reporter import Reporter
 from ban.core import context
-from ban.http import reverse
-from ban.http.api import api, application
+from ban.http.api import api, app as application
 from ban.tests.factories import SessionFactory, TokenFactory, UserFactory
 
 
@@ -69,36 +68,36 @@ def get(client):
     return client.get
 
 
-@pytest.fixture
-def call(client):
+class Client:
+    def __init__(self, client):
+        self.client = client
+        self.headers = {}
 
-    def _(verb, uri, data):
-        # Factorize the json serialization of requests.
-        method = getattr(client, verb)
+    def call(self, verb, uri, data=None):
+        method = getattr(self.client, verb)
         return method(uri, data=json.dumps(data),
-                      content_type='application/json')
-    return _
+                      content_type='application/json',
+                      headers=self.headers)
+
+    def get(self, url, data):
+        return self.call('get', url, data)
+
+    def patch(self, url, data):
+        return self.call('patch', url, data)
+
+    def put(self, url, data):
+        return self.call('put', url, data)
+
+    def post(self, url, data):
+        return self.call('post', url, data)
+
+    def delete(self, url):
+        return self.call('delete', url)
 
 
 @pytest.fixture
-def post(call):
-    def _(uri, data):
-        return call('post', uri, data)
-    return _
-
-
-@pytest.fixture
-def patch(call):
-    def _(uri, data):
-        return call('patch', uri, data)
-    return _
-
-
-@pytest.fixture
-def put(call):
-    def _(uri, data):
-        return call('put', uri, data)
-    return _
+def test_client(client):
+    return Client(client)
 
 
 @pytest.fixture()
