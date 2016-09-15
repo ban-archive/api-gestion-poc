@@ -1,3 +1,4 @@
+from flask_restplus import abort
 from flask_oauthlib.provider import OAuth2Provider
 
 from ban.auth import models
@@ -34,7 +35,6 @@ def tokengetter(access_token=None, refresh_token=None):
             # We use TZ aware datetime while Flask Oauthlib wants naive ones.
             token.expires = token.expires.replace(tzinfo=None)
             return token
-    raise HTTPBadRequest('tokengetter')
 
 
 @auth.tokensetter
@@ -44,7 +44,7 @@ def tokensetter(metadata, req, *args, **kwargs):
     metadata['client'] = req.client_id
     token = models.Token.create_with_session(**metadata)
     if not token:
-        raise HTTPBadRequest('Missing payload', 'Missing payload')
+        abort(400, 'Missing payload')
 
 
 @auth.grantgetter
@@ -57,12 +57,12 @@ def grantgetter(client_id, code):
 
 @auth.grantsetter
 def grantsetter(client_id, code, request, *args, **kwargs):
-    print('#TODO grantsetter()')
-    die()
+    # Needed by flask-oauthlib, but not used by client_crendentials flow.
+    pass
 
 
 @app.route('/token/', methods=['POST'])
-@auth.authorize_handler
+@auth.token_handler
 def authorize(*args, **kwargs):
     """Get a token to use the API."""
-    return True
+    return None
