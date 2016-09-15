@@ -7,6 +7,7 @@ from werkzeug.routing import BaseConverter, ValidationError
 from dateutil.parser import parse as parse_date
 import peewee
 
+from ban.auth import models as amodels
 from ban.core import models
 from ban.core.encoder import dumps
 
@@ -385,6 +386,13 @@ class HouseNumber(BaseResource):
 @api.route('/position/', endpoint='position-post')
 class Position(BaseResource):
     model = models.Position
+
+
+# Keep the path with identifier first to make it the URL for reverse.
+@api.route('/user/<string:identifier>/', endpoint='user-resource')
+@api.route('/user/', endpoint='user-post')
+class User(BaseResource):
+    model = amodels.User
 
 
 if __name__ == '__main__':
