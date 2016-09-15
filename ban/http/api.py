@@ -355,8 +355,8 @@ class Municipality(BaseResource):
 
 
 # Keep the path with identifier first to make it the URL for reverse.
-@api.route('/postcode/<string:identifier>/')
-@api.route('/postcode/')
+@api.route('/postcode/<string:identifier>/', endpoint='postcode-resource')
+@api.route('/postcode/', endpoint='postcode-post')
 class PostCode(BaseResource):
     model = models.PostCode
 
