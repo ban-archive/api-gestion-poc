@@ -94,7 +94,7 @@ class Client(FlaskClient):
         # Allow to define headers and content_type before opening the request.
         kwargs.setdefault('headers', {})
         kwargs['headers'].update(getattr(self, 'extra_headers', {}))
-        if hasattr(self, 'content_type'):
+        if hasattr(self, 'content_type') and not kwargs.get('content_type'):
             kwargs['content_type'] = self.content_type
         if kwargs.get('content_type') == 'application/json':
             if 'data' in kwargs:

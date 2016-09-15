@@ -1,18 +1,19 @@
 from datetime import timezone
+from io import StringIO
 from urllib.parse import urlencode
 
-from flask import request, make_response
+import peewee
+from dateutil.parser import parse as parse_date
+from flask import make_response, request
 from flask_restplus import Api, Resource, abort
 from werkzeug.routing import BaseConverter, ValidationError
-from dateutil.parser import parse as parse_date
-import peewee
 
 from ban.auth import models as amodels
-from ban.core import models, versioning
+from ban.commands.bal import bal
+from ban.core import models, versioning, context
 from ban.core.encoder import dumps
-
-from ban.http.wsgi import app
 from ban.http.auth import auth
+from ban.http.wsgi import app
 
 api = Api(app)
 
@@ -415,6 +416,18 @@ class Diff(BaseCollection):
         else:
             qs = qs.where(versioning.Diff.pk > increment)
         return self.collection(qs.as_resource())
+
+
+@api.route('/import/bal/')
+class Bal(Resource):
+
+    @auth.require_oauth()
+    def post(self):
+        """Import file at BAL format."""
+        data = request.files['data']
+        bal(StringIO(data.read().decode('utf-8-sig')))
+        reporter = context.get('reporter')
+        return {'report': reporter}
 
 
 if __name__ == '__main__':

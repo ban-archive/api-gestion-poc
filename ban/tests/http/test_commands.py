@@ -1,4 +1,4 @@
-import falcon
+from io import BytesIO
 
 from ban.core import models
 from ban.tests import factories
@@ -12,8 +12,10 @@ def test_bal_import_from_data_file(staff, client):
     content = """cle_interop,uid_adresse,voie_nom,numero,suffixe,commune_nom,position,x,y,long,lat,source,date_der_maj\n
 35001_0005_99999,,Mail Anita Conti,99999,,Acigné,,,,,,Rennes Métropole,2016-02-22
 """
-    resp = client.post('/import/bal', files={'data': (content, 'test.csv')})
-    assert resp.status == falcon.HTTP_OK
+    resp = client.post('/import/bal/',
+                       data={'data': (BytesIO(content.encode()), 'test.csv')},
+                       content_type='multipart/form-data')
+    assert resp.status_code == 200
     assert models.Group.select().count() == 1
     group = models.Group.select().first()
     assert group.name == "Mail Anita Conti"
@@ -24,14 +26,13 @@ def test_bal_import_from_data_file(staff, client):
 
 def test_cannot_use_bal_import_without_auth(staff, client):
     factories.MunicipalityFactory(name="Acigné", insee="35001")
-    content = """cle_interop,uid_adresse,voie_nom,numero,suffixe,commune_nom,position,x,y,long,lat,source,date_der_maj\n
-35001_0005_99999,,Mail Anita Conti,99999,,Acigné,,,,,,Rennes Métropole,2016-02-22
-"""
-    resp = client.post('/import/bal', files={'data': (content, 'test.csv')})
-    assert resp.status == falcon.HTTP_401
+    resp = client.post('/import/bal/', data={'data': (b'xxxx', 'test.csv')},
+                       content_type='multipart/form-data')
+    assert resp.status_code == 401
 
 
 @authorize
 def test_data_file_is_mandatory(staff, client):
-    resp = client.post('/import/bal', files={'badname': ('aaa', 'test.csv')})
-    assert resp.status == falcon.HTTP_400
+    resp = client.post('/import/bal/', data={'badname': (b'aaa', 'test.csv')},
+                       content_type='multipart/form-data')
+    assert resp.status_code == 400
