@@ -166,7 +166,7 @@ def test_get_housenumber_positions(get, url):
     pos1 = PositionFactory(housenumber=housenumber, center=(1, 1))
     pos2 = PositionFactory(housenumber=housenumber, center=(2, 2))
     pos3 = PositionFactory(housenumber=housenumber, center=(3, 3))
-    resp = get(url('position', housenumber=housenumber.id))
+    resp = get(url('position_collection', housenumber=housenumber.id))
     assert resp.json['total'] == 3
 
     def check(position):

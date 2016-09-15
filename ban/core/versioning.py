@@ -49,9 +49,9 @@ class Versioned(db.Model, metaclass=BaseVersioned):
 
     version = db.IntegerField(default=1)
     created_at = db.DateTimeField()
-    created_by = db.ForeignKeyField(Session, null=True)  # TODO remove null.
+    created_by = db.ForeignKeyField(Session)
     modified_at = db.DateTimeField()
-    modified_by = db.ForeignKeyField(Session, null=True)  # TODO remove null.
+    modified_by = db.ForeignKeyField(Session)
 
     class Meta:
         validate_backrefs = False
