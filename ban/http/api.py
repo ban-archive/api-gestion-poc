@@ -142,7 +142,7 @@ class BaseResourceCollection(BaseCollection):
         return qs
 
 
-@api.route('/municipality/')
+@api.route('/municipality/', endpoint='municipality-collection')
 class MunicipalityCollection(BaseResourceCollection):
     model = models.Municipality
     order_by = [model.insee]

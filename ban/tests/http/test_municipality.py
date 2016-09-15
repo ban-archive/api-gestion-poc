@@ -293,8 +293,7 @@ def test_delete_unknown_municipality_should_return_not_found(client, url):
 def test_municipality_select_use_default_orderby(get, url):
     MunicipalityFactory(insee="90002")
     MunicipalityFactory(insee="90001")
-    uri = url('municipality')
-    resp = get(uri)
+    resp = get(url('municipality-collection'))
     assert resp.status_code == 200
     assert resp.json['total'] == 2
     assert resp.json['collection'][0]['insee'] == '90001'
