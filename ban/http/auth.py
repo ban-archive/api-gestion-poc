@@ -39,7 +39,7 @@ def tokengetter(access_token=None, refresh_token=None):
 
 @auth.tokensetter
 def tokensetter(metadata, req, *args, **kwargs):
-    # req: oauthlib.Request (not falcon one).
+    # req: oauthlib.Request (not Flask one).
     metadata.update(dict(req.decoded_body))
     metadata['client'] = req.client_id
     token = models.Token.create_with_session(**metadata)
