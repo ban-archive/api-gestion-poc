@@ -1,8 +1,8 @@
 import json
-from urllib.parse import urlencode
 
 import pytest
 from flask import url_for
+from flask.testing import FlaskClient
 
 from ban import db
 from ban.commands.db import create as createdb
@@ -10,7 +10,7 @@ from ban.commands.db import truncate as truncatedb
 from ban.commands.db import models
 from ban.commands.reporter import Reporter
 from ban.core import context
-from ban.http.api import api, app as application
+from ban.http.api import app as application
 from ban.tests.factories import SessionFactory, TokenFactory, UserFactory
 
 
@@ -68,42 +68,46 @@ def get(client):
     return client.get
 
 
-class Client:
-    def __init__(self, client):
-        self.client = client
-        self.headers = {}
-
-    def call(self, verb, uri, data=None):
-        method = getattr(self.client, verb)
-        return method(uri, data=json.dumps(data),
-                      content_type='application/json',
-                      headers=self.headers)
-
-    def get(self, url, data):
-        return self.call('get', url, data)
-
-    def patch(self, url, data):
-        return self.call('patch', url, data)
-
-    def put(self, url, data):
-        return self.call('put', url, data)
-
-    def post(self, url, data):
-        return self.call('post', url, data)
-
-    def delete(self, url):
-        return self.call('delete', url)
+@pytest.fixture
+def post(client):
+    return client.post
 
 
 @pytest.fixture
-def test_client(client):
-    return Client(client)
+def patch(client):
+    return client.patch
+
+
+@pytest.fixture
+def put(client):
+    return client.put
+
+
+class Client(FlaskClient):
+
+    def open(self, *args, **kwargs):
+        if len(args) == 2:
+            # Be smart, allow to pass data as arg, even if EnvironBuilder want
+            # it as kwarg only.
+            kwargs['data'] = args[1]
+            args = args[0],
+        # Allow to define headers and content_type before opening the request.
+        kwargs.setdefault('headers', {})
+        kwargs['headers'].update(getattr(self, 'extra_headers', {}))
+        if hasattr(self, 'content_type'):
+            kwargs['content_type'] = self.content_type
+        if kwargs.get('content_type') == 'application/json':
+            if 'data' in kwargs:
+                kwargs['data'] = json.dumps(kwargs['data'])
+        return super().open(*args, **kwargs)
+
+application.test_client_class = Client
 
 
 @pytest.fixture()
 def url():
     def _(endpoint, **kwargs):
-        if not isinstance(endpoint, str):
+        if not isinstance(endpoint, str):  # Passing the resource.
             endpoint = endpoint.endpoint
         uri = url_for(endpoint, **kwargs)
         uri = 'http://localhost{}'.format(uri)

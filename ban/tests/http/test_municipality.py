@@ -255,10 +255,10 @@ def test_patch_municipality_with_alias(patch, url):
 
 
 @authorize
-def test_delete_municipality(test_client, url):
+def test_delete_municipality(client, url):
     municipality = MunicipalityFactory()
     uri = url(api.Municipality, identifier=municipality.id)
-    resp = test_client.delete(uri)
+    resp = client.delete(uri)
     assert resp.status_code == 200
     assert resp.json['resource_id'] == municipality.id
     assert not models.Municipality.select().count()

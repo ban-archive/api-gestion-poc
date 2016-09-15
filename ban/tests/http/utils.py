@@ -14,17 +14,15 @@ def authorize(func):
 
         # Subtly plug in authenticated user.
         client = None
-        if 'test_client' in kwargs:
-            client = kwargs['test_client']
-        elif 'get' in kwargs:
-            client = kwargs['get'].__self__
-        elif 'delete' in kwargs:
-            client = kwargs['delete'].__self__
+        if 'client' in kwargs:
+            client = kwargs['client']
+        for key in ['get', 'patch', 'post', 'put']:
+            if key in kwargs:
+                client = kwargs[key].__self__
         if client:
             client.content_type = 'application/json'
-            # client.before(attach)
-            client.headers.update({
+            client.extra_headers = {
                 'Authorization': 'Bearer {}'.format(token.access_token)
-            })
+            }
         return func(*args, **kwargs)
     return inner
