@@ -191,7 +191,7 @@ class HouseNumberCollection(BaseResourceCollection):
             # `as_resource_list`), and CompoundSelect is hardcoded in peewee
             # SelectQuery, and we'd need to copy-paste code to be able to use
             # a custom CompoundQuery class instead.
-            qs = [h.as_relation for h in qs]
+            qs = [h.as_relation for h in qs.order_by(*self.order_by)]
         return qs
 
     def filter_ancestors(self, qs):
@@ -272,8 +272,10 @@ class MunicipalityVersion(BaseVersion):
     model = models.Municipality
 
 
-@api.route('/group/<identifier>/versions/<int:ref>/')
-@api.route('/group/<identifier>/versions/<datetime:ref>/')
+@api.route('/group/<identifier>/versions/<int:ref>/',
+           endpoint='group-version-by-sequential')
+@api.route('/group/<identifier>/versions/<datetime:ref>/',
+           endpoint='group-version-by-date')
 class GroupVersion(BaseVersion):
     model = models.Group
 
@@ -364,8 +366,8 @@ class PostCode(BaseResource):
 
 
 # Keep the path with identifier first to make it the URL for reverse.
-@api.route('/group/<string:identifier>/')
-@api.route('/group/')
+@api.route('/group/<string:identifier>/', endpoint='group-resource')
+@api.route('/group/', endpoint='group-post')
 class Group(BaseResource):
     model = models.Group
 
