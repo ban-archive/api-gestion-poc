@@ -117,6 +117,7 @@ class BaseCollection(Resource):
 class BaseResourceCollection(BaseCollection):
     order_by = None
 
+    @auth.require_oauth()
     def get(self):
         qs = self.get_queryset()
         if qs is None:
@@ -243,6 +244,7 @@ class GroupVersionCollection(BaseVersionCollection):
 
 
 class BaseVersion(Resource):
+    @auth.require_oauth()
     @instance_or_404
     def get(self, identifier, ref, instance):
         instance = self.model.coerce(identifier)
@@ -251,6 +253,7 @@ class BaseVersion(Resource):
             abort(404)
         return version.as_resource
 
+    @auth.require_oauth()
     @instance_or_404
     def post(self, identifier, ref, instance):
         instance = self.model.coerce(identifier)
