@@ -317,11 +317,13 @@ class BaseResource(Resource):
     @auth.require_oauth()
     @instance_or_404
     def post(self, identifier=None, instance=None):
-        if instance:
-            return self.patch(instance)
-        instance = self.save_object()
-        headers = {'Location': api.url_for(self, identifier=instance.id)}
-        return instance.as_resource, 201, headers
+        instance = self.save_object(instance=instance, update=bool(identifier))
+        headers = {}
+        status = 200
+        if identifier is None:
+            headers = {'Location': api.url_for(self, identifier=instance.id)}
+            status = 201
+        return instance.as_resource, status, headers
 
     @auth.require_oauth()
     @instance_or_404
@@ -377,8 +379,8 @@ class HouseNumber(BaseResource):
 
 
 # Keep the path with identifier first to make it the URL for reverse.
-@api.route('/position/<string:identifier>/')
-@api.route('/position/')
+@api.route('/position/<string:identifier>/', endpoint='position-resource')
+@api.route('/position/', endpoint='position-post')
 class Position(BaseResource):
     model = models.Position
 
