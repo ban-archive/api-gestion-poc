@@ -23,6 +23,6 @@ def authorize(func):
             client = kwargs['get'].__self__
         if client:
             client.content_type = 'application/json'
-            client.before(attach)
+            # client.before(attach)
         return func(*args, **kwargs)
     return inner

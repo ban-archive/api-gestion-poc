@@ -1,13 +1,18 @@
+import json
 from urllib.parse import urlencode
-import pytest
 
-from ban.tests.factories import UserFactory, TokenFactory, SessionFactory
+import pytest
+from flask import url_for
 
 from ban import db
+from ban.commands.db import create as createdb
+from ban.commands.db import truncate as truncatedb
+from ban.commands.db import models
 from ban.commands.reporter import Reporter
-from ban.commands.db import models, create as createdb, truncate as truncatedb
 from ban.core import context
-from ban.http import application, reverse
+from ban.http import reverse
+from ban.http.api import api, application
+from ban.tests.factories import SessionFactory, TokenFactory, UserFactory
 
 
 def pytest_configure(config):
@@ -64,13 +69,46 @@ def get(client):
     return client.get
 
 
+@pytest.fixture
+def call(client):
+
+    def _(verb, uri, data):
+        # Factorize the json serialization of requests.
+        method = getattr(client, verb)
+        return method(uri, data=json.dumps(data),
+                      content_type='application/json')
+    return _
+
+
+@pytest.fixture
+def post(call):
+    def _(uri, data):
+        return call('post', uri, data)
+    return _
+
+
+@pytest.fixture
+def patch(call):
+    def _(uri, data):
+        return call('patch', uri, data)
+    return _
+
+
+@pytest.fixture
+def put(call):
+    def _(uri, data):
+        return call('put', uri, data)
+    return _
+
+
 @pytest.fixture()
 def url():
-    def _(class_, query_string=None, **kwargs):
-        url = reverse(class_, **kwargs)
-        if query_string:
-            url = '{}?{}'.format(url, urlencode(query_string))
-        return url
+    def _(endpoint, **kwargs):
+        if not isinstance(endpoint, str):
+            endpoint = endpoint.endpoint
+        uri = url_for(endpoint, **kwargs)
+        uri = 'http://localhost{}'.format(uri)
+        return uri
     return _
 
 

@@ -11,7 +11,7 @@ import peewee
 from ban.core import models
 from ban.core.encoder import dumps
 
-app = Flask(__name__)
+app = application = Flask(__name__)
 api = Api(app)
 
 
@@ -259,8 +259,10 @@ class BaseVersion(Resource):
             abort(400, message='Body should contain a "flag" boolean key')
 
 
-@api.route('/municipality/<identifier>/versions/<int:ref>/')
-@api.route('/municipality/<identifier>/versions/<datetime:ref>/')
+@api.route('/municipality/<identifier>/versions/<int:ref>/',
+           endpoint='municipality-version-by-sequential')
+@api.route('/municipality/<identifier>/versions/<datetime:ref>/',
+           endpoint='municipality-version-by-date')
 class MunicipalityVersion(BaseVersion):
     model = models.Municipality
 
@@ -335,8 +337,9 @@ class BaseResource(Resource):
 
 
 # Keep the path with identifier first to make it the URL for reverse.
-@api.route('/municipality/<string:identifier>/')
-@api.route('/municipality/')
+@api.route('/municipality/<string:identifier>/',
+           endpoint='municipality-resource')
+@api.route('/municipality/', endpoint='municipality-post')
 class Municipality(BaseResource):
     model = models.Municipality
 
