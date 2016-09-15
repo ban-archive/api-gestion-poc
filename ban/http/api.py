@@ -8,7 +8,7 @@ from dateutil.parser import parse as parse_date
 import peewee
 
 from ban.auth import models as amodels
-from ban.core import models
+from ban.core import models, versioning
 from ban.core.encoder import dumps
 
 from ban.http.wsgi import app
@@ -393,6 +393,28 @@ class Position(BaseResource):
 @api.route('/user/', endpoint='user-post')
 class User(BaseResource):
     model = amodels.User
+
+
+@api.route('/diff/')
+class Diff(BaseCollection):
+
+    @auth.require_oauth()
+    def get(self):
+        """Get database diffs.
+
+        Query parameters:
+        increment   the minimal increment value to retrieve
+        """
+        qs = versioning.Diff.select()
+        try:
+            increment = int(request.args.get('increment'))
+        except ValueError:
+            abort(400, 'Invalid value for increment')
+        except TypeError:
+            pass
+        else:
+            qs = qs.where(versioning.Diff.pk > increment)
+        return self.collection(qs.as_resource())
 
 
 if __name__ == '__main__':
