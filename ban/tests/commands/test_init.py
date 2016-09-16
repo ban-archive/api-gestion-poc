@@ -247,6 +247,16 @@ def test_can_match_position_parent_from_ign_id(session):
     assert position.ign == 'XXX'
 
 
+def test_process_group_without_fantoir_does_not_delete_it(session):
+    data = {'ref:ign': '06004#357', 'source': 'IGN/Poste (2016-06)',
+            'poste:matricule': '02500921', 'type': 'group'}
+    group = factories.GroupFactory(ign="06004#357", fantoir="060042357")
+    process_row(data)
+    group = models.Group.first()
+    assert group.fantoir == '060042357'
+    assert group.ign == '06004#357'
+
+
 # File: 09x_positions_sga-ign.json
 def test_process_positions_from_sga_ign(session):
     data = {'type': 'position', 'kind': 'segment',

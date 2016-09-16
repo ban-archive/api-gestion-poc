@@ -64,8 +64,7 @@ def process_municipality(row):
 
 
 def process_group(row):
-    fantoir = row.get('group:fantoir')
-    data = dict(version=1, fantoir=fantoir)
+    data = dict(version=1)
     name = row.get('name')
     if name:
         data['name'] = name
@@ -85,10 +84,19 @@ def process_group(row):
     if 'addressing' in row:
         if hasattr(Group, row['addressing'].upper()):
             data['addressing'] = row['addressing']
-    if 'ref:ign' in row:
-        data['ign'] = row['ref:ign']
     update = False
-    instance = Group.first(Group.fantoir == fantoir)
+    ign = row.get('ref:ign')
+    if ign:
+        data['ign'] = ign
+    fantoir = row.get('group:fantoir')
+    if fantoir:
+        data['fantoir'] = fantoir
+        instance = Group.first(Group.fantoir == fantoir)
+    elif ign:
+        instance = Group.first(Group.ign == data['ign'])
+    else:
+        reporter.error('Missing group unique id', row)
+        return
     if instance:
         attributes = getattr(instance, 'attributes') or {}
         if attributes.get('source') == source:
@@ -102,7 +110,7 @@ def process_group(row):
         update = True
     validator = Group.validator(instance=instance, update=update, **data)
     if validator.errors:
-        reporter.error('Invalid group data', (validator.errors, fantoir))
+        reporter.error('Invalid group data', (validator.errors, row))
     else:
         try:
             validator.save()
