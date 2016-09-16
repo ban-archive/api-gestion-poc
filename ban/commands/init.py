@@ -212,10 +212,16 @@ def process_position(row):
     if not positioning or not hasattr(Position, positioning.upper()):
         positioning = Position.OTHER
     source = row.get('source')
-    cia = row.get('housenumber:cia').upper()
-    housenumber = HouseNumber.first(HouseNumber.cia == cia)
+    cia = row.get('housenumber:cia')
+    housenumber_ign = row.get('housenumber:ign')
+    housenumber = None
+    if cia:
+        cia = cia.upper()
+        housenumber = HouseNumber.first(HouseNumber.cia == cia)
+    elif housenumber_ign:
+        housenumber = HouseNumber.first(HouseNumber.ign == housenumber_ign)
     if not housenumber:
-        reporter.error('Position housenumber does not exist', cia)
+        reporter.error('Unable to find parent housenumber', row)
         return
     instance = Position.first(Position.housenumber == housenumber,
                               Position.kind == kind, Position.source == source)

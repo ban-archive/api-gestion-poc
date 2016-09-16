@@ -233,6 +233,20 @@ def test_can_match_housenumber_parent_from_ign_id(session):
     assert housenumber.ign == 'ADRNIVX_0000000261474435'
 
 
+def test_can_match_position_parent_from_ign_id(session):
+    data = {"type": "position", "source": "IGN (2016-06)",
+            "ref:ign": "XXX",
+            'geometry': {'type': 'Point',
+                         'coordinates': [6.82920162869564, 47.6098351749073]},
+            "housenumber:ign": "ADRNIVX_0000000261474435"}
+    housenumber = factories.HouseNumberFactory(ign='ADRNIVX_0000000261474435')
+    process_row(data)
+    assert models.Position.select().count() == 1
+    position = models.Position.first()
+    assert position.housenumber == housenumber
+    assert position.ign == 'XXX'
+
+
 # File: 09x_positions_sga-ign.json
 def test_process_positions_from_sga_ign(session):
     data = {'type': 'position', 'kind': 'segment',
