@@ -206,7 +206,7 @@ def test_can_create_group_with_fantoir_on_9digits(session):
                                        municipality=municipality,
                                        fantoir='123456789')
     assert not validator.errors
-    assert validator.document['fantoir'] == "123456789"
+    assert validator.data['fantoir'] == "123456789"
 
 
 def test_can_create_group_with_fantoir_on_10digits(session):
@@ -216,7 +216,7 @@ def test_can_create_group_with_fantoir_on_10digits(session):
                                        municipality=municipality,
                                        fantoir='1234567890')
     assert not validator.errors
-    assert validator.document['fantoir'] == "123456789"
+    assert validator.data['fantoir'] == "123456789"
 
 
 def test_cannot_create_group_with_fantoir_less_than_9or10_digits(session):

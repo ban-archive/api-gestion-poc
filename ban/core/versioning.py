@@ -190,7 +190,7 @@ class Version(db.Model):
 
     def load(self):
         validator = self.model.validator(**self.data)
-        return self.model(**validator.document)
+        return self.model(**validator.data)
 
     @property
     def diff(self):

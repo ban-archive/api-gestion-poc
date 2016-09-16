@@ -25,26 +25,18 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
                        'modified_by', 'attributes']
     exclude_for_collection = ['created_at', 'created_by',
                               'modified_at', 'modified_by']
-    # 'version' is validated by us.
-    resource_schema = {'version': {'required': False},
-                       'created_at': {'readonly': True},
-                       'created_by': {'readonly': True},
-                       'modified_at': {'readonly': True},
-                       'modified_by': {'readonly': True}}
+    jsonschema = {'properties': {
+        'created_by': {'readOnly': True},
+        'created_at': {'readOnly': True},
+        'modified_at': {'readOnly': True},
+        'modified_by': {'readOnly': True}}
+    }
 
     attributes = db.HStoreField(null=True)
 
     class Meta:
         validate_backrefs = False
         validator = VersionedResourceValidator
-
-    @classmethod
-    def validate(cls, validator, document, instance):
-        errors = {}
-        # Only check version if instance already exists.
-        if instance and not document.get('version'):
-            errors['version'] = validator.ERROR_REQUIRED_FIELD
-        return errors
 
 
 class NamedModel(Model):
@@ -139,8 +131,8 @@ class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'positions', 'ign', 'postcode']
-    resource_schema = {'cia': {'readonly': True},
-                       'positions': {'readonly': True}}
+    jsonschema = {'properties': {'cia': {'readonly': True},
+                                 'positions': {'readonly': True}}}
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
@@ -249,7 +241,7 @@ class Position(Model):
 
     @classmethod
     def validate(cls, validator, document, instance):
-        errors = super().validate(validator, document, instance)
+        errors = {}
         default = instance and validator.update and instance.name
         name = document.get('name', default)
         default = instance and validator.update and instance.center

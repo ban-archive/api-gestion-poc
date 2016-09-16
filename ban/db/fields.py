@@ -140,7 +140,7 @@ class IntegerField(peewee.IntegerField):
 
 
 class HStoreField(postgres_ext.HStoreField):
-    schema_type = 'dict'
+    schema_type = 'object'
 
     def coerce(self, value):
         if isinstance(value, str):
@@ -149,7 +149,7 @@ class HStoreField(postgres_ext.HStoreField):
 
 
 class BinaryJSONField(postgres_ext.BinaryJSONField):
-    schema_type = 'dict'
+    schema_type = 'object'
 
 
 class UUIDField(peewee.UUIDField):
@@ -157,7 +157,7 @@ class UUIDField(peewee.UUIDField):
 
 
 class ArrayField(postgres_ext.ArrayField):
-    schema_type = 'list'
+    schema_type = 'array'
 
     def coerce(self, value):
         if value and not isinstance(value, (list, tuple)):
@@ -166,7 +166,8 @@ class ArrayField(postgres_ext.ArrayField):
 
 
 class DateTimeField(postgres_ext.DateTimeTZField):
-    schema_type = 'datetime'
+    schema_type = 'string'
+    schema_format = 'date-time'
 
     def python_value(self, value):
         value = super().python_value(value)
@@ -226,7 +227,7 @@ class ManyToManyQuery(fields.ManyToManyQuery):
 
 
 class ManyToManyField(fields.ManyToManyField):
-    schema_type = 'list'
+    schema_type = 'array'
 
     def __init__(self, *args, **kwargs):
         # ManyToManyField is not a real "Field", so try to better conform to

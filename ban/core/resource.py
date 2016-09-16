@@ -1,3 +1,4 @@
+from copy import deepcopy
 import uuid
 
 import peewee
@@ -47,7 +48,7 @@ class BaseResource(peewee.BaseModel):
     def __new__(mcs, name, bases, attrs, **kwargs):
         # Inherit and extend instead of replacing.
         resource_fields = attrs.pop('resource_fields', None)
-        resource_schema = attrs.pop('resource_schema', None)
+        jsonschema = attrs.pop('jsonschema', None)
         exclude_for_collection = attrs.pop('exclude_for_collection', None)
         exclude_for_version = attrs.pop('exclude_for_version', None)
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
@@ -55,10 +56,10 @@ class BaseResource(peewee.BaseModel):
             inherited = getattr(cls, 'resource_fields', {})
             resource_fields.extend(inherited)
             cls.resource_fields = resource_fields
-        if resource_schema is not None:
-            inherited = getattr(cls, 'resource_schema', {})
-            resource_schema.update(inherited)
-            cls.resource_schema = resource_schema
+        if jsonschema is not None:
+            inherited = getattr(cls, 'jsonschema', {})
+            jsonschema['properties'].update(inherited.get('properties', {}))
+            cls.jsonschema = jsonschema
         if exclude_for_collection is not None:
             inherited = getattr(cls, 'exclude_for_collection', [])
             exclude_for_collection.extend(inherited)
@@ -73,14 +74,15 @@ class BaseResource(peewee.BaseModel):
         cls.versioned_fields = [
             n for n in cls.resource_fields
             if n not in cls.exclude_for_version]
-        cls.build_resource_schema()
+        cls.build_jsonschema()
         return cls
 
 
 class ResourceModel(db.Model, metaclass=BaseResource):
     resource_fields = ['id']
     identifiers = []
-    resource_schema = {'id': {'readonly': True}}
+    jsonschema = {'type': 'object', 'properties': {'id': {'readOnly': True}},
+                  'required': []}
     exclude_for_collection = []
     exclude_for_version = []
 
@@ -100,9 +102,10 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         return super().save(*args, **kwargs)
 
     @classmethod
-    def build_resource_schema(cls):
-        """Map Peewee models to Cerberus validation schema."""
-        schema = dict(cls.resource_schema)
+    def build_jsonschema(cls):
+        """Map Peewee models to jsonschema validation."""
+        schema = deepcopy(cls.jsonschema)  # Do not share with others.
+        schema.setdefault('required', [])
         for name, field in cls._meta.fields.items():
             if name not in cls.resource_fields:
                 continue
@@ -112,31 +115,38 @@ class ResourceModel(db.Model, metaclass=BaseResource):
             if not type_:
                 continue
             row = {
-                'type': type_,
-                'required': not field.null,
-                'coerce': field.coerce,
+                'type': [type_],
+                'field': field,
+                'model': cls,
             }
+            if hasattr(field.__class__, 'schema_format'):
+                row['format'] = field.__class__.schema_format
             if field.null:
-                row['nullable'] = True
+                row['type'].append('null')
             if field.unique:
                 row['unique'] = True
             max_length = getattr(field, 'max_length', None)
             if max_length:
-                row['maxlength'] = max_length
-            if not field.null:
-                row['empty'] = False
+                row['maxLength'] = max_length
+            min_length = getattr(field, 'min_length', None)
+            if not min_length and type_ == 'string' and not field.null:
+                min_length = 1
+            if min_length:
+                row['minLength'] = min_length
             if getattr(field, 'choices', None):
-                row['allowed'] = [v for v, l in field.choices]
-            row.update(cls.resource_schema.get(name, {}))
-            schema[name] = row
-            if schema[name].get('readonly'):
-                schema[name]['required'] = False
-        cls.resource_schema = schema
+                row['enum'] = [v for v, l in field.choices]
+            row.update(schema['properties'].get(name, {}))  # Inherit values.
+            schema['properties'][name] = row
+            readonly = row.get('readOnly')
+            if (not field.null and name not in schema['required']
+               and not readonly):
+                schema['required'].append(name)
+        cls.jsonschema = schema
 
     @classmethod
     def validator(cls, instance=None, update=False, **data):
-        validator = cls._meta.validator(cls)
-        validator(data, update=update, instance=instance)
+        validator = cls._meta.validator(cls, update=update)
+        validator.validate(data, instance=instance)
         return validator
 
     @property

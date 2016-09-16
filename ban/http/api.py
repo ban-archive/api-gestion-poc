@@ -5,7 +5,7 @@ from urllib.parse import urlencode
 import peewee
 from dateutil.parser import parse as parse_date
 from flask import make_response, request
-from flask_restplus import Api, Resource, abort
+from flask_restplus import Api, Resource, abort, fields
 from werkzeug.routing import BaseConverter, ValidationError
 
 from ban.auth import models as amodels
@@ -70,6 +70,25 @@ def json(data, code, headers):
     resp = make_response(dumps(data), code)
     resp.headers.extend(headers)
     return resp
+
+municipality = api.model('Municipality', {
+    'name': fields.String(required=True, coerce=models.Municipality.name.coerce),
+    'insee': fields.String(required=True, max_length=5, min_length=5, coerce=models.Municipality.insee.coerce),
+    'siren': fields.String(required=False, coerce=models.Municipality.siren.coerce)
+})
+
+
+def validate_schema(func):
+
+    def wrapper(self, instance, **kwargs):
+        validator = Draft4JavaNameIsSoNice(instance.rest_schema)
+        try:
+            validator.validate(request.json)
+        except ValidationError:
+            abort(422, 'Voilà la police')
+        kwargs['data'] = validator.find_themethod_get_the_data()
+        return func(**kwargs)
+    return wrapper
 
 
 class BaseCollection(Resource):
