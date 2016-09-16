@@ -220,6 +220,19 @@ def test_process_positions_reset_name_key_if_null(session):
     assert position.version == 2
 
 
+def test_can_match_housenumber_parent_from_ign_id(session):
+    data = {"type": "housenumber", "source": "IGN (2016-06)",
+            "ref:ign": "ADRNIVX_0000000261474435", "group:ign": "06002#003",
+            "numero": "70", "ordinal": ""}
+    group = factories.GroupFactory(municipality__insee='06002',
+                                   fantoir='', ign='06002#003')
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.parent == group
+    assert housenumber.ign == 'ADRNIVX_0000000261474435'
+
+
 # File: 09x_positions_sga-ign.json
 def test_process_positions_from_sga_ign(session):
     data = {'type': 'position', 'kind': 'segment',
@@ -276,7 +289,7 @@ def test_import_housenumbers_group_cea_poste(session):
 def test_import_housenumber_cea(session):
     data = {'type': 'housenumber', 'cia': '33001_B072_2_',
             'poste:cea': '33001223T2', 'numero': '2', 'ordinal': '',
-            'source': 'IGN/Poste (2016-04)'}
+            'source': 'IGN/Poste (2016-04)', 'group:fantoir': '33001B072'}
     group = factories.GroupFactory(municipality__insee='33001',
                                    fantoir='33001B072', kind=models.Group.AREA)
     factories.HouseNumberFactory(parent=group, number='2', ordinal='')

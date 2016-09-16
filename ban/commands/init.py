@@ -138,14 +138,18 @@ def process_housenumber(row):
     ordinal = row.get('ordinal') or None
     fantoir = row.get('group:fantoir')
     cia = row.get('cia')
-    if not fantoir and cia:
-        # 12xxx.json is missing group:fantoir.
-        fantoir = '{}{}'.format(cia[:5], cia[6:10])
-    insee = fantoir[:5]
-    computed_cia = compute_cia(insee, fantoir[5:], number, ordinal)
-    if not cia:
-        cia = computed_cia
-    parent = 'fantoir:{}'.format(fantoir)
+    group_ign = row.get('group:ign')
+    if fantoir:
+        insee = fantoir[:5]
+        parent = 'fantoir:{}'.format(fantoir)
+        computed_cia = compute_cia(insee, fantoir[5:], number, ordinal)
+        if not cia:
+            cia = computed_cia
+    elif group_ign:
+        parent = 'ign:{}'.format(group_ign)
+    else:
+        reporter.error('Missing parent reference', row)
+        return
     source = row.get('source')
     attributes = {'source': source}
     data = dict(number=number, ordinal=ordinal, version=1, parent=parent,
@@ -164,25 +168,27 @@ def process_housenumber(row):
             reporter.error('HouseNumber postcode not found', (cia, code))
         else:
             data['postcode'] = postcode
-    instance = HouseNumber.first(HouseNumber.cia == cia)
     update = False
-    if instance:
-        if cia != computed_cia:
-            # Means new values are changing one of the four values of the cia
-            # (insee, fantoir, number, ordinal). Make sure we are not creating
-            # a duplicate.
-            duplicate = HouseNumber.first(HouseNumber.cia == computed_cia)
-            if duplicate:
-                msg = 'Duplicate CIA'
-                reporter.error(msg, (cia, computed_cia))
+    instance = None
+    if cia:
+        instance = HouseNumber.first(HouseNumber.cia == cia)
+        if instance:
+            if cia != computed_cia:
+                # Means new values are changing one of the four values of the
+                # cia (insee, fantoir, number, ordinal). Make sure we are not
+                # creating a duplicate.
+                duplicate = HouseNumber.first(HouseNumber.cia == computed_cia)
+                if duplicate:
+                    msg = 'Duplicate CIA'
+                    reporter.error(msg, (cia, computed_cia))
+                    return
+            attributes = getattr(instance, 'attributes') or {}
+            if attributes.get('source') == source:
+                # Reimporting same data?
+                reporter.warning('HouseNumber already exists', instance.cia)
                 return
-        attributes = getattr(instance, 'attributes') or {}
-        if attributes.get('source') == source:
-            # Reimporting same data?
-            reporter.warning('HouseNumber already exists', instance.cia)
-            return
-        data['version'] = instance.version + 1
-        update = True
+            data['version'] = instance.version + 1
+            update = True
 
     validator = HouseNumber.validator(instance=instance, update=update, **data)
     if validator.errors:
