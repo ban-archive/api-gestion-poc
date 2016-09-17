@@ -63,20 +63,24 @@ def process_municipality(row):
     reporter.notice('Imported Municipality', row['insee'])
 
 
+def populate(keys, source, dest):
+    for key in keys:
+        if isinstance(key, (list, tuple)):
+            dest_key = key[1]
+            key = key[0]
+        else:
+            dest_key = key
+        if key in source:
+            dest[dest_key] = source[key]
+
+
 def process_group(row):
     data = dict(version=1)
-    name = row.get('name')
-    if name:
-        data['name'] = name
-    kind = row.get('group')
-    if kind:
-        data['kind'] = kind
+    keys = ['name', ('group', 'kind'), 'laposte', 'ign', 'fantoir']
+    populate(keys, row, data)
     insee = row.get('municipality:insee')
     if insee:
         data['municipality'] = 'insee:{}'.format(insee)
-    laposte = row.get('poste:matricule')
-    if laposte:
-        data['laposte'] = laposte
     source = row.get('source')
     attributes = row.get('attributes', {})
     attributes['source'] = source
@@ -85,12 +89,9 @@ def process_group(row):
         if hasattr(Group, row['addressing'].upper()):
             data['addressing'] = row['addressing']
     update = False
-    ign = row.get('ref:ign')
-    if ign:
-        data['ign'] = ign
-    fantoir = row.get('group:fantoir')
+    ign = data.get('ign')
+    fantoir = data.get('fantoir')
     if fantoir:
-        data['fantoir'] = fantoir
         instance = Group.first(Group.fantoir == fantoir)
     elif ign:
         instance = Group.first(Group.ign == data['ign'])
@@ -142,31 +143,28 @@ def process_postcode(row):
 
 
 def process_housenumber(row):
-    number = row.get('numero')
-    ordinal = row.get('ordinal') or None
+    data = dict(version=1)
+    keys = [('numero', 'number'), 'ordinal', 'ign', 'laposte', 'cia']
+    populate(keys, row, data)
     fantoir = row.get('group:fantoir')
     cia = row.get('cia')
     group_ign = row.get('group:ign')
     if fantoir:
         insee = fantoir[:5]
-        parent = 'fantoir:{}'.format(fantoir)
+        data['parent'] = 'fantoir:{}'.format(fantoir)
+        number = data.get('number')
+        ordinal = data.get('ordinal')
         computed_cia = compute_cia(insee, fantoir[5:], number, ordinal)
-        if not cia:
-            cia = computed_cia
+        if data.get('cia'):
+            data['cia'] = computed_cia
     elif group_ign:
-        parent = 'ign:{}'.format(group_ign)
+        data['parent'] = 'ign:{}'.format(group_ign)
     else:
         reporter.error('Missing parent reference', row)
         return
     source = row.get('source')
-    attributes = {'source': source}
-    data = dict(number=number, ordinal=ordinal, version=1, parent=parent,
-                attributes=attributes)
+    data['attributes'] = {'source': source}
     # Only override if key is present (even if value is null).
-    if 'ref:ign' in row:
-        data['ign'] = row['ref:ign']
-    if 'poste:cea' in row:
-        data['laposte'] = row['poste:cea']
     if 'postcode' in row:
         code = row.get('postcode')
         postcode = PostCode.select().join(Municipality).where(
@@ -200,7 +198,7 @@ def process_housenumber(row):
 
     validator = HouseNumber.validator(instance=instance, update=update, **data)
     if validator.errors:
-        reporter.error('HouseNumber errors', (validator.errors, parent))
+        reporter.error('HouseNumber errors', (validator.errors, data))
         return
     with HouseNumber._meta.database.atomic():
         try:
@@ -209,7 +207,7 @@ def process_housenumber(row):
             reporter.warning('HouseNumber DB error', cia)
         else:
             msg = 'HouseNumber Updated' if instance else 'HouseNumber created'
-            reporter.notice(msg, (number, ordinal, parent))
+            reporter.notice(msg, data)
 
 
 def process_position(row):
@@ -236,12 +234,7 @@ def process_position(row):
     version = instance.version + 1 if instance else 1
     data = dict(kind=kind, source=source, housenumber=housenumber,
                 positioning=positioning, version=version)
-    if 'ref:ign' in row:
-        data['ign'] = row.get('ref:ign')
-    if 'name' in row:
-        data['name'] = row.get('name')
-    if 'geometry' in row:
-        data['center'] = row.get('geometry')
+    populate(['ign', 'name', ('geometry', 'center')], row, data)
     validator = Position.validator(instance=instance, update=bool(instance),
                                    **data)
     if validator.errors:
