@@ -71,24 +71,7 @@ def json(data, code, headers):
     resp.headers.extend(headers)
     return resp
 
-municipality = api.model('Municipality', {
-    'name': fields.String(required=True, coerce=models.Municipality.name.coerce),
-    'insee': fields.String(required=True, max_length=5, min_length=5, coerce=models.Municipality.insee.coerce),
-    'siren': fields.String(required=False, coerce=models.Municipality.siren.coerce)
-})
-
-
-def validate_schema(func):
-
-    def wrapper(self, instance, **kwargs):
-        validator = Draft4JavaNameIsSoNice(instance.rest_schema)
-        try:
-            validator.validate(request.json)
-        except ValidationError:
-            abort(422, 'Voilà la police')
-        kwargs['data'] = validator.find_themethod_get_the_data()
-        return func(**kwargs)
-    return wrapper
+municipality = api.schema_model('Municipality', models.Municipality.jsonschema)
 
 
 class BaseCollection(Resource):
@@ -450,7 +433,3 @@ class Bal(Resource):
         bal(StringIO(data.read().decode('utf-8-sig')))
         reporter = context.get('reporter')
         return {'report': reporter}
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
