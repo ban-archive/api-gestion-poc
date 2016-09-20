@@ -261,6 +261,17 @@ def test_process_group_without_fantoir_does_not_delete_it(session):
     assert group.ign == '06004#357'
 
 
+def test_can_import_group_with_laposte_but_no_fantoir(session):
+    data = {'laposte': '02500934', 'municipality:insee': '06004',
+            'type': 'group', 'name': 'VOIE DU TANIT', 'group': 'way',
+            'source': 'Poste/RAN (2016-06)'}
+    municipality = factories.MunicipalityFactory(insee="06004")
+    process_row(data)
+    group = models.Group.first()
+    assert group.laposte == '02500934'
+    assert group.municipality == municipality
+
+
 # File: 09x_positions_sga-ign.json
 def test_process_positions_from_sga_ign(session):
     data = {'type': 'position', 'kind': 'segment',

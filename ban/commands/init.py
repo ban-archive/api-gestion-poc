@@ -91,10 +91,13 @@ def process_group(row):
     update = False
     ign = data.get('ign')
     fantoir = data.get('fantoir')
+    laposte = data.get('laposte')
     if fantoir:
         instance = Group.first(Group.fantoir == fantoir)
     elif ign:
-        instance = Group.first(Group.ign == data['ign'])
+        instance = Group.first(Group.ign == ign)
+    elif laposte:
+        instance = Group.first(Group.laposte == laposte)
     else:
         reporter.error('Missing group unique id', row)
         return
