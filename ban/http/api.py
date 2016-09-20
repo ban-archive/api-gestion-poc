@@ -29,8 +29,8 @@ def get_bbox(args):
         try:
             bbox[param] = float(args.get(param))
         except ValueError:
-            abort(400, 'Invalid value for {}: {}'.format(param,
-                                                         args.get(param)))
+            abort(400, error='Invalid value for {}: {}'.format(
+                param, args.get(param)))
         except TypeError:
             # None (param not set).
             continue
