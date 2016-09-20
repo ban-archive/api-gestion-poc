@@ -4,14 +4,13 @@ from datetime import datetime
 from ban.core import models
 from ban.core.encoder import dumps
 from ban.core.versioning import Version
-from ban.http import api
 
 from ..factories import MunicipalityFactory, PostCodeFactory, GroupFactory
 from .utils import authorize
 
 
 @authorize
-def test_get_municipality(get, url):
+def test_get_municipality(get):
     municipality = MunicipalityFactory(name="Cabour")
     resp = get('/municipality/{}'.format(municipality.id))
     assert resp.status_code == 200
@@ -20,7 +19,7 @@ def test_get_municipality(get, url):
 
 
 @authorize
-def test_get_municipality_with_postcodes(get, url):
+def test_get_municipality_with_postcodes(get):
     municipality = MunicipalityFactory(name="Cabour")
     postcode = PostCodeFactory(code="33000", municipality=municipality)
     resp = get('/municipality/{}'.format(municipality.id))
@@ -40,7 +39,7 @@ def test_get_municipality_with_postcodes(get, url):
 
 
 @authorize
-def test_get_municipality_without_explicit_identifier(get, url):
+def test_get_municipality_without_explicit_identifier(get):
     municipality = MunicipalityFactory(name="Cabour")
     resp = get('/municipality/{}'.format(municipality.id))
     assert resp.status_code == 200
@@ -49,7 +48,7 @@ def test_get_municipality_without_explicit_identifier(get, url):
 
 
 @authorize
-def test_get_municipality_groups_collection(get, url):
+def test_get_municipality_groups_collection(get):
     municipality = MunicipalityFactory(name="Cabour")
     street = GroupFactory(municipality=municipality, name="Rue de la Plage")
     resp = get('/group?municipality={}'.format(municipality.id))
@@ -60,7 +59,7 @@ def test_get_municipality_groups_collection(get, url):
 
 
 @authorize
-def test_get_municipality_groups_collection_is_paginated(get, url):
+def test_get_municipality_groups_collection_is_paginated(get):
     municipality = MunicipalityFactory(name="Cabour")
     GroupFactory.create_batch(6, municipality=municipality)
     resp = get('/group?municipality={}&limit=4'.format(municipality.id))
@@ -82,7 +81,7 @@ def test_get_municipality_groups_collection_is_paginated(get, url):
 
 
 @authorize
-def test_get_municipality_versions(get, url):
+def test_get_municipality_versions(get):
     municipality = MunicipalityFactory(name="Cabour")
     municipality.version = 2
     municipality.name = "Cabour2"
@@ -96,7 +95,7 @@ def test_get_municipality_versions(get, url):
 
 
 @authorize
-def test_get_municipality_versions_by_datetime(get, url):
+def test_get_municipality_versions_by_datetime(get):
     municipality = MunicipalityFactory(name="Cabour")
     municipality.version = 2
     municipality.name = "Cabour2"
@@ -132,7 +131,7 @@ def test_get_municipality_versions_by_datetime(get, url):
 
 
 @authorize
-def test_get_versions_by_datetime_should_raise_if_format_is_invalid(get, url):
+def test_get_versions_by_datetime_should_raise_if_format_is_invalid(get):
     municipality = MunicipalityFactory(name="Cabour")
     # Artificialy change versions periods.
     resp = get('/municipality/{}/versions/01:02:032015-06-01'
@@ -141,7 +140,7 @@ def test_get_versions_by_datetime_should_raise_if_format_is_invalid(get, url):
 
 
 @authorize
-def test_get_municipality_version(get, url):
+def test_get_municipality_version(get):
     municipality = MunicipalityFactory(name="Cabour")
     municipality.version = 2
     municipality.name = "Cabour2"
@@ -157,7 +156,7 @@ def test_get_municipality_version(get, url):
 
 
 @authorize
-def test_can_retrieve_municipality_with_old_insee(get, url):
+def test_can_retrieve_municipality_with_old_insee(get):
     municipality = MunicipalityFactory(insee="12345")
     # This should create a redirect.
     municipality.insee = '54321'
@@ -171,7 +170,7 @@ def test_can_retrieve_municipality_with_old_insee(get, url):
 
 
 @authorize
-def test_create_municipality(post, url):
+def test_create_municipality(post):
     assert not models.Municipality.select().count()
     data = {
         "name": "Fornex",
@@ -188,7 +187,7 @@ def test_create_municipality(post, url):
 
 
 @authorize
-def test_cannot_duplicate_municipality(post, url):
+def test_cannot_duplicate_municipality(post):
     MunicipalityFactory(insee="12345")
     data = {
         "name": "Fornex",
@@ -203,7 +202,7 @@ def test_cannot_duplicate_municipality(post, url):
 
 
 @authorize
-def test_create_municipality_with_one_alias(post, url):
+def test_create_municipality_with_one_alias(post):
     data = {
         "name": "Orvane",
         "insee": "12345",
@@ -217,7 +216,7 @@ def test_create_municipality_with_one_alias(post, url):
 
 
 @authorize
-def test_create_municipality_with_list_of_aliases(post, url):
+def test_create_municipality_with_list_of_aliases(post):
     data = {
         "name": "Orvane",
         "insee": "12345",
@@ -232,7 +231,7 @@ def test_create_municipality_with_list_of_aliases(post, url):
 
 
 @authorize
-def test_patch_municipality_with_alias(patch, url):
+def test_patch_municipality_with_alias(patch):
     municipality = MunicipalityFactory()
     data = {
         "version": 2,
@@ -245,7 +244,7 @@ def test_patch_municipality_with_alias(patch, url):
 
 
 @authorize
-def test_delete_municipality(client, url):
+def test_delete_municipality(client):
     municipality = MunicipalityFactory()
     resp = client.delete('/municipality/{}'.format(municipality.id))
     assert resp.status_code == 200
@@ -253,7 +252,7 @@ def test_delete_municipality(client, url):
     assert not models.Municipality.select().count()
 
 
-def test_cannot_delete_municipality_if_not_authorized(client, url):
+def test_cannot_delete_municipality_if_not_authorized(client):
     municipality = MunicipalityFactory()
     resp = client.delete('/municipality/{}'.format(municipality.id))
     assert resp.status_code == 401
@@ -261,7 +260,7 @@ def test_cannot_delete_municipality_if_not_authorized(client, url):
 
 
 @authorize
-def test_cannot_delete_municipality_if_linked_to_street(client, url):
+def test_cannot_delete_municipality_if_linked_to_street(client):
     municipality = MunicipalityFactory()
     GroupFactory(municipality=municipality)
     resp = client.delete('/municipality/{}'.format(municipality.id))
@@ -270,13 +269,13 @@ def test_cannot_delete_municipality_if_linked_to_street(client, url):
 
 
 @authorize
-def test_delete_unknown_municipality_should_return_not_found(client, url):
+def test_delete_unknown_municipality_should_return_not_found(client):
     resp = client.delete('/municipality/11')
     assert resp.status_code == 404
 
 
 @authorize
-def test_municipality_select_use_default_orderby(get, url):
+def test_municipality_select_use_default_orderby(get):
     MunicipalityFactory(insee="90002")
     MunicipalityFactory(insee="90001")
     resp = get('/municipality')
