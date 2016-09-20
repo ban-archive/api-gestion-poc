@@ -4,23 +4,23 @@ from .utils import authorize
 
 
 @authorize
-def test_create_user(client, url):
+def test_create_user(client):
     # Client user + session user == 2
     assert models.User.select().count() == 2
-    resp = client.post('/user/', {
+    resp = client.post('/user', {
         'username': 'newuser',
         'email': 'test@test.com',
     })
     assert resp.status_code == 201
     assert models.User.select().count() == 3
-    uri = url('user-resource', identifier=resp.json['id'])
+    uri = 'http://localhost/user/{}'.format(resp.json['id'])
     assert resp.headers['Location'] == uri
 
 
 @authorize
 def test_cannot_create_user_without_username(client):
     assert models.User.select().count() == 2
-    resp = client.post('/user/', {
+    resp = client.post('/user', {
         'username': '',
         'email': 'test@test.com',
     })
@@ -31,7 +31,7 @@ def test_cannot_create_user_without_username(client):
 @authorize
 def test_cannot_create_user_without_email(client):
     assert models.User.select().count() == 2
-    resp = client.post('/user/', {
+    resp = client.post('/user', {
         'username': 'newuser',
         'email': '',
     })
@@ -41,7 +41,7 @@ def test_cannot_create_user_without_email(client):
 
 def test_cannot_create_user_if_not_authenticated(client):
     assert not models.User.select().count()
-    resp = client.post('/user/', {
+    resp = client.post('/user', {
         'username': 'newuser',
         'email': 'test@test.com',
     }, content_type='application/json')
