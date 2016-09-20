@@ -56,7 +56,7 @@ class DateTimeConverter(BaseConverter):
 app.url_map.converters['datetime'] = DateTimeConverter
 
 
-class CollectionMixin:
+class CollectionEndpoint:
 
     filters = []
     DEFAULT_LIMIT = 20
@@ -98,7 +98,7 @@ class CollectionMixin:
         return data, 200, headers
 
 
-class ModelEndpoint(CollectionMixin):
+class ModelEndpoint(CollectionEndpoint):
     endpoints = {}
     order_by = None
 
@@ -107,7 +107,8 @@ class ModelEndpoint(CollectionMixin):
             instance = self.model.coerce(identifier)
         except self.model.DoesNotExist:
             # TODO Flask changes the 404 message, which we don't want.
-            abort(404)
+            abort(404, message='Instance for "{}" does not exist.'
+                  .format(identifier))
         return instance
 
     def save_object(self, instance=None, update=False):
@@ -487,23 +488,25 @@ class User(ModelEndpoint):
     model = amodels.User
 
 
-@app.route('/import/bal/')
-class Bal:
+@app.route('/import/bal', methods=['POST'])
+@auth.require_oauth()
+def bal_post():
+    """Import file at BAL format."""
+    data = request.files['data']
+    bal(StringIO(data.read().decode('utf-8-sig')))
+    reporter = context.get('reporter')
+    return dumps({'report': reporter})
+
+
+@app.resource
+class DiffEndpoint(CollectionEndpoint):
+    endpoint = '/diff'
+    model = versioning.Diff
 
     @auth.require_oauth()
-    def post(self):
-        """Import file at BAL format."""
-        data = request.files['data']
-        bal(StringIO(data.read().decode('utf-8-sig')))
-        reporter = context.get('reporter')
-        return {'report': reporter}
-
-
-@app.route('/diff/')
-class Diff(CollectionMixin):
-
-    @auth.require_oauth()
-    def get(self):
+    @app.jsonify
+    @app.endpoint('', methods=['GET'])
+    def get_collection(self):
         """Get database diffs.
 
         Query parameters:
