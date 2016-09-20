@@ -118,7 +118,7 @@ class ModelEndpoint(CollectionMixin):
         try:
             instance = validator.save()
         except models.Model.ForcedVersionError as e:
-            abort(409, str(e))
+            abort(409, error=str(e))
         return instance
 
     def get_queryset(self):
@@ -213,7 +213,7 @@ class ModelEndpoint(CollectionMixin):
         """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
-        return instance.as_resource()
+        return instance.as_resource
 
     @auth.require_oauth()
     @app.jsonify
