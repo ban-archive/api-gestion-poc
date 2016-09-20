@@ -1,9 +1,14 @@
+import re
+
 from flask import Flask, make_response
 from ban.core.encoder import dumps
 from functools import wraps
+from .schema import Schema
 
 
 class App(Flask):
+    _schema = Schema()
+
     def jsonify(self, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -38,6 +43,20 @@ class App(Flask):
                                        .lower().replace('_', '-'))
                     self.add_url_rule(path, view_func=func, endpoint=endpoint,
                                       **kwargs)
+        return cls
+
+    def schema(self, cls):
+        if hasattr(cls, 'model'):
+            self._schema.register_model(cls.model)
+        for name in dir(cls):
+            func = getattr(cls, name)
+            if hasattr(func, '_endpoints'):
+                for endpoint in func._endpoints:
+                    path, kwargs = endpoint
+                    path = '{}{}'.format(cls.endpoint, path)
+                    path = re.sub(r'<(\w+:)?(\w+)>', r'{\2}', path)
+                    self._schema.register_endpoint(path, func,
+                                                   kwargs['methods'], cls)
         return cls
 
 

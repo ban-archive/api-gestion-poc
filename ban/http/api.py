@@ -145,6 +145,24 @@ class ModelEndpoint(CollectionMixin):
     @app.jsonify
     @app.endpoint('', methods=['GET'])
     def get_collection(self):
+        """Get {resource} collection.
+
+        responses:
+            200:
+                description: Get {resource} collection.
+                schema:
+                    type: object
+                    properties:
+                      collection:
+                        name: collection
+                        type: array
+                        items:
+                          $ref: '#/definitions/{resource}'
+                      total:
+                        name: total
+                        type: integer
+                        description: total resources available
+        """
         qs = self.get_queryset()
         if qs is None:
             return self.collection([])
@@ -158,6 +176,16 @@ class ModelEndpoint(CollectionMixin):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['GET'])
     def get_resource(self, identifier):
+        """Get {resource} with 'identifier'.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Get {resource} instance.
+                schema:
+                    $ref: '#/definitions/{resource}'
+        """
         instance = self.get_object(identifier)
         return instance.as_resource
 
@@ -165,6 +193,24 @@ class ModelEndpoint(CollectionMixin):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['POST'])
     def post_resource(self, identifier):
+        """Patch {resource} with 'identifier'.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Instance has been updated successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            419:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            422:
+                description: Invalid data.
+                schema:
+                    $ref: '#/definitions/Error'
+        """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
         return instance.as_resource()
@@ -173,6 +219,22 @@ class ModelEndpoint(CollectionMixin):
     @app.jsonify
     @app.endpoint('', methods=['POST'])
     def post(self):
+        """Create {resource}
+
+        responses:
+            201:
+                description: Instance has been created successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            419:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            422:
+                description: Invalid data.
+                schema:
+                    $ref: '#/definitions/Error'
+        """
         instance = self.save_object()
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         headers = {'Location': url_for(endpoint, identifier=instance.id)}
@@ -182,6 +244,24 @@ class ModelEndpoint(CollectionMixin):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
+        """Patch {resource}
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Instance has been updated successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            419:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            422:
+                description: Invalid data.
+                schema:
+                    $ref: '#/definitions/Error'
+        """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
         return instance.as_resource
@@ -190,6 +270,24 @@ class ModelEndpoint(CollectionMixin):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
     def put(self, identifier):
+        """Replace {resource}.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Instance has been replaced successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            419:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            422:
+                description: Invalid data.
+                schema:
+                    $ref: '#/definitions/Error'
+        """
         instance = self.get_object(identifier)
         instance = self.save_object(instance)
         return instance.as_resource
@@ -198,6 +296,20 @@ class ModelEndpoint(CollectionMixin):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['DELETE'])
     def delete(self, identifier):
+        """Delete {resource}.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            204:
+                description: Instance has been deleted successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            419:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+        """
         instance = self.get_object(identifier)
         try:
             instance.delete_instance()
@@ -212,6 +324,18 @@ class VersionedModelEnpoint(ModelEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>/versions', methods=['GET'])
     def get_versions(self, identifier):
+        """Get resource versions.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Version collection for resource {resource}.
+                schema:
+                    type: array
+                    items:
+                        $ref: '#/definitions/Version'
+        """
         instance = self.get_object(identifier)
         return self.collection(instance.versions.as_resource())
 
@@ -220,6 +344,21 @@ class VersionedModelEnpoint(ModelEndpoint):
     @app.endpoint('/<identifier>/versions/<datetime:ref>', methods=['GET'])
     @app.endpoint('/<identifier>/versions/<int:ref>', methods=['GET'])
     def get_version(self, identifier, ref):
+        """Get {resource} version corresponding to 'ref' number or datetime.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: ref
+              in: path
+              type: string
+              required: true
+              description: version reference, either a date or an increment.
+        responses:
+            200:
+                description: get specific Version for resource {resource}.
+                schema:
+                    $ref: '#/definitions/Version'
+        """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
         if not version:
@@ -231,6 +370,19 @@ class VersionedModelEnpoint(ModelEndpoint):
     @app.endpoint('/<identifier>/versions/<int:ref>', methods=['POST'])
     @app.endpoint('/<identifier>/versions/<datetime:ref>', methods=['POST'])
     def post_version(self, identifier, ref):
+        """Flag a version.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: ref
+              in: path
+              type: string
+              required: true
+              description: version reference, either a date or an increment.
+        responses:
+            204:
+                description: version flag was updated.
+        """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
         if not version:
@@ -245,6 +397,7 @@ class VersionedModelEnpoint(ModelEndpoint):
 
 
 @app.resource
+@app.schema
 class Municipality(VersionedModelEnpoint):
     endpoint = '/municipality'
     model = models.Municipality
@@ -260,6 +413,7 @@ class PostCode(VersionedModelEnpoint):
 
 
 @app.resource
+@app.schema
 class Group(VersionedModelEnpoint):
     endpoint = '/group'
     model = models.Group
