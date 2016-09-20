@@ -110,7 +110,7 @@ class ModelEndpoint(CollectionMixin):
             abort(404)
         return instance
 
-    def save_object(self, instance=None, update=True):
+    def save_object(self, instance=None, update=False):
         validator = self.model.validator(update=update, instance=instance,
                                          **request.json)
         if validator.errors:
@@ -183,7 +183,7 @@ class ModelEndpoint(CollectionMixin):
     @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
         instance = self.get_object(identifier)
-        instance = self.save_object(instance)
+        instance = self.save_object(instance, update=True)
         return instance.as_resource
 
     @auth.require_oauth()
@@ -191,7 +191,7 @@ class ModelEndpoint(CollectionMixin):
     @app.endpoint('/<identifier>', methods=['PUT'])
     def put(self, identifier):
         instance = self.get_object(identifier)
-        instance = self.save_object(instance, update=False)
+        instance = self.save_object(instance)
         return instance.as_resource
 
     @auth.require_oauth()

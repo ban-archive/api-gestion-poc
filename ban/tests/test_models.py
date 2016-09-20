@@ -168,6 +168,30 @@ def test_group_as_relation():
     }
 
 
+def test_can_create_group_with_fantoir_equal_to_9_chars(get):
+    fantoir = "900010123"
+    group = GroupFactory(fantoir=fantoir)
+    assert group.fantoir == fantoir
+
+
+def test_can_create_group_with_fantoir_equal_to_10_chars(get):
+    fantoir = "7800101234"
+    group = GroupFactory(fantoir=fantoir)
+    assert group.fantoir == fantoir[:9]
+
+
+def test_cannot_create_group_with_fantoir_less_than_9_or_10_chars():
+    fantoir = "90001012"
+    with pytest.raises(ValueError):
+        GroupFactory(fantoir=fantoir)
+
+
+def test_cannot_create_group_with_fantoir_greater_than_9_or_10_chars():
+    fantoir = "900010123456"
+    with pytest.raises(ValueError):
+        GroupFactory(fantoir=fantoir)
+
+
 def test_housenumber_should_create_cia_on_save():
     municipality = MunicipalityFactory(insee='93031')
     street = GroupFactory(municipality=municipality, fantoir='930311491')
