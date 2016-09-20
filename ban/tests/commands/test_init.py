@@ -80,12 +80,11 @@ def test_process_can_import_two_postcode_with_same_code(session):
 
 
 # File: 04_housenumbers_dgfip.json
-def test_process_housenumber_from_dgfip(session, reporter):
+def test_process_housenumber_from_dgfip(session):
     group = factories.GroupFactory(fantoir="900010016")
     data = {"type": "housenumber", "source": "DGFiP/BANO (2016-04)",
             "group:fantoir": "900010016", "numero": "15", "ordinal": "bis"}
     process_row(data)
-    print(reporter)
     assert models.HouseNumber.select().count() == 1
     housenumber = models.HouseNumber.first()
     assert housenumber.attributes['source'] == "DGFiP/BANO (2016-04)"
@@ -193,12 +192,14 @@ def test_process_positions_from_oldban(session):
 
 def test_process_positions_does_not_reset_name_key_if_not_given(session):
     data = {"type": "position", "kind": "entrance",
-            "housenumber:cia": "90001_0005_5_"}
+            "housenumber:cia": "90001_0005_5_",
+            "ign": "ADRNIVX_0000000261741380"}
     factories.PositionFactory(
         housenumber__number='5',
         housenumber__ordinal='',
         housenumber__parent__municipality__insee='90001',
         housenumber__parent__fantoir='900010005',
+        ign='ADRNIVX_0000000261741380',
         name='Bâtiment A')
     process_row(data)
     position = models.Position.first()
@@ -208,12 +209,14 @@ def test_process_positions_does_not_reset_name_key_if_not_given(session):
 
 def test_process_positions_reset_name_key_if_null(session):
     data = {"type": "position", "kind": "entrance", "name": None,
+            "ign": "ADRNIVX_0000000261741380",
             "housenumber:cia": "90001_0005_5_"}
     factories.PositionFactory(
         housenumber__number='5',
         housenumber__ordinal='',
         housenumber__parent__municipality__insee='90001',
         housenumber__parent__fantoir='900010005',
+        ign='ADRNIVX_0000000261741380',
         name='Bâtiment A')
     process_row(data)
     position = models.Position.first()
@@ -281,14 +284,35 @@ def test_process_positions_from_sga_ign(session):
     assert position.center.coords == (6.82920162869564, 47.6098351749073)
 
 
+# File: 09x_positions_sga-ign.json
+def test_can_update_position_from_ign_identifier(session):
+    data = {'type': 'position', 'kind': 'segment',
+            'positionning': 'interpolation', 'source': 'IGN (2016-04)',
+            'housenumber:cia': '90004_0022_1_',
+            'ign': 'ADRNIVX_0000000354868426',
+            'geometry': {'type': 'Point',
+                         'coordinates': [6.82920162869564, 47.6098351749073]}}
+    housenumber = factories.HouseNumberFactory(
+        parent__fantoir='900040022',
+        parent__municipality__insee='90004',
+        number='1',
+        ordinal='')
+    position = factories.PositionFactory(ign='ADRNIVX_0000000354868426',
+                                         housenumber=housenumber)
+    process_row(data)
+    assert models.Position.select().count() == 1
+    position = models.Position.first()
+    assert position.source == 'IGN (2016-04)'
+    assert position.housenumber == housenumber
+
+
 # File: 10_groups-poste-matricule.json
-def test_import_poste_group_matricule(session, reporter):
+def test_import_poste_group_matricule(session):
     data = {'type': 'group', 'source': 'IGN (2016-04)',
             'fantoir': '330010005', 'laposte': '00580321'}
     factories.GroupFactory(name='RUE DES ARNAUDS', municipality__insee='33001',
                            fantoir='330010005', kind=models.Group.WAY)
     process_row(data)
-    print(reporter)
     assert models.Group.select().count() == 1
     group = models.Group.first()
     assert group.name == 'RUE DES ARNAUDS'

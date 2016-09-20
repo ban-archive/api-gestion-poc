@@ -211,9 +211,6 @@ def process_housenumber(row):
 
 
 def process_position(row):
-    kind = row.get('kind', '')
-    if not hasattr(Position, kind.upper()):
-        kind = Position.UNKNOWN
     positioning = row.get('positionning')  # two "n" in the data.
     if not positioning or not hasattr(Position, positioning.upper()):
         positioning = Position.OTHER
@@ -229,11 +226,22 @@ def process_position(row):
     if not housenumber:
         reporter.error('Unable to find parent housenumber', row)
         return
-    instance = Position.first(Position.housenumber == housenumber,
-                              Position.kind == kind, Position.source == source)
+    instance = None
+    if 'ign' in row:
+        # The only situation where we want to avoid creating new position is
+        # when we have the ign identifier.
+        instance = Position.first(Position.ign == row['ign'])
     version = instance.version + 1 if instance else 1
-    data = dict(kind=kind, source=source, housenumber=housenumber,
+    data = dict(source=source, housenumber=housenumber,
                 positioning=positioning, version=version)
+    kind = row.get('kind', '')
+    if hasattr(Position, kind.upper()):
+        data['kind'] = kind
+    elif not instance:
+        # We are creating a new position (not updating), kind is mandatory.
+        kind = Position.UNKNOWN
+    if kind:
+        data['kind'] = kind
     populate(['ign', 'name', ('geometry', 'center')], row, data)
     validator = Position.validator(instance=instance, update=bool(instance),
                                    **data)
