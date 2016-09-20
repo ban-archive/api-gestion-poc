@@ -237,6 +237,19 @@ def test_can_match_housenumber_parent_from_ign_id(session):
     assert housenumber.ign == 'ADRNIVX_0000000261474435'
 
 
+def test_can_match_housenumber_parent_from_laposte_id(session):
+    data = {"type": "housenumber", "source": "Poste/RAN (2016-06)",
+            "numero": None, "group:laposte": "02855657",
+            "laposte": "0600222227"}
+    group = factories.GroupFactory(municipality__insee='06002',
+                                   fantoir='', laposte='02855657')
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.parent == group
+    assert housenumber.laposte == '0600222227'
+
+
 def test_can_match_position_parent_from_ign_id(session):
     data = {"type": "position", "source": "IGN (2016-06)",
             "ign": "XXX",

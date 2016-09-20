@@ -152,6 +152,7 @@ def process_housenumber(row):
     fantoir = row.get('group:fantoir')
     cia = row.get('cia')
     group_ign = row.get('group:ign')
+    group_laposte = row.get('group:laposte')
     if fantoir:
         insee = fantoir[:5]
         data['parent'] = 'fantoir:{}'.format(fantoir)
@@ -162,6 +163,8 @@ def process_housenumber(row):
             data['cia'] = computed_cia
     elif group_ign:
         data['parent'] = 'ign:{}'.format(group_ign)
+    elif group_laposte:
+        data['parent'] = 'laposte:{}'.format(group_laposte)
     else:
         reporter.error('Missing parent reference', row)
         return
