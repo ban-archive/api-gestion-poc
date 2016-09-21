@@ -276,6 +276,19 @@ def test_can_update_housenumber_with_parent_number_and_ordinal(session):
     assert housenumber.postcode == postcode
 
 
+def test_can_update_housenumber_postcode_with_laposte_id(session):
+    data = {"type": "housenumber", "source": "Poste (2016-06)",
+            "laposte": "060012223P", "postcode:code": "06910",
+            "municipality:insee": "06900"}
+    postcode = factories.PostCodeFactory(code='06910',
+                                         municipality__insee='06900')
+    housenumber = factories.HouseNumberFactory(laposte='060012223P')
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.postcode == postcode
+
+
 def test_can_match_position_parent_from_ign_id(session):
     data = {"type": "position", "source": "IGN (2016-06)",
             "ign": "XXX",

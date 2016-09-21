@@ -191,6 +191,7 @@ def process_housenumber(row):
     update = False
     instance = None
     ign = data.get('ign')
+    laposte = data.get('laposte')
     if cia:
         instance = HouseNumber.first(HouseNumber.cia == cia)
         if instance and compute_cia:
@@ -205,7 +206,9 @@ def process_housenumber(row):
                     return
     elif ign:
         instance = HouseNumber.first(HouseNumber.ign == ign)
-    elif parent:
+    elif laposte:
+        instance = HouseNumber.first(HouseNumber.laposte == laposte)
+    if parent and not instance:
         # Data is not coerced yet, we want None for empty strings.
         ordinal = data.get('ordinal') or None
         instance = HouseNumber.first(HouseNumber.parent == parent,
@@ -221,7 +224,7 @@ def process_housenumber(row):
         update = True
 
     if not instance and not parent:
-        reporter.error('Missing parent reference', row)
+        reporter.error('Not updating and missing parent reference', row)
         return
 
     validator = HouseNumber.validator(instance=instance, update=update, **data)
