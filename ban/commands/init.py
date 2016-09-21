@@ -151,9 +151,11 @@ def process_housenumber(row):
     populate(keys, row, data)
     fantoir = row.get('group:fantoir')
     cia = row.get('cia')
+    insee = row.get('municipality:insee')
     computed_cia = None
     if fantoir:
-        insee = fantoir[:5]
+        if not insee:
+            insee = fantoir[:5]
         number = data.get('number')
         ordinal = data.get('ordinal')
         computed_cia = compute_cia(insee, fantoir[5:], number, ordinal)
@@ -162,8 +164,8 @@ def process_housenumber(row):
     source = row.get('source')
     data['attributes'] = {'source': source}
     # Only override if key is present (even if value is null).
-    if 'postcode' in row:
-        code = row.get('postcode')
+    if 'postcode:code' in row:
+        code = row.get('postcode:code')
         postcode = PostCode.select().join(Municipality).where(
             PostCode.code == code,
             Municipality.insee == insee).first()
@@ -171,6 +173,21 @@ def process_housenumber(row):
             reporter.error('HouseNumber postcode not found', (cia, code))
         else:
             data['postcode'] = postcode
+
+    group_ign = row.get('group:ign')
+    group_laposte = row.get('group:laposte')
+    parent = None
+    if fantoir:
+        parent = 'fantoir:{}'.format(fantoir)
+    elif group_ign:
+        parent = 'ign:{}'.format(group_ign)
+    elif group_laposte:
+        parent = 'laposte:{}'.format(group_laposte)
+    if parent:
+        parent = Group.coerce(parent)
+        if parent:
+            data['parent'] = parent
+
     update = False
     instance = None
     ign = data.get('ign')
@@ -188,6 +205,12 @@ def process_housenumber(row):
                     return
     elif ign:
         instance = HouseNumber.first(HouseNumber.ign == ign)
+    elif parent:
+        # Data is not coerced yet, we want None for empty strings.
+        ordinal = data.get('ordinal') or None
+        instance = HouseNumber.first(HouseNumber.parent == parent,
+                                     HouseNumber.number == data['number'],
+                                     HouseNumber.ordinal == ordinal)
     if instance:
         attributes = getattr(instance, 'attributes') or {}
         if attributes.get('source') == source:
@@ -197,15 +220,7 @@ def process_housenumber(row):
         data['version'] = instance.version + 1
         update = True
 
-    group_ign = row.get('group:ign')
-    group_laposte = row.get('group:laposte')
-    if fantoir:
-        data['parent'] = 'fantoir:{}'.format(fantoir)
-    elif group_ign:
-        data['parent'] = 'ign:{}'.format(group_ign)
-    elif group_laposte:
-        data['parent'] = 'laposte:{}'.format(group_laposte)
-    elif not instance:
+    if not instance and not parent:
         reporter.error('Missing parent reference', row)
         return
 
@@ -216,8 +231,8 @@ def process_housenumber(row):
     with HouseNumber._meta.database.atomic():
         try:
             validator.save()
-        except peewee.IntegrityError:
-            reporter.warning('HouseNumber DB error', cia)
+        except peewee.IntegrityError as e:
+            reporter.warning('HouseNumber DB error', (data, str(e)))
         else:
             msg = 'HouseNumber Updated' if instance else 'HouseNumber created'
             reporter.notice(msg, data)

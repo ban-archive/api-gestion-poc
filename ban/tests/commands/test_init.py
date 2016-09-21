@@ -152,7 +152,7 @@ def test_process_housenumber_from_oldban(session):
     data = {"type": "housenumber", "source": "BAN (2016-06-05)",
             "cia": "90001_0005_2_BIS", "group:fantoir": "900010005",
             "numero": "2", "ordinal": "BIS",
-            "ign": "ADRNIVX_0000000259416737", "postcode": "90400"}
+            "ign": "ADRNIVX_0000000259416737", "postcode:code": "90400"}
     group = factories.GroupFactory(municipality__insee="90001",
                                    fantoir="900010005")
     factories.HouseNumberFactory(parent=group, number="2", ordinal="bis")
@@ -250,7 +250,7 @@ def test_can_match_housenumber_parent_from_laposte_id(session):
     assert housenumber.laposte == '0600222227'
 
 
-def test_can_update_housenumber_laposte_without_parent(session):
+def test_can_update_housenumber_laposte_with_ign_id(session):
     data = {"type": "housenumber", "source": "IGN/Poste (2016-06)",
             "ign": "ADRNIVX_0000000261488312", "laposte": "060012222M"}
     housenumber = factories.HouseNumberFactory(ign='ADRNIVX_0000000261488312')
@@ -258,6 +258,22 @@ def test_can_update_housenumber_laposte_without_parent(session):
     assert models.HouseNumber.select().count() == 1
     housenumber = models.HouseNumber.first()
     assert housenumber.laposte == '060012222M'
+
+
+def test_can_update_housenumber_with_parent_number_and_ordinal(session):
+    data = {"type": "housenumber", "source": "Poste (2016-06)",
+            "group:laposte": "00067358", "laposte": "060012223P",
+            "numero": "5", "ordinal": "", "postcode:code": "06910",
+            "municipality:insee": "06900"}
+    postcode = factories.PostCodeFactory(code='06910',
+                                         municipality__insee='06900')
+    housenumber = factories.HouseNumberFactory(parent__laposte='00067358',
+                                               number='5', ordinal='')
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.laposte == '060012223P'
+    assert housenumber.postcode == postcode
 
 
 def test_can_match_position_parent_from_ign_id(session):
