@@ -224,7 +224,8 @@ def process_housenumber(row):
         update = True
 
     if not instance and not parent:
-        reporter.error('Not updating and missing parent reference', row)
+        reporter.error('No matching instance and missing parent reference',
+                       row)
         return
 
     validator = HouseNumber.validator(instance=instance, update=update, **data)
@@ -281,8 +282,8 @@ def process_position(row):
     else:
         try:
             position = validator.save()
-        except peewee.IntegrityError:
-            reporter.error('Integrity error', row)
+        except peewee.IntegrityError as e:
+            reporter.error('Integrity error', (str(e), data))
         else:
             msg = 'Position updated' if instance else 'Position created'
             reporter.notice(msg, position.id)
