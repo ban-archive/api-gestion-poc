@@ -207,24 +207,6 @@ class FantoirField(CharField):
         return value
 
 
-class ResourceListQueryResultWrapper(peewee.ModelQueryResultWrapper):
-
-    def process_row(self, row):
-        instance = super().process_row(row)
-        return instance.as_relation
-
-
-class ManyToManyQuery(fields.ManyToManyQuery):
-
-    def _get_result_wrapper(self):
-        return (getattr(self, '_result_wrapper', None) or
-                ResourceListQueryResultWrapper)
-
-    @peewee.returns_clone
-    def as_resource_list(self):
-        self._result_wrapper = ResourceListQueryResultWrapper
-
-
 class ManyToManyField(fields.ManyToManyField):
     schema_type = list
 

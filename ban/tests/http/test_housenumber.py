@@ -21,7 +21,7 @@ def test_get_housenumber(get):
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
-    assert resp.json['parent']['name'] == housenumber.parent.name
+    assert resp.json['parent'] == housenumber.parent.id
 
 
 @authorize
@@ -32,7 +32,7 @@ def test_get_housenumber_without_explicit_identifier(get):
     assert resp.json['number'] == "22"
     assert resp.json['id'] == housenumber.id
     assert resp.json['cia'] == housenumber.cia
-    assert resp.json['parent']['name'] == housenumber.parent.name
+    assert resp.json['parent'] == housenumber.parent.id
 
 
 @authorize
@@ -58,8 +58,7 @@ def test_get_housenumber_with_districts(get):
     resp = get('/housenumber/{}'.format(housenumber.id))
     assert resp.status_code == 200
     assert 'ancestors' in resp.json
-    assert resp.json['ancestors'][0]['id'] == district.id
-    assert resp.json['ancestors'][0]['name'] == district.name
+    assert resp.json['ancestors'][0] == district.id
 
 
 @authorize
@@ -68,7 +67,7 @@ def test_get_housenumber_collection(get):
     resp = get('/housenumber')
     assert resp.json['total'] == 5
     for obj in objs:
-        assert json.loads(dumps(obj.as_relation)) in resp.json['collection']
+        assert json.loads(dumps(obj.serialize())) in resp.json['collection']
 
 
 @authorize

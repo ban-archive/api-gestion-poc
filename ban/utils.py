@@ -27,7 +27,7 @@ def make_diff(old, new, update=False):
 
     update      only consider new keys"""
     meta = set(['pk', 'id', 'created_by', 'modified_by', 'created_at',
-                'modified_at', 'version', 'cia'])
+                'modified_at', 'version', 'cia', 'resource'])
     keys = list(new)
     if not update:
         keys += list(old)
@@ -46,3 +46,14 @@ def make_diff(old, new, update=False):
 
 def utcnow():
     return datetime.now(timezone.utc)
+
+
+def parse_mask(source):
+    dest = {}
+    for fields in source.split(','):
+        key, *submask = fields.split('.', maxsplit=1)
+        if key not in dest:
+            dest[key] = {}
+        if submask:
+            dest[key].update(parse_mask(submask[0]))
+    return dest

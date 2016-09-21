@@ -142,18 +142,12 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             self.lock_version()
 
 
-class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
-
-    def process_row(self, row):
-        instance = super().process_row(row)
-        return instance.as_resource
-
-
 class SelectQuery(db.SelectQuery):
 
     @peewee.returns_clone
-    def as_resource(self):
-        self._result_wrapper = ResourceQueryResultWrapper
+    def serialize(self):
+        self._serializer = lambda inst: inst.serialize()
+        super().serialize()
 
 
 class Version(db.Model):
@@ -177,11 +171,10 @@ class Version(db.Model):
     def data(self):
         return json.loads(self.raw)
 
-    @property
-    def as_resource(self):
+    def serialize(self, *args):
         return {
             'data': self.data,
-            'flags': list(self.flags.as_resource())
+            'flags': list(self.flags.serialize())
         }
 
     @property
@@ -240,8 +233,7 @@ class Diff(db.Model):
         super().save(*args, **kwargs)
         IdentifierRedirect.from_diff(self)
 
-    @property
-    def as_resource(self):
+    def serialize(self, *args):
         version = self.new or self.old
         return {
             'increment': self.pk,
@@ -305,8 +297,7 @@ class Flag(db.Model):
             self.created_at = utcnow()
         super().save(*args, **kwargs)
 
-    @property
-    def as_resource(self):
+    def serialize(self, *args):
         return {
             'at': self.created_at,
             'by': self.client.flag_id

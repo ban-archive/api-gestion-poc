@@ -57,14 +57,6 @@ class Municipality(NamedModel):
     insee = db.CharField(max_length=5, unique=True)
     siren = db.CharField(max_length=9, unique=True, null=True)
 
-    @property
-    def postcodes_extended(self):
-        return [p.as_relation for p in self.postcodes]
-
-    @property
-    def postcodes_compact(self):
-        return [p.id for p in self.postcodes]
-
 
 class PostCode(NamedModel):
     resource_fields = ['code', 'name', 'alias', 'municipality']
@@ -163,18 +155,6 @@ class HouseNumber(Model):
         return compute_cia(str(self.parent.municipality.insee),
                            self.parent.get_fantoir(),
                            self.number, self.ordinal)
-
-    @property
-    def positions_extended(self):
-        return list(self.positions.as_resource_list())
-
-    @property
-    def ancestors_extended(self):
-        return [d.as_relation for d in self.ancestors]
-
-    @property
-    def ancestors_compact(self):
-        return [d.id for d in self.ancestors]
 
 
 class Position(Model):

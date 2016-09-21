@@ -8,29 +8,12 @@ from ban import db
 from .validators import ResourceValidator
 
 
-class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
-
-    def process_row(self, row):
-        instance = super().process_row(row)
-        return instance.as_resource
-
-
-class ResourceListQueryResultWrapper(peewee.ModelQueryResultWrapper):
-
-    def process_row(self, row):
-        instance = super().process_row(row)
-        return instance.as_relation
-
-
 class SelectQuery(db.SelectQuery):
 
     @peewee.returns_clone
-    def as_resource(self):
-        self._result_wrapper = ResourceQueryResultWrapper
-
-    @peewee.returns_clone
-    def as_resource_list(self):
-        self._result_wrapper = ResourceListQueryResultWrapper
+    def serialize(self, mask=None):
+        self._serializer = lambda inst: inst.serialize(mask)
+        super().serialize()
 
 
 class BaseResource(peewee.BaseModel):
@@ -155,27 +138,48 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         return self.__class__.__name__.lower()
 
     @property
+    def serialized(self):
+        return self.id
+
+    def serialize(self, mask=None):
+        if not mask:
+            return self.serialized
+        dest = {}
+        for name, subfields in mask.items():
+            if name == '*':
+                return self.serialize({k: subfields
+                                       for k in self.resource_fields})
+            field = getattr(self.__class__, name, None)
+            if not field:
+                raise ValueError('Unknown field {}'.format(name))
+            value = getattr(self, name)
+            if value is not None:
+                if isinstance(field, (db.ManyToManyField,
+                                      peewee.ReverseRelationDescriptor)):
+                    value = [v.serialize(subfields) for v in value]
+                elif isinstance(field, db.ForeignKeyField):
+                    value = value.serialize(subfields)
+                elif isinstance(field, db.PointField):
+                    value = value.geojson
+            dest[name] = value
+        return dest
+
+    @property
     def as_resource(self):
         """Resource plus relations."""
-        return {f: self.extended_field(f) for f in self.resource_fields}
+        # All fields and all first level relations fields.
+        return self.serialize({'*': {}})
 
     @property
     def as_relation(self):
         """Resources plus relation references without metadata."""
-        return {f: self.compact_field(f) for f in self.collection_fields}
+        # All fields plus relations references.
+        return self.serialize({f: {} for f in self.collection_fields})
 
     @property
     def as_version(self):
         """Resources plus relations references and metadata."""
-        return {f: self.compact_field(f) for f in self.versioned_fields}
-
-    def extended_field(self, name):
-        value = getattr(self, '{}_extended'.format(name), getattr(self, name))
-        return getattr(value, 'as_relation', value)
-
-    def compact_field(self, name):
-        value = getattr(self, '{}_compact'.format(name), getattr(self, name))
-        return getattr(value, 'id', value)
+        return self.serialize({f: {} for f in self.versioned_fields})
 
     @classmethod
     def coerce(cls, id, identifier=None):

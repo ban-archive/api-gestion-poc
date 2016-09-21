@@ -52,16 +52,7 @@ def test_municipality_as_resource():
     assert municipality.as_resource['siren'] == "210100566"
     assert municipality.as_resource['version'] == 1
     assert municipality.as_resource['id'] == municipality.id
-    assert municipality.as_resource['postcodes'] == [{
-        'code': '31310',
-        'attributes': None,
-        'resource': 'postcode',
-        'name': 'Test PostCode Area Name',
-        'municipality': municipality.id,
-        'id': postcode.id,
-        'alias': None,
-        'version': 1,
-    }]
+    assert municipality.as_resource['postcodes'] == [postcode.id]
 
 
 def test_municipality_as_relation():
@@ -320,7 +311,7 @@ def test_housenumber_as_resource():
     assert housenumber.as_resource == {
         'ancestors': [],
         'cia': '21892_1234_90_BIS',
-        'parent': housenumber.parent.as_relation,
+        'parent': housenumber.parent.id,
         'positions': [],
         'laposte': None,
         'ign': None,
@@ -330,9 +321,9 @@ def test_housenumber_as_resource():
         'number': '90',
         'postcode': None,
         'ordinal': 'bis',
-        'created_by': housenumber.created_by.as_relation,
+        'created_by': housenumber.created_by.serialize(),
         'created_at': housenumber.created_at,
-        'modified_by': housenumber.modified_by.as_relation,
+        'modified_by': housenumber.modified_by.serialize(),
         'modified_at': housenumber.modified_at,
     }
 

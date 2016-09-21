@@ -117,6 +117,13 @@ class Session(db.Model):
             'user': self.user.username if self.user else None
         }
 
+    def serialize(self, *args):
+        return {
+            'id': self.pk,
+            'client': self.client.name if self.client else None,
+            'user': self.user.username if self.user else None
+        }
+
     @property
     def id(self):
         # Pretend to be a resource for created_by/modified_by values in

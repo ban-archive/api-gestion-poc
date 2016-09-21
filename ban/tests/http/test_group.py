@@ -53,10 +53,45 @@ def test_get_group_housenumbers(get):
     resp = get('/housenumber?group={}'.format(street.id))
     assert resp.status_code == 200
     assert resp.json['total'] == 3
-    # loads/dumps to compare string dates to string dates.
-    assert resp.json['collection'][0] == json.loads(dumps(hn1.as_relation))
-    assert resp.json['collection'][1] == json.loads(dumps(hn2.as_relation))
-    assert resp.json['collection'][2] == json.loads(dumps(hn3.as_relation))
+    assert resp.json['collection'][0] == json.loads(dumps({
+        'attributes': None,
+        'laposte': None,
+        'ordinal': 'bis',
+        'parent': street.id,
+        'id': hn1.id,
+        'version': 1,
+        'postcode': None,
+        'number': '1',
+        'resource': 'housenumber',
+        'cia': hn1.cia,
+        'ign': None,
+    }))
+    assert resp.json['collection'][1] == json.loads(dumps({
+        'attributes': None,
+        'laposte': None,
+        'ordinal': 'bis',
+        'parent': street.id,
+        'id': hn2.id,
+        'version': 1,
+        'postcode': None,
+        'number': '2',
+        'resource': 'housenumber',
+        'cia': hn2.cia,
+        'ign': None,
+    }))
+    assert resp.json['collection'][2] == json.loads(dumps({
+        'attributes': None,
+        'laposte': None,
+        'ordinal': 'bis',
+        'parent': street.id,
+        'id': hn3.id,
+        'version': 1,
+        'postcode': None,
+        'number': '3',
+        'resource': 'housenumber',
+        'cia': hn3.cia,
+        'ign': None,
+    }))
 
 
 @authorize
@@ -73,7 +108,7 @@ def test_create_group(client):
     assert resp.status_code == 201
     assert resp.json['id']
     assert resp.json['name'] == 'Rue de la Plage'
-    assert resp.json['municipality']['id'] == municipality.id
+    assert resp.json['municipality'] == municipality.id
     assert models.Group.select().count() == 1
     uri = 'http://localhost/group/{}'.format(resp.json['id'])
     assert resp.headers['Location'] == uri
