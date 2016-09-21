@@ -250,6 +250,16 @@ def test_can_match_housenumber_parent_from_laposte_id(session):
     assert housenumber.laposte == '0600222227'
 
 
+def test_can_update_housenumber_laposte_without_parent(session):
+    data = {"type": "housenumber", "source": "IGN/Poste (2016-06)",
+            "ign": "ADRNIVX_0000000261488312", "laposte": "060012222M"}
+    housenumber = factories.HouseNumberFactory(ign='ADRNIVX_0000000261488312')
+    process_row(data)
+    assert models.HouseNumber.select().count() == 1
+    housenumber = models.HouseNumber.first()
+    assert housenumber.laposte == '060012222M'
+
+
 def test_can_match_position_parent_from_ign_id(session):
     data = {"type": "position", "source": "IGN (2016-06)",
             "ign": "XXX",

@@ -151,23 +151,13 @@ def process_housenumber(row):
     populate(keys, row, data)
     fantoir = row.get('group:fantoir')
     cia = row.get('cia')
-    group_ign = row.get('group:ign')
-    group_laposte = row.get('group:laposte')
     if fantoir:
         insee = fantoir[:5]
-        data['parent'] = 'fantoir:{}'.format(fantoir)
         number = data.get('number')
         ordinal = data.get('ordinal')
         computed_cia = compute_cia(insee, fantoir[5:], number, ordinal)
         if data.get('cia'):
             data['cia'] = computed_cia
-    elif group_ign:
-        data['parent'] = 'ign:{}'.format(group_ign)
-    elif group_laposte:
-        data['parent'] = 'laposte:{}'.format(group_laposte)
-    else:
-        reporter.error('Missing parent reference', row)
-        return
     source = row.get('source')
     data['attributes'] = {'source': source}
     # Only override if key is present (even if value is null).
@@ -182,6 +172,7 @@ def process_housenumber(row):
             data['postcode'] = postcode
     update = False
     instance = None
+    ign = data.get('ign')
     if cia:
         instance = HouseNumber.first(HouseNumber.cia == cia)
         if instance:
@@ -194,13 +185,28 @@ def process_housenumber(row):
                     msg = 'Duplicate CIA'
                     reporter.error(msg, (cia, computed_cia))
                     return
-            attributes = getattr(instance, 'attributes') or {}
-            if attributes.get('source') == source:
-                # Reimporting same data?
-                reporter.warning('HouseNumber already exists', instance.cia)
-                return
-            data['version'] = instance.version + 1
-            update = True
+    elif ign:
+        instance = HouseNumber.first(HouseNumber.ign == ign)
+    if instance:
+        attributes = getattr(instance, 'attributes') or {}
+        if attributes.get('source') == source:
+            # Reimporting same data?
+            reporter.warning('HouseNumber already exists', instance.cia)
+            return
+        data['version'] = instance.version + 1
+        update = True
+
+    group_ign = row.get('group:ign')
+    group_laposte = row.get('group:laposte')
+    if fantoir:
+        data['parent'] = 'fantoir:{}'.format(fantoir)
+    elif group_ign:
+        data['parent'] = 'ign:{}'.format(group_ign)
+    elif group_laposte:
+        data['parent'] = 'laposte:{}'.format(group_laposte)
+    elif not instance:
+        reporter.error('Missing parent reference', row)
+        return
 
     validator = HouseNumber.validator(instance=instance, update=update, **data)
     if validator.errors:
