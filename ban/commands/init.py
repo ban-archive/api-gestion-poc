@@ -282,8 +282,8 @@ def process_position(row):
     else:
         try:
             position = validator.save()
-        except peewee.IntegrityError:
-            reporter.error('Integrity error', row)
+        except peewee.IntegrityError as e:
+            reporter.error('Integrity error', (str(e), data))
         else:
             msg = 'Position updated' if instance else 'Position created'
             reporter.notice(msg, position.id)
