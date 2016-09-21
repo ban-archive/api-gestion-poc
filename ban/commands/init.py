@@ -224,7 +224,8 @@ def process_housenumber(row):
         update = True
 
     if not instance and not parent:
-        reporter.error('Not updating and missing parent reference', row)
+        reporter.error('No matching instance and missing parent reference',
+                       row)
         return
 
     validator = HouseNumber.validator(instance=instance, update=update, **data)
