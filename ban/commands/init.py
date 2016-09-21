@@ -151,6 +151,7 @@ def process_housenumber(row):
     populate(keys, row, data)
     fantoir = row.get('group:fantoir')
     cia = row.get('cia')
+    computed_cia = None
     if fantoir:
         insee = fantoir[:5]
         number = data.get('number')
@@ -175,7 +176,7 @@ def process_housenumber(row):
     ign = data.get('ign')
     if cia:
         instance = HouseNumber.first(HouseNumber.cia == cia)
-        if instance:
+        if instance and compute_cia:
             if cia != computed_cia:
                 # Means new values are changing one of the four values of the
                 # cia (insee, fantoir, number, ordinal). Make sure we are not
