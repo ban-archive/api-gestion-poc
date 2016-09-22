@@ -326,8 +326,7 @@ class VersionedModelEnpoint(ModelEndpoint):
 
     @auth.require_oauth()
     @app.jsonify
-    @app.endpoint('/<identifier>/versions/<int:ref>', methods=['POST'])
-    @app.endpoint('/<identifier>/versions/<datetime:ref>', methods=['POST'])
+    @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
     def post_version(self, identifier, ref):
         """Flag a version.
 
@@ -346,13 +345,13 @@ class VersionedModelEnpoint(ModelEndpoint):
         version = instance.load_version(ref)
         if not version:
             abort(404)
-        flag = request.json.get('flag')
-        if flag is True:
+        status = request.json.get('status')
+        if status is True:
             version.flag()
-        elif flag is False:
+        elif status is False:
             version.unflag()
         else:
-            abort(400, message='Body should contain a "flag" boolean key')
+            abort(400, message='Body should contain a "status" boolean key')
 
 
 @app.resource

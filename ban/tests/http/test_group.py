@@ -189,8 +189,7 @@ def test_get_group_version(get):
 @authorize
 def test_get_group_unknown_version_should_go_in_404(get):
     street = GroupFactory(name="Rue de la Paix")
-    uri = '/group/{}/versions/{}'.format(street.id, 2)
-    resp = get(uri)
+    resp = get('/group/{}/versions/{}'.format(street.id, 2))
     assert resp.status_code == 404
 
 
