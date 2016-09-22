@@ -500,3 +500,14 @@ class DiffEndpoint(CollectionEndpoint):
         else:
             qs = qs.where(versioning.Diff.pk > increment)
         return self.collection(qs.serialize())
+
+
+@app.route('/openapi', methods=['GET'])
+def openapi():
+    return dumps(app._schema)
+
+
+app._schema.register_model(amodels.Session)
+app._schema.register_model(versioning.Diff)
+app._schema.register_model(versioning.Version)
+app._schema.register_model(versioning.Flag)

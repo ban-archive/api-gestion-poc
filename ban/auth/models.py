@@ -105,7 +105,7 @@ class Session(db.Model):
     __openapi__ = """
         properties:
             id:
-                type: string
+                type: integer
                 description: primary key of the session
             client:
                 type: string

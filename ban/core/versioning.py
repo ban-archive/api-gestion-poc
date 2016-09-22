@@ -320,7 +320,7 @@ class IdentifierRedirect(db.Model):
 
 class Flag(db.Model):
 
-    definition = """
+    __openapi__ = """
         properties:
             at:
                 type: string
