@@ -33,7 +33,11 @@ postgres_ext.PostgresqlExtDatabase.register_ops({
 # TODO: mv to a third-party module.
 class PointField(peewee.Field):
     db_field = 'point'
-    schema_type = Point
+    __data_type__ = Point
+    # TODO how to deal properly with custom type?
+    # Or should we just accept geojson (and not [lat, lon]…)?
+    __schema_type__ = 'object'
+    __schema_format__ = 'geojson'
     srid = 4326
 
     def db_value(self, value):
@@ -75,7 +79,9 @@ postgres_ext.PostgresqlExtDatabase.register_fields({'point':
 
 class DateRangeField(peewee.Field):
     db_field = 'tstzrange'
-    schema_type = datetime
+    __data_type__ = datetime
+    __schema_type__ = 'string'
+    __schema_format__ = 'date-time'
 
     def db_value(self, value):
         return self.coerce(value)
@@ -97,7 +103,8 @@ class DateRangeField(peewee.Field):
 
 class ForeignKeyField(peewee.ForeignKeyField):
 
-    schema_type = int
+    __data_type__ = int
+    __schema_type__ = 'integer'
 
     def coerce(self, value):
         if not value:
@@ -118,7 +125,8 @@ class ForeignKeyField(peewee.ForeignKeyField):
 
 
 class CharField(peewee.CharField):
-    schema_type = str
+    __data_type__ = str
+    __schema_type__ = 'string'
 
     def coerce(self, value):
         if self.null and not value:
@@ -127,7 +135,8 @@ class CharField(peewee.CharField):
 
 
 class TextField(peewee.TextField):
-    schema_type = str
+    __data_type__ = str
+    __schema_type__ = 'string'
 
     def coerce(self, value):
         if self.null and not value:
@@ -136,11 +145,13 @@ class TextField(peewee.TextField):
 
 
 class IntegerField(peewee.IntegerField):
-    schema_type = int
+    __data_type__ = int
+    __schema_type__ = 'integer'
 
 
 class HStoreField(postgres_ext.HStoreField):
-    schema_type = dict
+    __data_type__ = dict
+    __schema_type__ = 'object'
 
     def coerce(self, value):
         if isinstance(value, str):
@@ -149,7 +160,8 @@ class HStoreField(postgres_ext.HStoreField):
 
 
 class BinaryJSONField(postgres_ext.BinaryJSONField):
-    schema_type = dict
+    __data_type__ = dict
+    __schema_type__ = 'object'
 
 
 class UUIDField(peewee.UUIDField):
@@ -157,7 +169,8 @@ class UUIDField(peewee.UUIDField):
 
 
 class ArrayField(postgres_ext.ArrayField):
-    schema_type = list
+    __data_type__ = list
+    __schema_type__ = 'array'
 
     def coerce(self, value):
         if value and not isinstance(value, (list, tuple)):
@@ -166,7 +179,9 @@ class ArrayField(postgres_ext.ArrayField):
 
 
 class DateTimeField(postgres_ext.DateTimeTZField):
-    schema_type = datetime
+    __data_type__ = datetime
+    __schema_type__ = 'string'
+    __schema_format__ = 'date-time'
 
     def python_value(self, value):
         value = super().python_value(value)
@@ -177,7 +192,8 @@ class DateTimeField(postgres_ext.DateTimeTZField):
 
 
 class BooleanField(peewee.BooleanField):
-    schema_type = bool
+    __data_type__ = bool
+    __schema_type__ = 'boolean'
 
 
 class PostCodeField(CharField):
@@ -208,7 +224,8 @@ class FantoirField(CharField):
 
 
 class ManyToManyField(fields.ManyToManyField):
-    schema_type = list
+    __data_type__ = list
+    __schema_type__ = 'array'
 
     def __init__(self, *args, **kwargs):
         # ManyToManyField is not a real "Field", so try to better conform to

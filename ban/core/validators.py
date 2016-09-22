@@ -47,9 +47,9 @@ class ResourceValidator:
             except peewee.DoesNotExist:
                 raise ValueError('No matching resource for "{}"'.format(value))
 
-        if value and not isinstance(value, field.schema_type):
+        if value and not isinstance(value, field.__data_type__):
             raise ValueError('"{value}" is not of type "{type}".'.format(
-                value=value, type=field.schema_type
+                value=value, type=field.__data_type__
             ))
         checks = ['null', 'choices', 'min_length', 'max_length', 'unique']
         for check in checks:
@@ -58,7 +58,7 @@ class ResourceValidator:
         return value
 
     def validate_null(self, field, value):
-        if field.schema_type == bool and value is not None:
+        if field.__data_type__ == bool and value is not None:
             return
 
         if not value and not field.null:

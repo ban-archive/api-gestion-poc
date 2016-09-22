@@ -25,12 +25,6 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
                        'modified_by', 'attributes']
     exclude_for_collection = ['created_at', 'created_by',
                               'modified_at', 'modified_by']
-    jsonschema = {'properties': {
-        'created_by': {'readOnly': True},
-        'created_at': {'readOnly': True},
-        'modified_at': {'readOnly': True},
-        'modified_by': {'readOnly': True}}
-    }
     readonly_fields = (ResourceModel.readonly_fields + ['created_at',
                        'created_by', 'modified_at', 'modified_by'])
 
@@ -125,8 +119,6 @@ class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'positions', 'ign', 'postcode']
-    jsonschema = {'properties': {'cia': {'readonly': True},
-                                 'positions': {'readonly': True}}}
     readonly_fields = Model.readonly_fields + ['cia']
 
     number = db.CharField(max_length=16, null=True)

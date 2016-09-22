@@ -1,6 +1,8 @@
+from datetime import datetime
+
 import yaml
 
-from ban import __version__
+from ban import __version__, db
 
 
 BASE = {
@@ -80,56 +82,56 @@ class Schema(dict):
     def register_model(self, model):
         if hasattr(model, 'definition'):
             definition = yaml.load(model.definition)
-        elif hasattr(model, 'jsonschema'):
-            definition = {
-                'properties': {name: self.field_definition(name, field)
-                               for name, field
-                               in model.jsonschema['properties'].items()}
-            }
         else:
-            definition = None
-        if definition:
-            self['definitions'][model.__name__] = definition
+            definition = self.model_definition(model)
+        self['definitions'][model.__name__] = definition
 
-    def field_definition(self, name, schema):
-        definition = {}
-        type_ = schema.get('type')
-        if isinstance(type_, list):
-            type_ = type_[0]
-        if type_ == 'integer':
-            definition['type'] = 'integer'
-        elif type_ == 'datetime':
-            definition['type'] = 'string'
-            definition['format'] = 'date-time'
-        elif type_ == 'array':
-            definition['type'] = 'array'
-            # Try to guess if it's a m2m field.
-            if 'field' in schema:
-                field = schema['field']
-                if hasattr(field, 'rel_model'):
-                    definition['items'] = {
-                        '$ref': '#/definitions/{}'.format(
-                            field.rel_model.__name__)
-                    }
-                else:
-                    definition['items'] = {
-                        'type': field.db_field
-                    }
-            elif 'model' in schema:
-                definition['items'] = {
-                    '$ref': '#/definitions/{}'.format(schema['model'])
+    def model_definition(self, model):
+        """Map Peewee models to jsonschema."""
+        schema = {'required': [], 'properties': {}, 'type': 'object'}
+        for name, field in model._meta.fields.items():
+            if name not in model.resource_fields:
+                continue
+            if field.primary_key:
+                continue
+            type_ = getattr(field.__class__, '__schema_type__', None)
+            if not type_:
+                continue
+            row = {
+                'type': [type_]
+            }
+            if hasattr(field.__class__, '__schema_format__'):
+                row['format'] = field.__class__.__schema_format__
+            if isinstance(field, db.ForeignKeyField):
+                row['$ref'] = '#/definitions/{}'.format(
+                    field.rel_model.__name__)
+            if isinstance(field, db.ManyToManyField):
+                row['items'] = {
+                    '$ref': '#/definitions/{}'.format(
+                        field.rel_model.__name__)
                 }
-        elif type_ == 'object':
-            definition['type'] = 'object'
-        elif type_ == 'point':
-            definition['type'] = 'object'
-            definition['format'] = 'geo'
-        elif type_ == 'foreignkey':
-            definition['$ref'] = '#/definitions/{}'.format(
-                schema['field'].rel_model.__name__)
-        else:
-            definition['type'] = 'string'
-        return definition
+            elif type_ == 'array':
+                row['items'] = {'type': field.db_field}
+            if field.null:
+                row['type'].append('null')
+            if field.unique:
+                row['unique'] = True
+            max_length = getattr(field, 'max_length', None)
+            if max_length:
+                row['maxLength'] = max_length
+            min_length = getattr(field, 'min_length', None)
+            if not min_length and type_ == 'string' and not field.null:
+                min_length = 1
+            if min_length:
+                row['minLength'] = min_length
+            if getattr(field, 'choices', None):
+                row['enum'] = [v for v, l in field.choices]
+            schema['properties'][name] = row
+            readonly = name in model.readonly_fields
+            if (not field.null and not readonly
+               and name not in schema['required']):
+                schema['required'].append(name)
+        return schema
 
     def register_endpoint(self, path, func, methods, endpoint):
         definition = {verb.lower(): self.get_responder_doc(func, endpoint)
