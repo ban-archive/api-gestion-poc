@@ -51,9 +51,9 @@ def utcnow():
 def parse_mask(source):
     dest = {}
     for fields in source.split(','):
-        key, *submask = fields.split('.', maxsplit=1)
-        if key not in dest:
-            dest[key] = {}
-        if submask:
-            dest[key].update(parse_mask(submask[0]))
+        parent = dest
+        for field in fields.split('.'):
+            if field not in parent:
+                parent[field] = {}
+            parent = parent[field]
     return dest
