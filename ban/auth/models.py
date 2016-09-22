@@ -121,6 +121,9 @@ class Session(db.Model):
     email = db.CharField(null=True)  # TODO EmailField
 
     def serialize(self, *args):
+        # Pretend to be a resource for created_by/modified_by values in
+        # resources serialization.
+        # Should we also expose the email/ip? CNIL question to be solved.
         return {
             'id': self.pk,
             'client': self.client.name if self.client else None,

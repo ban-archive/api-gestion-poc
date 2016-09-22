@@ -282,10 +282,10 @@ class Diff(db.Model):
 
 
 class IdentifierRedirect(db.Model):
-    model_name = peewee.CharField(max_length=64)
-    identifier = peewee.CharField(max_length=64)
-    old = peewee.CharField(max_length=255)
-    new = peewee.CharField(max_length=255)
+    model_name = db.CharField(max_length=64)
+    identifier = db.CharField(max_length=64)
+    old = db.CharField(max_length=255)
+    new = db.CharField(max_length=255)
 
     @classmethod
     def from_diff(cls, diff):
