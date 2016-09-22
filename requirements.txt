@@ -1,7 +1,8 @@
 bcrypt==3.1.0
 decorator==4.0.10
-Flask-OAuthlib==0.9.3
 Flask==0.11.1
+Flask-Cors==3.0.2
+Flask-OAuthlib==0.9.3
 peewee==2.8.3
 progressist
 psycopg-postgis

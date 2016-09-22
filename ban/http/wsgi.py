@@ -1,8 +1,10 @@
 import re
+from functools import wraps
 
 from flask import Flask, make_response
+from flask_cors import CORS
+
 from ban.core.encoder import dumps
-from functools import wraps
 from .schema import Schema
 
 
@@ -61,3 +63,4 @@ class App(Flask):
 
 
 app = application = App(__name__)
+CORS(app)
