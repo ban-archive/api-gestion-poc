@@ -44,7 +44,7 @@ class App(Flask):
                     endpoint = ('{}-{}'.format(cls.__name__, func.__name__)
                                        .lower().replace('_', '-'))
                     self.add_url_rule(path, view_func=func, endpoint=endpoint,
-                                      **kwargs)
+                                      strict_slashes=False, **kwargs)
         return cls
 
     def schema(self, cls):
