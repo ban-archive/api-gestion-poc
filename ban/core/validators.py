@@ -12,7 +12,7 @@ class ResourceValidator:
         self.update = update
 
     def error(self, key, message):
-        # Should we create a list and append insteaad?
+        # Should we create a list and append instead?
         if key not in self.errors:
             self.errors[key] = message
 
@@ -22,9 +22,10 @@ class ResourceValidator:
         self.data = {}
         for name, field in self.model._meta.fields.items():
             if (name in self.model.readonly_fields
-                 or name not in self.model.resource_fields):
+               or name not in self.model.resource_fields):
                 continue
-            if self.update and not name in data and name is not 'version':
+            # We want to check for version even in update mode.
+            if self.update and name not in data and name is not 'version':
                 continue
             try:
                 self.data[name] = self.validate_field(field, data.get(name))
@@ -38,14 +39,12 @@ class ResourceValidator:
                 self.error(key, message)
 
     def validate_field(self, field, value):
-        coerce = getattr(field, 'coerce', None)
-        if coerce:
-            try:
-                value = coerce(value)
-            except (ValueError, TypeError):
-                raise ValueError('Unable to coerce value "{}"'.format(value))
-            except peewee.DoesNotExist:
-                raise ValueError('No matching resource for "{}"'.format(value))
+        try:
+            value = field.coerce(value)
+        except (ValueError, TypeError):
+            raise ValueError('Unable to coerce value "{}"'.format(value))
+        except peewee.DoesNotExist:
+            raise ValueError('No matching resource for "{}"'.format(value))
 
         if value and not isinstance(value, field.__data_type__):
             raise ValueError('"{value}" is not of type "{type}".'.format(
