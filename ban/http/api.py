@@ -426,11 +426,7 @@ class HouseNumber(VersionedModelEnpoint):
             qs = [h.serialize(mask) for h in qs.order_by(*self.order_by)]
         return qs
 
-    def filter_ancestors(self, qs):
-        return self.filter_ancestors_and_group(qs)
-
-    def filter_group(self, qs):
-        return self.filter_ancestors_and_group(qs)
+    filter_ancestors = filter_group = filter_ancestors_and_group
 
     def get_queryset(self):
         qs = super().get_queryset()
