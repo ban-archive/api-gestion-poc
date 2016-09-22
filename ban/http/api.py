@@ -1,12 +1,8 @@
-from datetime import timezone
 from io import StringIO
 from urllib.parse import urlencode
 
 import peewee
-from dateutil.parser import parse as parse_date
-from werkzeug.exceptions import HTTPException
-from flask import request, url_for, Response
-from werkzeug.routing import BaseConverter, ValidationError
+from flask import request, url_for
 
 from ban.auth import models as amodels
 from ban.commands.bal import bal
@@ -15,45 +11,7 @@ from ban.core.encoder import dumps
 from ban.http.auth import auth
 from ban.http.wsgi import app
 
-
-def abort(code, **kwargs):
-    response = Response(status=code, mimetype='application/json',
-                        response=dumps(kwargs))
-    raise HTTPException(description=dumps(kwargs), response=response)
-
-
-def get_bbox(args):
-    bbox = {}
-    params = ['north', 'south', 'east', 'west']
-    for param in params:
-        try:
-            bbox[param] = float(args.get(param))
-        except ValueError:
-            abort(400, error='Invalid value for {}: {}'.format(
-                param, args.get(param)))
-        except TypeError:
-            # None (param not set).
-            continue
-    if not len(bbox) == 4:
-        return None
-    return bbox
-
-
-class DateTimeConverter(BaseConverter):
-
-    def to_python(self, value):
-        try:
-            value = parse_date(value)
-        except ValueError:
-            raise ValidationError
-        # Be smart, imply that naive dt are in the same tz the API
-        # exposes, which is UTC.
-        if not value.tzinfo:
-            value = value.replace(tzinfo=timezone.utc)
-        return value
-
-
-app.url_map.converters['datetime'] = DateTimeConverter
+from .utils import abort, get_bbox
 
 
 class CollectionEndpoint:

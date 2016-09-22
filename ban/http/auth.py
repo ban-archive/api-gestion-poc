@@ -1,5 +1,7 @@
-from flask_restplus import abort
+from .utils import abort
 from flask_oauthlib.provider import OAuth2Provider
+from flask import request
+from werkzeug.datastructures import ImmutableMultiDict
 
 from ban.auth import models
 from ban.core import context
@@ -8,6 +10,14 @@ from ban.utils import is_uuid4
 from .wsgi import app
 
 auth = OAuth2Provider(app)
+
+
+def json_to_form(func):
+    def wrapper(*args, **kwargs):
+        if not request.form:
+            request.form = ImmutableMultiDict(request.json)
+        return func(*args, **kwargs)
+    return wrapper
 
 
 @auth.clientgetter
@@ -62,6 +72,7 @@ def grantsetter(client_id, code, request, *args, **kwargs):
 
 
 @app.route('/token/', methods=['POST'])
+@json_to_form
 @auth.token_handler
 def authorize(*args, **kwargs):
     """Get a token to use the API."""

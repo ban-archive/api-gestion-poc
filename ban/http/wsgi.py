@@ -1,11 +1,14 @@
 import re
 from functools import wraps
+from datetime import timezone
+from dateutil.parser import parse as parse_date
 
 from flask import Flask, make_response
 from flask_cors import CORS
+from werkzeug.routing import BaseConverter, ValidationError
 
-from ban.core.encoder import dumps
 from .schema import Schema
+from ban.core.encoder import dumps
 
 
 class App(Flask):
@@ -62,5 +65,20 @@ class App(Flask):
         return cls
 
 
+class DateTimeConverter(BaseConverter):
+
+    def to_python(self, value):
+        try:
+            value = parse_date(value)
+        except ValueError:
+            raise ValidationError
+        # Be smart, imply that naive dt are in the same tz the API
+        # exposes, which is UTC.
+        if not value.tzinfo:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+
+
 app = application = App(__name__)
 CORS(app)
+app.url_map.converters['datetime'] = DateTimeConverter
