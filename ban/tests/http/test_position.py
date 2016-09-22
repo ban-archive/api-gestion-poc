@@ -22,7 +22,7 @@ def test_create_position(client):
     position = models.Position.first()
     assert resp.json['id'] == position.id
     assert resp.json['center']['coordinates'] == [3, 4]
-    assert resp.json['housenumber']['id'] == housenumber.id
+    assert resp.json['housenumber'] == housenumber.id
 
 
 @authorize
@@ -300,7 +300,7 @@ def test_patch_position_should_allow_to_update_only_some_fields(client, url):
     assert resp.status_code == 200
     assert resp.json['id'] == position.id
     assert resp.json['center']['coordinates'] == [3.4, 5.678]
-    assert resp.json['housenumber']['id'] == position.housenumber.id
+    assert resp.json['housenumber'] == position.housenumber.id
     assert models.Position.select().count() == 1
 
 

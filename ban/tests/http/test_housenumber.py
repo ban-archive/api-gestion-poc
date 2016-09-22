@@ -67,7 +67,7 @@ def test_get_housenumber_collection(get):
     resp = get('/housenumber')
     assert resp.json['total'] == 5
     for obj in objs:
-        assert json.loads(dumps(obj.serialize())) in resp.json['collection']
+        assert json.loads(dumps(obj.as_relation)) in resp.json['collection']
 
 
 @authorize
@@ -141,7 +141,7 @@ def test_get_housenumber_with_position(get):
     housenumber = HouseNumberFactory()
     position = PositionFactory(housenumber=housenumber, center=(1, 1))
     resp = get('/housenumber/{}'.format(housenumber.id))
-    assert resp.json['positions'] == [json.loads(dumps(position.as_relation))]
+    assert resp.json['positions'] == [position.id]
 
 
 @authorize
@@ -149,7 +149,7 @@ def test_get_housenumber_with_postcode(get):
     postcode = PostCodeFactory(code="12345")
     housenumber = HouseNumberFactory(postcode=postcode)
     resp = get('/housenumber/{}'.format(housenumber.id))
-    assert resp.json['postcode'] == json.loads(dumps(postcode.as_relation))
+    assert resp.json['postcode'] == postcode.id
 
 
 @authorize
@@ -185,7 +185,7 @@ def test_create_housenumber(client):
     assert resp.json['id']
     assert resp.json['number'] == '20'
     assert resp.json['ordinal'] is None
-    assert resp.json['parent']['id'] == street.id
+    assert resp.json['parent'] == street.id
     assert models.HouseNumber.select().count() == 1
 
 
@@ -248,7 +248,7 @@ def test_replace_housenumber(client):
     assert resp.json['version'] == 2
     assert resp.json['number'] == '22'
     assert resp.json['ordinal'] == 'bis'
-    assert resp.json['parent']['id'] == housenumber.parent.id
+    assert resp.json['parent'] == housenumber.parent.id
     assert models.HouseNumber.select().count() == 1
 
 

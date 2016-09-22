@@ -26,16 +26,7 @@ def test_get_municipality_with_postcodes(get):
     assert resp.status_code == 200
     assert resp.json['id']
     assert resp.json['name'] == 'Cabour'
-    assert resp.json['postcodes'] == [{
-        'id': postcode.id,
-        'attributes': None,
-        'code': '33000',
-        'name': 'Test PostCode Area Name',
-        'municipality': municipality.id,
-        'resource': 'postcode',
-        'alias': None,
-        'version': 1,
-    }]
+    assert resp.json['postcodes'] == [postcode.id]
 
 
 @authorize
