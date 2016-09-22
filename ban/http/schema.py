@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import yaml
 
 from ban import __version__, db
@@ -68,20 +66,20 @@ class Schema(dict):
         try:
             doc = (func.__doc__ or '').split('\n\n')[1]
         except IndexError:
-            pass
+            print('Bad openapi docstring for {}'.format(func))
         else:
             try:
                 extra = yaml.load(doc.format(
                     resource=resource.__class__.__name__))
-            except ValueError:
-                pass
+            except:
+                print('Bad openapi docstring for {}'.format(func))
             else:
                 default.update(extra)
         return default
 
     def register_model(self, model):
-        if hasattr(model, 'definition'):
-            definition = yaml.load(model.definition)
+        if hasattr(model, '__openapi__'):
+            definition = yaml.load(model.__openapi__)
         else:
             definition = self.model_definition(model)
         self['definitions'][model.__name__] = definition

@@ -37,32 +37,26 @@ class App(Flask):
         return wrapper
 
     def resource(self, cls):
+        if hasattr(cls, 'model'):
+            self._schema.register_model(cls.model)
         instance = cls()
         for name in dir(cls):
             func = getattr(instance, name)
             if hasattr(func, '_endpoints'):
-                for endpoint in func._endpoints:
-                    path, kwargs = endpoint
-                    path = '{}{}'.format(cls.endpoint, path)
-                    endpoint = ('{}-{}'.format(cls.__name__, func.__name__)
-                                       .lower().replace('_', '-'))
-                    self.add_url_rule(path, view_func=func, endpoint=endpoint,
-                                      strict_slashes=False, **kwargs)
+                self.register_endpoints(func)
         return cls
 
-    def schema(self, cls):
-        if hasattr(cls, 'model'):
-            self._schema.register_model(cls.model)
-        for name in dir(cls):
-            func = getattr(cls, name)
-            if hasattr(func, '_endpoints'):
-                for endpoint in func._endpoints:
-                    path, kwargs = endpoint
-                    path = '{}{}'.format(cls.endpoint, path)
-                    path = re.sub(r'<(\w+:)?(\w+)>', r'{\2}', path)
-                    self._schema.register_endpoint(path, func,
-                                                   kwargs['methods'], cls)
-        return cls
+    def register_endpoints(self, func):
+        cls = func.__self__.__class__
+        for endpoint in func._endpoints:
+            path, kwargs = endpoint
+            path = '{}{}'.format(cls.endpoint, path)
+            endpoint = ('{}-{}'.format(cls.__name__, func.__name__)
+                               .lower().replace('_', '-'))
+            self.add_url_rule(path, view_func=func, endpoint=endpoint,
+                              strict_slashes=False, **kwargs)
+            path = re.sub(r'<(\w+:)?(\w+)>', r'{\2}', path)
+            self._schema.register_endpoint(path, func, kwargs['methods'], cls)
 
 
 class DateTimeConverter(BaseConverter):

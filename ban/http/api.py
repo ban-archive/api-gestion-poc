@@ -372,7 +372,6 @@ class VersionedModelEnpoint(ModelEndpoint):
 
 
 @app.resource
-@app.schema
 class Municipality(VersionedModelEnpoint):
     endpoint = '/municipality'
     model = models.Municipality
@@ -388,7 +387,6 @@ class PostCode(VersionedModelEnpoint):
 
 
 @app.resource
-@app.schema
 class Group(VersionedModelEnpoint):
     endpoint = '/group'
     model = models.Group
@@ -480,9 +478,18 @@ class DiffEndpoint(CollectionEndpoint):
     def get_collection(self):
         """Get database diffs.
 
-        Query parameters:
-        increment   the minimal increment value to retrieve
-        """
+        parameters:
+        - name: increment
+          in: query
+          description: The minimal increment value to retrieve
+          type: integer
+          required: false
+        responses:
+          200:
+            description: A list of diff objects
+            schema:
+              $ref: '#/definitions/Diff'
+         """
         qs = versioning.Diff.select()
         try:
             increment = int(request.args.get('increment'))

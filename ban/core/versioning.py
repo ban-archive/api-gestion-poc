@@ -151,6 +151,18 @@ class SelectQuery(db.SelectQuery):
 
 
 class Version(db.Model):
+
+    __openapi__ = """
+        properties:
+            data:
+                type: object
+                description: serialized resource
+            flag:
+                type: array
+                items:
+                    $ref: '#/definitions/Flag'
+        """
+
     model_name = db.CharField(max_length=64)
     model_pk = db.IntegerField()
     sequential = db.IntegerField()
@@ -209,6 +221,29 @@ class Version(db.Model):
 
 
 class Diff(db.Model):
+
+    __openapi__ = """
+        properties:
+            resource:
+                type: string
+                description: name of the resource the diff is applied to
+            resource_id:
+                type: string
+                description: id of the resource the diff is applied to
+            created_at:
+                type: string
+                format: date-time
+                description: the date and time the diff has been created at
+            old:
+                type: object
+                description: the resource before the change
+            new:
+                type: object
+                description: the resource after the change
+            diff:
+                type: object
+                description: detail of changed properties
+            """
 
     # Allow to skip diff at very first data import.
     ACTIVE = True
@@ -284,6 +319,18 @@ class IdentifierRedirect(db.Model):
 
 
 class Flag(db.Model):
+
+    definition = """
+        properties:
+            at:
+                type: string
+                format: date-time
+                description: when the flag has been created
+            by:
+                type: string
+                description: identifier of the client who flagged the version
+        """
+
     version = db.ForeignKeyField(Version, related_name='flags')
     client = db.ForeignKeyField(Client)
     session = db.ForeignKeyField(Session)
