@@ -83,6 +83,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     identifiers = []
     jsonschema = {'type': 'object', 'properties': {'id': {'readOnly': True}},
                   'required': []}
+    readonly_fields = ['id', 'pk']
     exclude_for_collection = []
     exclude_for_version = []
 

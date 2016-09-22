@@ -54,7 +54,7 @@ def tokensetter(metadata, req, *args, **kwargs):
     metadata['client'] = req.client_id
     token = models.Token.create_with_session(**metadata)
     if not token:
-        abort(400, 'Missing payload')
+        abort(400, error='Missing payload')
 
 
 @auth.grantgetter

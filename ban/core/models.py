@@ -31,6 +31,8 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
         'modified_at': {'readOnly': True},
         'modified_by': {'readOnly': True}}
     }
+    readonly_fields = (ResourceModel.readonly_fields + ['created_at',
+                       'created_by', 'modified_at', 'modified_by'])
 
     attributes = db.HStoreField(null=True)
 
@@ -133,6 +135,7 @@ class HouseNumber(Model):
                        'ancestors', 'positions', 'ign', 'postcode']
     jsonschema = {'properties': {'cia': {'readonly': True},
                                  'positions': {'readonly': True}}}
+    readonly_fields = Model.readonly_fields + ['cia']
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)

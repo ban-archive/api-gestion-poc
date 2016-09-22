@@ -1,64 +1,15 @@
-from copy import deepcopy
-
 import peewee
-from jsonschema import Draft4Validator, ValidationError, FormatChecker
-from jsonschema import validators
-from postgis import Point
 
 from ban import db
 from ban.utils import make_diff
 
 
-extra_types = {
-    'point': Point,
-    'foreignkey': int,
-}
-
-
-def validate_unique(validator, value, instance, schema):
-    # "instance" is the current field value.
-    # "value" is the value of "unique" in the schema
-    model = schema['model']
-    field = schema['field']
-    if field.name in validator.errors:
-        # Value has not been coerced? Does not try to run a SQL with it.
-        return []
-    qs = model.select()
-    qs = qs.where(field == instance)
-    if validator.instance:
-        qs = qs.where(model.pk != validator.instance.pk)
-    if qs.exists():
-        return [ValidationError("'{}': Duplicate value: {}".format(field.name,
-                                                                   instance))]
-    return []
-
-
-Validator = validators.extend(Draft4Validator, {
-    'unique': validate_unique
-})
-
-
-class ResourceValidator(Validator):
-    ValidationError = ValidationError
+class ResourceValidator:
     errors = None
 
     def __init__(self, model, update=False):
         self.model = model
         self.update = update
-        self.schema = self.prepare()
-        super().__init__(self.schema, types=extra_types,
-                         format_checker=FormatChecker())
-
-    def prepare(self):
-        jsonschema = deepcopy(self.model.jsonschema)
-        properties = {}
-        for attr, schema in self.model.jsonschema['properties'].items():
-            # TODO PR against python-jsonschema to deal with readOnly.
-            if schema.get('readOnly'):
-                continue
-            properties[attr] = schema
-        jsonschema['properties'] = properties
-        return jsonschema
 
     def error(self, key, message):
         # Should we create a list and append insteaad?
@@ -68,37 +19,77 @@ class ResourceValidator(Validator):
     def validate(self, data, instance=None):
         self.errors = {}
         self.instance = instance
-        self.data = self.coerce(data)
-        for error in self.iter_errors(self.data):
-            # Draft4Validator does not provide any reliable endpoint to get the
-            # failed property. Worse, in the case of "required" check, the
-            # failed property does not appear at all but in the message.
-            if error.validator == 'required':
-                key = error.message.split("'")[1]
-            else:
-                key = error.relative_path[0]
-            self.error(key, error.message)
+        self.data = {}
+        for name, field in self.model._meta.fields.items():
+            if (name in self.model.readonly_fields
+                 or name not in self.model.resource_fields):
+                continue
+            if self.update and not name in data and name is not 'version':
+                continue
+            try:
+                self.data[name] = self.validate_field(field, data.get(name))
+            except ValueError as e:
+                self.error(name, str(e))
+                continue
+
         if hasattr(self.model, 'validate'):
             for key, message in self.model.validate(self, self.data,
                                                     instance).items():
                 self.error(key, message)
 
-    def coerce(self, data):
-        for attr, value in data.items():
-            field = getattr(self.model, attr, None)
-            if not field:
-                continue  # Unknown field passed in data, ignore.
-            func = getattr(field, 'coerce', None)
-            if not func:
-                continue
+    def validate_field(self, field, value):
+        coerce = getattr(field, 'coerce', None)
+        if coerce:
             try:
-                data[attr] = func(value)
+                value = coerce(value)
             except (ValueError, TypeError):
-                self.error(attr, ('Unable to coerce value {} '
-                                  'for field {}'.format(value, attr)))
+                raise ValueError('Unable to coerce value "{}"'.format(value))
             except peewee.DoesNotExist:
-                self.error(attr, 'No matching resource for {}'.format(value))
-        return data
+                raise ValueError('No matching resource for "{}"'.format(value))
+
+        if value and not isinstance(value, field.schema_type):
+            raise ValueError('"{value}" is not of type "{type}".'.format(
+                value=value, type=field.schema_type
+            ))
+        checks = ['null', 'choices', 'min_length', 'max_length', 'unique']
+        for check in checks:
+            if getattr(field, check, None) is not None:
+                getattr(self, 'validate_{}'.format(check))(field, value)
+        return value
+
+    def validate_null(self, field, value):
+        if field.schema_type == bool and value is not None:
+            return
+
+        if not value and not field.null:
+            raise ValueError('Value should not be null')
+
+    def validate_choices(self, field, value):
+        choices = [choice[0] for choice in field.choices]
+        if value and value not in choices:
+            raise ValueError('"{}" should be one of the following choices: {}'
+                             .format(value, ','.join(choices)))
+
+    def validate_min_length(self, field, value):
+        if value and len(value) < field.min_length:
+            raise ValueError('"{}" should be minimum {} characters'.format(
+                value, field.min_length
+            ))
+
+    def validate_max_length(self, field, value):
+        if value and len(value) > field.max_length:
+            raise ValueError('"{}" should be maximum {} characters'.format(
+                value, field.max_length
+            ))
+
+    def validate_unique(self, field, value):
+        if not value or not field.unique:
+            return
+        qs = self.model.select().where(field == value)
+        if self.instance:
+            qs = qs.where(self.model.pk != self.instance.pk)
+        if qs.exists():
+            raise ValueError('"{}" already exists'.format(value))
 
     def patch(self):
         for key, value in self.data.items():
@@ -106,7 +97,7 @@ class ResourceValidator(Validator):
 
     def save(self):
         if self.errors:
-            raise ValidationError('Invalid document')
+            raise ValueError('Invalid document')
         database = self.model._meta.database
         if self.instance:
             with database.atomic():
@@ -130,14 +121,6 @@ class ResourceValidator(Validator):
 
 
 class VersionedResourceValidator(ResourceValidator):
-
-    def prepare(self):
-        jsonschema = super().prepare()
-        if self.update:
-            # Means we are updating the model, so no need for checking the
-            # required fields.
-            jsonschema['required'] = ['version']
-        return jsonschema
 
     def validate(self, data, instance=None):
         if not instance:

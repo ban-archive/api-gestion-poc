@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import datetime, timezone
 import json
 import re
 
@@ -33,7 +33,7 @@ postgres_ext.PostgresqlExtDatabase.register_ops({
 # TODO: mv to a third-party module.
 class PointField(peewee.Field):
     db_field = 'point'
-    schema_type = 'point'
+    schema_type = Point
     srid = 4326
 
     def db_value(self, value):
@@ -75,7 +75,7 @@ postgres_ext.PostgresqlExtDatabase.register_fields({'point':
 
 class DateRangeField(peewee.Field):
     db_field = 'tstzrange'
-    schema_type = 'tstzrange'
+    schema_type = datetime
 
     def db_value(self, value):
         return self.coerce(value)
@@ -97,7 +97,7 @@ class DateRangeField(peewee.Field):
 
 class ForeignKeyField(peewee.ForeignKeyField):
 
-    schema_type = 'foreignkey'
+    schema_type = int
 
     def coerce(self, value):
         if not value:
@@ -118,7 +118,7 @@ class ForeignKeyField(peewee.ForeignKeyField):
 
 
 class CharField(peewee.CharField):
-    schema_type = 'string'
+    schema_type = str
 
     def coerce(self, value):
         if self.null and not value:
@@ -127,7 +127,7 @@ class CharField(peewee.CharField):
 
 
 class TextField(peewee.TextField):
-    schema_type = 'string'
+    schema_type = str
 
     def coerce(self, value):
         if self.null and not value:
@@ -136,11 +136,11 @@ class TextField(peewee.TextField):
 
 
 class IntegerField(peewee.IntegerField):
-    schema_type = 'integer'
+    schema_type = int
 
 
 class HStoreField(postgres_ext.HStoreField):
-    schema_type = 'object'
+    schema_type = dict
 
     def coerce(self, value):
         if isinstance(value, str):
@@ -149,7 +149,7 @@ class HStoreField(postgres_ext.HStoreField):
 
 
 class BinaryJSONField(postgres_ext.BinaryJSONField):
-    schema_type = 'object'
+    schema_type = dict
 
 
 class UUIDField(peewee.UUIDField):
@@ -157,7 +157,7 @@ class UUIDField(peewee.UUIDField):
 
 
 class ArrayField(postgres_ext.ArrayField):
-    schema_type = 'array'
+    schema_type = list
 
     def coerce(self, value):
         if value and not isinstance(value, (list, tuple)):
@@ -166,8 +166,7 @@ class ArrayField(postgres_ext.ArrayField):
 
 
 class DateTimeField(postgres_ext.DateTimeTZField):
-    schema_type = 'string'
-    schema_format = 'date-time'
+    schema_type = datetime
 
     def python_value(self, value):
         value = super().python_value(value)
@@ -178,7 +177,7 @@ class DateTimeField(postgres_ext.DateTimeTZField):
 
 
 class BooleanField(peewee.BooleanField):
-    schema_type = 'bool'
+    schema_type = bool
 
 
 class PostCodeField(CharField):
@@ -227,7 +226,7 @@ class ManyToManyQuery(fields.ManyToManyQuery):
 
 
 class ManyToManyField(fields.ManyToManyField):
-    schema_type = 'array'
+    schema_type = list
 
     def __init__(self, *args, **kwargs):
         # ManyToManyField is not a real "Field", so try to better conform to
@@ -239,6 +238,8 @@ class ManyToManyField(fields.ManyToManyField):
         super().__init__(*args, **kwargs)
 
     def coerce(self, value):
+        if not value:
+            return []
         if not isinstance(value, (tuple, list, peewee.SelectQuery)):
             value = [value]
         # https://github.com/coleifer/peewee/pull/795
