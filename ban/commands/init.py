@@ -188,6 +188,7 @@ def process_housenumber(row):
             parent = Group.coerce(parent)
         except Group.DoesNotExist:
             reporter.error('Parent given but not found', parent)
+            parent = None
         else:
             data['parent'] = parent
 
