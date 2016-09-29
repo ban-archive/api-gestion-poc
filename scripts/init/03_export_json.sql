@@ -303,12 +303,11 @@ order by h.co_cea
 ) to '/tmp/12b_0633-housenumbers_cea.json';
 
 
-/* 12c La Poste: correction postcode si différent du SGA */
+/* 12c La Poste: ajout postcode depuis RAN */
 copy (
-select format('{"type":"housenumber", "source":"Poste/RAN (2016-06)", "laposte":"%s","postcode:code":"%s", "municipality:insee":"%s"}', h.co_cea, h.co_postal, h.co_insee)
+select format('{"type":"housenumber", "source":"Poste/RAN-CP (2016-06)", "laposte":"%s","postcode:code":"%s", "municipality:insee":"%s"}', h.co_cea, h.co_postal, h.co_insee)
 from ran_housenumber h
-join ign_housenumber i on (code_insee=co_insee and id_poste=co_cea)
-where code_post != co_postal and (co_insee like '06%' or co_insee like '33%')
+where (co_insee like '06%' or co_insee like '33%')
 order by h.co_cea
 ) to '/tmp/12c_0633-housenumbers_postcode.json';
 
