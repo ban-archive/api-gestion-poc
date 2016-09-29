@@ -60,7 +60,7 @@ copy (select format('{"type":"position", "kind":"entrance", "source":"DGFiP/BANO
 /* groups IGN rapprochés de FANTOIR */
 copy (
 select format('{"type":"group", "source":"IGN (2016-06)", "fantoir":"%s", "ign": "%s" %s %s}',left(id_fantoir,9), id_pseudo_fpb, case when type_d_adressage='Classique' then ',"addressing":"classical"' when type_d_adressage='Mixte' then ',"addressing":"mixed"' when type_d_adressage='Linéaire' then ',"addressing":"linear"' when type_d_adressage='Anarchique' then ',"addressing":"anarchical"' when type_d_adressage='Métrique' then ',"addressing":"metric"' else '' end, case when alias is not null then ',"alias":"'||alias||'"' else '' end )
-from ign_group i 
+from ign_group i
 where id_fantoir is not null
 order by id_pseudo_fpb
 ) to '/tmp/08a_groups-sga-ign-rapproches.json';
@@ -251,7 +251,7 @@ order by co_insee,co_voie
 
 /* 11a La Poste: création du CEA pour le group (via SGA/IGN) */
 copy (
-select format('{"type":"housenumber", "source":"IGN/Poste (2016-06)", "group:ign":"%s", "laposte": "%s", "numero":null}',left(id_pseudo_fpb,9), co_cea)
+select format('{"type":"housenumber", "source":"IGN/Poste (2016-06)", "group:ign":"%s", "laposte": "%s", "numero":null, "postcode:code":"%s"}',left(id_pseudo_fpb,9), co_cea, co_postal)
 from ign_group i
 join ran_group r on (id_poste=right('0000000'||co_voie,8))
 where id_poste is not null
@@ -259,7 +259,7 @@ order by id_pseudo_fpb
 ) to '/tmp/11a_housenumbers_group_cea_poste_sga.json';
 
 copy (
-select format('{"type":"housenumber", "source":"IGN/Poste (2016-06)", "group:ign":"%s", "laposte": "%s", "numero":null}',left(id_pseudo_fpb,9), co_cea)
+select format('{"type":"housenumber", "source":"IGN/Poste/CP (2016-06)", "group:ign":"%s", "laposte": "%s", "numero":null, "postcode:code":"%s", "municipality:insee":"%s"}',left(id_pseudo_fpb,9), co_cea, co_postal, co_insee)
 from ign_group i
 join ran_group r on (id_poste=right('0000000'||co_voie,8))
 WHERE id_poste is not null and (i.code_insee like '06%' or i.code_insee like '33%')
@@ -370,5 +370,3 @@ where coalesce(fantoir,'')!='' and (fantoir like '06%' or fantoir like '33%')
 
 /* différence entre indices de répétition IGN et POSTE (REP et LB_EXT) */
 \copy (select i.id, h.co_cea, i.id_pseudo_fpb, h.va_no_voie, h.lb_ext, i.numero, i.rep from ran_housenumber h join ran_group g on (h.co_voie=g.co_voie) join ign_housenumber i on (i.id_poste=h.co_cea) where lb_ext!=rep order by 3) to 99_rep_mismatch.csv with (format csv, header true);
-
-
