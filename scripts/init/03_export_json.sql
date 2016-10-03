@@ -157,7 +157,7 @@ group by g.id_pseudo_fpb, i.numero, i.rep
 \copy (select format('{"type":"position", %s "source":"IGN (2016-06)", "housenumber:cia": "%s", "ign": "%s", "geometry": {"type":"Point","coordinates":[%s,%s]}}', kind_pos, upper(format('%s_%s_%s_%s',left(f.fantoir,5),left(right(f.fantoir,5),4),i.numero,coalesce(i.rep,''))), i.id, i.lon::text, i.lat::text) from ign_housenumber i join dgfip_fantoir f on (i.id_pseudo_fpb=f.fantoir2) left join dgfip_housenumbers d on (d.fantoir=f.fantoir10 and d.numero=trim(i.numero||' '||coalesce(i.rep,''))) where d.numero is not null) to 09a_old_positions_sga-ign.json ;
 
 copy (
-select format('{"type":"position", %s "source":"IGN (2016-06)", "housenumber:cia": "%s", "ign": "%s", "geometry": {"type":"Point","coordinates":[%s,%s]}}', kind_pos, upper(format('%s_%s_%s_%s',left(g.id_fantoir,5),right(g.id_fantoir,4),i.numero,coalesce(i.rep,''))), i.id, i.lon::text, i.lat::text) from ign_housenumber i join ign_group g on (g.id_pseudo_fpb=i.id_pseudo_fpb)
+select format('{"type":"position", %s "source":"IGN/2 (2016-06)", "housenumber:cia": "%s", "ign": "%s", %s "geometry": {"type":"Point","coordinates":[%s,%s]}}', kind_pos, upper(format('%s_%s_%s_%s',left(g.id_fantoir,5),right(g.id_fantoir,4),i.numero,coalesce(i.rep,''))), i.id, case when designation_de_l_entree !='' then format('"name":"%s",',designation_de_l_entree) else '' end, i.lon::text, i.lat::text) from ign_housenumber i join ign_group g on (g.id_pseudo_fpb=i.id_pseudo_fpb)
 where g.id_fantoir is not null
 and (i.code_insee like '06%' or i.code_insee like '33%')
 ) to '/tmp/09a_0633-positions_sga-ign-rapprochees.json' ;
@@ -237,7 +237,7 @@ order by co_insee,co_voie
 copy (
 select format('{"type":"group", "source":"Poste/RAN (2016-06)", "municipality:insee":"%s", "name":"%s", "laposte": "%s", "group":"%s"}', r.co_insee, r.lb_voie, right('0000000'||r.co_voie,8), case when lb_voie ~'(LD |LIEU DIT )' then 'area' else 'way' end)
 from ran_group r
-left join libelles l1 on (long=lb_voie)
+left join libelles l1 on (l1.long=r.lb_voie)
 left join libelles l2 on (l2.court=l1.court and l1.long!=l2.long)
 left join dgfip_fantoir f on (f.code_insee=r.co_insee and l2.long = trim(nature_voie||' '||libelle_voie))
 left join ign_group g on (g.code_insee=r.co_insee and (g.nom=l2.long or g.nom_afnor=l2.long))
