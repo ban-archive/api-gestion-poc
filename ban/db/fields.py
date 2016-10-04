@@ -2,6 +2,7 @@ from datetime import timezone
 import json
 import re
 
+import ipaddress
 import peewee
 
 from playhouse import postgres_ext, fields
@@ -12,7 +13,8 @@ from psycopg2.extras import DateTimeTZRange
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
            'BooleanField', 'BinaryJSONField', 'PostCodeField', 'FantoirField',
-           'ManyToManyField', 'PasswordField', 'DateRangeField', 'TextField']
+           'IPAddressField', 'ManyToManyField', 'PasswordField',
+           'DateRangeField', 'TextField']
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
@@ -204,6 +206,21 @@ class FantoirField(CharField):
         if not len(value) == 9:
             raise ValueError('FANTOIR must be municipality INSEE '
                              '+ 4 first chars of FANTOIR "{}"'.format(value))
+        return value
+
+
+class IPAddressField(CharField):
+
+    max_length = 100
+
+    def coerce(self, value=None):
+        if value:
+            value = str(value)
+            try:
+                ipaddress.ip_address(value)
+            except ipaddress.AddressValueError:
+                raise ValueError('Invalid IP Address "{}"'.format(value))
+
         return value
 
 

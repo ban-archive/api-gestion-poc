@@ -103,7 +103,7 @@ class Session(db.Model):
     """
     user = db.ForeignKeyField(User, null=True)
     client = db.ForeignKeyField(Client, null=True)
-    ip = db.CharField(null=True)  # TODO IPField
+    ip = db.IPAddressField(null=True)
     email = db.CharField(null=True)  # TODO EmailField
 
     @property
