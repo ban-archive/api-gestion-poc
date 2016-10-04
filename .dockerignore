@@ -1,0 +1,4 @@
+__pycache__
+*.csv
+BAN_odbl_*json
+.git

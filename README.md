@@ -129,3 +129,22 @@ For production, you need to use either gunicorn or uwsgi.
 Load the API root to get the available endpoints:
 
     http http://localhost:5959/
+
+## Docker-compose all-in-one
+
+You can be set quickly with `docker-compose`.
+
+Copy the `docker/env.sample` to `docker/env` and edit it to match your expected "departement".
+
+```
+DEPARTEMENT=77
+```
+
+Run:
+
+    docker compose build
+    docker-compose up
+
+You are now ready to use your BAN server:
+
+    http http://localhost:5959/
