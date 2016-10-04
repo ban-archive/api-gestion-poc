@@ -10,3 +10,4 @@ python-dateutil
 git+https://github.com/yohanboniface/falcon-oauth
 psycopg-postgis
 progressist
+validate_email==1.3

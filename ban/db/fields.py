@@ -2,6 +2,7 @@ from datetime import timezone
 import json
 import re
 
+from validate_email import validate_email
 import peewee
 
 from playhouse import postgres_ext, fields
@@ -12,7 +13,8 @@ from psycopg2.extras import DateTimeTZRange
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
            'BooleanField', 'BinaryJSONField', 'PostCodeField', 'FantoirField',
-           'ManyToManyField', 'PasswordField', 'DateRangeField', 'TextField']
+           'EmailField', 'ManyToManyField', 'PasswordField', 'DateRangeField',
+           'TextField']
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
@@ -259,3 +261,16 @@ class PasswordField(PWDField):
         if value is None:
             return value
         return super().python_value(value)
+
+
+class EmailField(CharField):
+
+    max_length = 100
+
+    def coerce(self, value=None):
+        if value:
+            value = str(value)
+            if not validate_email(value):
+                raise ValueError('Invalid Email "{}"'.format(value))
+
+        return value
