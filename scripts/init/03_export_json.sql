@@ -78,9 +78,8 @@ order by id_pseudo_fpb
 
 /* groups IGN non rapprochés de FANTOIR (création potentielle de doublons) */
 copy (
-select format('{"type":"group", "group": "%s", "source":"IGN (2016-06)", "fantoir":"%s", "ign": "%s", "name": "%s", "municipality:insee": "%s" %s %s}',
+select format('{"type":"group", "group": "%s", "source":"IGN (2016-06)", "ign": "%s", "name": "%s", "municipality:insee": "%s" %s %s}',
   case when nom_afnor ~ '^(LIEU DIT |LD )' then 'area' else 'way' end,
-  left(id_pseudo_fpb,9),
   id_pseudo_fpb,
   nom,
   code_insee,
@@ -92,9 +91,8 @@ order by id_pseudo_fpb
 ) to '/tmp/08b_groups-sga-ign-non-rapproches.json';
 
 copy (
-select format('{"type":"group", "group": "%s", "source":"IGN (2016-06)", "fantoir":"%s", "ign": "%s", "name": "%s", "municipality:insee": "%s" %s %s}',
+select format('{"type":"group", "group": "%s", "source":"IGN (2016-06)", "ign": "%s", "name": "%s", "municipality:insee": "%s" %s %s}',
   case when nom_afnor ~ '^(LIEU DIT |LD )' then 'area' else 'way' end,
-  left(id_pseudo_fpb,9),
   id_pseudo_fpb,
   nom,
   code_insee,
