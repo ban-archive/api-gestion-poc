@@ -342,13 +342,13 @@ where numero !='99999' and (cia like '06%' or cia like '33%')
 
 /* DGFiP noms complets */
 copy (
-select format('{"type":"group", "source":"DGFiP/BANO (2016-05)", "fantoir":"%s", "name": "%s"}', left(fantoir,9), nom_cadastre)
+select format('{"type":"group", "source":"DGFiP/BANO (2016-05)", "fantoir":"%s", "name": "%s"}', left(fantoir,9), regexp_replace(nom_cadastre,E'\'[\' ]',E'\'','g'))
 from dgfip_noms_cadastre
 where coalesce(fantoir,'')!=''
 ) to '/tmp/15_group_noms_cadastre_dgfip_bano.json';
 
 copy (
-select format('{"type":"group", "source":"DGFiP/BANO (2016-05)", "fantoir":"%s", "name": "%s"}', left(fantoir,9), nom_cadastre)
+select format('{"type":"group", "source":"DGFiP/BANO (2016-05)", "fantoir":"%s", "name": "%s"}', left(fantoir,9), regexp_replace(nom_cadastre,E'\'[\' ]',E'\'','g'))
 from dgfip_noms_cadastre
 where coalesce(fantoir,'')!='' and (fantoir like '06%' or fantoir like '33%')
 ) to '/tmp/15_0633-group_noms_cadastre_dgfip_bano.json';
