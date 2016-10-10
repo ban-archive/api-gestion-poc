@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from ban import db
 from ban.core.resource import ResourceModel
@@ -129,12 +129,6 @@ class Session(db.Model):
             'client': self.client.name if self.client else None,
             'user': self.user.username if self.user else None
         }
-
-    @property
-    def id(self):
-        # Pretend to be a resource for created_by/modified_by values in
-        # list resources serialization.
-        return self.pk
 
     def save(self, **kwargs):
         if not self.user and not self.client:
