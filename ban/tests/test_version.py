@@ -185,6 +185,6 @@ def test_position_as_version():
         'ign': '123456',
         'kind': 'entrance',
         'version': 1,
-        'center': {'coordinates': (-1.1111, 48.8888), 'type': 'Point'},
+        'center': (-1.1111, 48.8888),
         'comment': None,
         'id': position.id}

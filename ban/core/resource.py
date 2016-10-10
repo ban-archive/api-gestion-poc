@@ -109,8 +109,6 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                     value = [v.serialize(subfields) for v in value]
                 elif isinstance(field, db.ForeignKeyField):
                     value = value.serialize(subfields)
-                elif isinstance(field, db.PointField):
-                    value = value.geojson
             dest[name] = value
         return dest
 
