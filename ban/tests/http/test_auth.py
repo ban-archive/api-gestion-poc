@@ -70,3 +70,15 @@ def test_access_token_with_password(client):
     })
     assert resp.status_code == 200
     assert 'access_token' in resp.json
+
+
+def test_can_request_token_with_json_enoded_body(client):
+    c = ClientFactory()
+    resp = client.post('/token/', data={
+        'grant_type': 'client_credentials',
+        'client_id': str(c.client_id),
+        'client_secret': c.client_secret,
+        'ip': '1.2.3.4',
+    }, content_type='application/json')
+    assert resp.status_code == 200
+    assert 'access_token' in resp.json
