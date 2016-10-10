@@ -18,10 +18,80 @@ def test_get_housenumber(get):
     housenumber = HouseNumberFactory(number="22")
     resp = get('/housenumber/{}'.format(housenumber.id))
     assert resp.status_code == 200
-    assert resp.json['number'] == "22"
-    assert resp.json['id'] == housenumber.id
-    assert resp.json['cia'] == housenumber.cia
-    assert resp.json['parent'] == housenumber.parent.id
+    assert resp.json == {
+        'number': '22',
+        'id': housenumber.id,
+        'cia': housenumber.cia,
+        'parent': housenumber.parent.id,
+        'version': 1,
+        'modified_at': housenumber.modified_at.isoformat(),
+        'created_at': housenumber.created_at.isoformat(),
+        'modified_by': housenumber.modified_by.serialize(),
+        'created_by': housenumber.created_by.serialize(),
+        'ancestors': [],
+        'attributes': None,
+        'ign': None,
+        'laposte': None,
+        'ordinal': 'bis',
+        'positions': [],
+        'postcode': None
+    }
+
+
+@authorize
+def test_get_housenumber_with_filtered_fields(get):
+    housenumber = HouseNumberFactory(number="22")
+    resp = get('/housenumber/{}?fields=number,id'.format(housenumber.id))
+    assert resp.status_code == 200
+    assert resp.json == {
+        'number': '22',
+        'id': housenumber.id,
+    }
+
+
+@authorize
+def test_get_housenumber_with_filtered_parent_fields(get):
+    housenumber = HouseNumberFactory(number="22")
+    resp = get('/housenumber/{}?fields=id,parent.name'.format(housenumber.id))
+    assert resp.status_code == 200
+    assert resp.json == {
+        'id': housenumber.id,
+        'parent': {
+            'name': housenumber.parent.name
+        }
+    }
+
+
+@authorize
+def test_get_housenumber_with_filtered_municipality_fields(get):
+    housenumber = HouseNumberFactory(number="22")
+    fields = 'id,parent.name,parent.municipality.name'
+    resp = get('/housenumber/{}?fields={}'.format(housenumber.id, fields))
+    assert resp.status_code == 200
+    assert resp.json == {
+        'id': housenumber.id,
+        'parent': {
+            'name': housenumber.parent.name,
+            'municipality': {
+                'name': housenumber.parent.municipality.name
+            }
+        }
+    }
+
+
+@authorize
+def test_get_housenumber_with_filtered_position_fields(get):
+    housenumber = HouseNumberFactory(number="22")
+    PositionFactory(housenumber=housenumber, name='bâtiment A')
+    fields = 'id,positions.name'
+    resp = get('/housenumber/{}?fields={}'.format(housenumber.id, fields))
+    assert resp.status_code == 200
+    assert resp.json == {
+        'id': housenumber.id,
+        'positions': [{
+            'name': 'bâtiment A',
+        }]
+    }
 
 
 @authorize
