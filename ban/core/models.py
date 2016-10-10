@@ -205,15 +205,6 @@ class Position(Model):
             (('housenumber', 'source'), True),
         )
 
-    @property
-    def center_extended(self):
-        self.center = self._meta.fields["center"].coerce(self.center)
-        return self.center.geojson if self.center else None
-
-    @property
-    def center_compact(self):
-        return self.center_extended
-
     @classmethod
     def validate(cls, validator, document, instance):
         errors = {}
