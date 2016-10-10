@@ -6,16 +6,13 @@ from ban.commands.reporter import Reporter
 
 class ResourceEncoder(json.JSONEncoder):
     def default(self, o):
+        # This method is only called if default encoding failed.
         if isinstance(o, datetime):
             return o.isoformat()
         elif isinstance(o, Geometry):
             return o.geojson
         elif isinstance(o, Reporter):
             return o.__json__()
-        try:
-            return super().default(o)
-        except TypeError:
-            return str(o)
 
 
 def dumps(data):
