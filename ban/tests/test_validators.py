@@ -41,6 +41,18 @@ def test_cannot_create_municipality_with_missing_fields(session):
         validator.save()
 
 
+def test_cannot_create_municipality_with_insee_too_short(session):
+    validator = models.Municipality.validator(name="Eu", insee="1234",
+                                              siren="12345678")
+    assert 'insee' in validator.errors
+
+
+def test_cannot_create_municipality_with_insee_too_long(session):
+    validator = models.Municipality.validator(name="Eu", insee="123456",
+                                              siren="12345678")
+    assert 'insee' in validator.errors
+
+
 def test_can_update_municipality(session):
     municipality = MunicipalityFactory(insee="12345")
     validator = models.Municipality.validator(instance=municipality,

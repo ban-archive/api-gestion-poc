@@ -128,6 +128,12 @@ class CharField(peewee.CharField):
     __data_type__ = str
     __schema_type__ = 'string'
 
+    def __init__(self, *args, **kwargs):
+        if 'length' in kwargs:
+            kwargs['min_length'] = kwargs['max_length'] = kwargs.pop('length')
+        self.min_length = kwargs.pop('min_length', None)
+        super().__init__(*args, **kwargs)
+
     def coerce(self, value):
         if self.null and not value:
             return None
