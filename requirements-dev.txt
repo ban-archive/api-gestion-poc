@@ -1,6 +1,6 @@
 -r requirements.txt
-pytest==3.0.2
+pytest==3.0.3
 pytest-flask==0.10.0
 factory-boy==2.7.0
 factory-boy-peewee==0.0.4
-flex==5.8.0
+flex==5.9.0
