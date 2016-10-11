@@ -19,7 +19,7 @@ class CollectionEndpoint:
 
     filters = []
     DEFAULT_LIMIT = 20
-    MAX_LIMIT = 100
+    MAX_LIMIT = 1000
 
     def get_limit(self):
         return min(int(request.args.get('limit', self.DEFAULT_LIMIT)),

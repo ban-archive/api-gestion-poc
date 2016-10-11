@@ -72,6 +72,16 @@ def test_get_municipality_groups_collection_is_paginated(get):
 
 
 @authorize
+def test_get_municipality_collection_is_ceiled(get, monkeypatch):
+    monkeypatch.setattr('ban.http.api.CollectionEndpoint.MAX_LIMIT', 4)
+    MunicipalityFactory.create_batch(6)
+    resp = get('/municipality?limit=6')
+    page1 = resp.json
+    assert len(page1['collection']) == 4
+    assert page1['total'] == 6
+
+
+@authorize
 def test_get_municipality_versions(get):
     municipality = MunicipalityFactory(name="Cabour")
     municipality.version = 2
