@@ -31,7 +31,7 @@ postgres_ext.PostgresqlExtDatabase.register_ops({
 
 
 # TODO: mv to a third-party module.
-class PointField(peewee.Field):
+class PointField(peewee.Field, postgres_ext.IndexedFieldMixin):
     db_field = 'point'
     __data_type__ = Point
     # TODO how to deal properly with custom type?
@@ -39,6 +39,7 @@ class PointField(peewee.Field):
     __schema_type__ = 'object'
     __schema_format__ = 'geojson'
     srid = 4326
+    index_type = 'GiST'
 
     def db_value(self, value):
         return self.coerce(value)
