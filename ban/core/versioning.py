@@ -70,7 +70,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             model_name=self.__class__.__name__,
             model_pk=self.pk,
             sequential=self.version,
-            raw=dumps(self.as_version),
+            data=self.as_version,
             period=[self.modified_at, None]
         )
         old = None
@@ -166,7 +166,7 @@ class Version(db.Model):
     model_name = db.CharField(max_length=64)
     model_pk = db.IntegerField()
     sequential = db.IntegerField()
-    raw = db.BinaryJSONField()
+    data = db.BinaryJSONField()
     period = db.DateRangeField()
 
     class Meta:
@@ -178,10 +178,6 @@ class Version(db.Model):
     def __repr__(self):
         return '<Version {} of {}({})>'.format(self.sequential,
                                                self.model_name, self.model_pk)
-
-    @property
-    def data(self):
-        return json.loads(self.raw)
 
     def serialize(self, *args):
         return {

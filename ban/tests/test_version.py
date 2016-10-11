@@ -20,10 +20,10 @@ def test_municipality_version():
         'id': municipality.id,
         'name': 'Lille',
         'insee': '12345',
-        'created_at': municipality.created_at,
+        'created_at': municipality.created_at.isoformat(),
         'alias': ['Rijsel'],
         'created_by': municipality.created_by.serialize(),
-        'modified_at': municipality.modified_at,
+        'modified_at': municipality.modified_at.isoformat(),
         'version': 1}
 
 
@@ -101,10 +101,10 @@ def test_group_version():
         'laposte': '123456',
         'ign': None,
         'name': 'Rue de la Princesse Lila',
-        'created_at': group.created_at,
+        'created_at': group.created_at.isoformat(),
         'alias': ['Rue du Prince Louison'],
         'created_by': group.created_by.serialize(),
-        'modified_at': group.modified_at,
+        'modified_at': group.modified_at.isoformat(),
         'version': 1}
 
 
@@ -141,9 +141,9 @@ def test_housenumber_as_version():
         'created_by': hn.created_by.serialize(),
         'ancestors': [district.id],
         'postcode': postcode.id,
-        'modified_at': hn.modified_at,
+        'modified_at': hn.modified_at.isoformat(),
         'ign': None,
-        'created_at': hn.created_at,
+        'created_at': hn.created_at.isoformat(),
         'parent': street.id,
         'modified_by': hn.modified_by.serialize(),
         'positions': [],
@@ -176,8 +176,8 @@ def test_position_as_version():
         'housenumber': position.housenumber.id,
         'modified_by': position.modified_by.serialize(),
         'attributes': {'key': 'value'},
-        'created_at': position.created_at,
-        'modified_at': position.modified_at,
+        'created_at': position.created_at.isoformat(),
+        'modified_at': position.modified_at.isoformat(),
         'source': None,
         'parent': parent.id,
         'positioning': 'imagery',
@@ -185,6 +185,6 @@ def test_position_as_version():
         'ign': '123456',
         'kind': 'entrance',
         'version': 1,
-        'center': (-1.1111, 48.8888),
+        'center': {'coordinates': (-1.1111, 48.8888), 'type': 'Point'},
         'comment': None,
         'id': position.id}

@@ -322,9 +322,9 @@ def test_housenumber_as_resource():
         'postcode': None,
         'ordinal': 'bis',
         'created_by': housenumber.created_by.serialize(),
-        'created_at': housenumber.created_at,
+        'created_at': housenumber.created_at.isoformat(),
         'modified_by': housenumber.modified_by.serialize(),
-        'modified_at': housenumber.modified_at,
+        'modified_at': housenumber.modified_at.isoformat(),
     }
 
 

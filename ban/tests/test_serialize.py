@@ -44,8 +44,8 @@ def test_serialize_with_wildcard():
         'laposte': None,
         'addressing': None,
         'version': 1,
-        'modified_at': group.modified_at,
-        'created_at': group.created_at,
+        'modified_at': group.modified_at.isoformat(),
+        'created_at': group.created_at.isoformat(),
         'created_by': {
             'client': group.created_by.client.name,
             'user': group.created_by.user.username,
@@ -76,8 +76,8 @@ def test_serialize_with_wildcard_in_relation():
             'laposte': None,
             'addressing': None,
             'version': 1,
-            'modified_at': group.modified_at,
-            'created_at': group.created_at,
+            'modified_at': group.modified_at.isoformat(),
+            'created_at': group.created_at.isoformat(),
             'created_by': {
                 'client': group.created_by.client.name,
                 'user': group.created_by.user.username,
@@ -100,8 +100,8 @@ def test_serialize_with_double_wildcard():
         'id': housenumber.id,
         'number': '1',
         'ordinal': 'bis',
-        'modified_at': housenumber.modified_at,
-        'created_at': housenumber.created_at,
+        'modified_at': housenumber.modified_at.isoformat(),
+        'created_at': housenumber.created_at.isoformat(),
         'created_by': {
             'client': housenumber.created_by.client.name,
             'user': housenumber.created_by.user.username,
@@ -133,8 +133,8 @@ def test_serialize_with_double_wildcard():
             'laposte': None,
             'addressing': None,
             'version': 1,
-            'modified_at': group.modified_at,
-            'created_at': group.created_at,
+            'modified_at': group.modified_at.isoformat(),
+            'created_at': group.created_at.isoformat(),
             'created_by': {
                 'client': group.created_by.client.name,
                 'user': group.created_by.user.username,

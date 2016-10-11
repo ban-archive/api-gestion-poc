@@ -1,7 +1,8 @@
-from copy import deepcopy
+from datetime import datetime
 import uuid
 
 import peewee
+from postgis import Point
 
 from ban import db
 
@@ -109,6 +110,10 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                     value = [v.serialize(subfields) for v in value]
                 elif isinstance(field, db.ForeignKeyField):
                     value = value.serialize(subfields)
+                elif isinstance(value, datetime):
+                    value = value.isoformat()
+                elif isinstance(value, Point):
+                    value = value.geojson
             dest[name] = value
         return dest
 
