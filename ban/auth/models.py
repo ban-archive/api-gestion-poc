@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from ban import db
 from ban.core.resource import ResourceModel
@@ -101,13 +101,26 @@ class Session(db.Model):
       a nominative session
     - a client sends us IP and/or email from a remote user we don't know of
     """
+
+    __openapi__ = """
+        properties:
+            id:
+                type: integer
+                description: primary key of the session
+            client:
+                type: string
+                description: client name
+            user:
+                type: string
+                description: user name
+        """
+
     user = db.ForeignKeyField(User, null=True)
     client = db.ForeignKeyField(Client, null=True)
     ip = db.CharField(null=True)  # TODO IPField
     email = db.CharField(null=True)  # TODO EmailField
 
-    @property
-    def as_relation(self):
+    def serialize(self, *args):
         # Pretend to be a resource for created_by/modified_by values in
         # resources serialization.
         # Should we also expose the email/ip? CNIL question to be solved.
@@ -116,12 +129,6 @@ class Session(db.Model):
             'client': self.client.name if self.client else None,
             'user': self.user.username if self.user else None
         }
-
-    @property
-    def id(self):
-        # Pretend to be a resource for created_by/modified_by values in
-        # list resources serialization.
-        return self.pk
 
     def save(self, **kwargs):
         if not self.user and not self.client:

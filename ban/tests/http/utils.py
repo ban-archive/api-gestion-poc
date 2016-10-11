@@ -12,17 +12,17 @@ def authorize(func):
             token_kwargs['session'] = kwargs['session']
         token = TokenFactory(**token_kwargs)
 
-        def attach(kwargs):
-            kwargs['headers']['Authorization'] = 'Bearer {}'.format(token.access_token)  # noqa
-
         # Subtly plug in authenticated user.
         client = None
         if 'client' in kwargs:
             client = kwargs['client']
-        elif 'get' in kwargs:
-            client = kwargs['get'].__self__
+        for key in ['get', 'patch', 'post', 'put']:
+            if key in kwargs:
+                client = kwargs[key].__self__
         if client:
             client.content_type = 'application/json'
-            client.before(attach)
+            client.extra_headers = {
+                'Authorization': 'Bearer {}'.format(token.access_token)
+            }
         return func(*args, **kwargs)
     return inner

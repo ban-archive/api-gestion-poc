@@ -3,11 +3,31 @@ import peewee
 from .connections import default
 
 
+class SerializerQueryResultWrapper(peewee.ModelQueryResultWrapper):
+
+    def process_row(self, row):
+        instance = super().process_row(row)
+        if hasattr(self, '_serializer'):
+            instance = self._serializer(instance)
+        return instance
+
+
 class SelectQuery(peewee.SelectQuery):
 
+    def execute(self):
+        wrapper = super().execute()
+        if hasattr(self, '_serializer'):
+            wrapper._serializer = self._serializer
+        return wrapper
+
+    def serialize(self, *args, **kwargs):
+        self._result_wrapper = SerializerQueryResultWrapper
+
     def _get_result_wrapper(self):
-        return getattr(self, '_result_wrapper', None) \
-                                            or super()._get_result_wrapper()
+        wrapper = getattr(self, '_result_wrapper', None)
+        if wrapper:
+            return wrapper
+        return super()._get_result_wrapper()
 
     def __len__(self):
         return self.count()

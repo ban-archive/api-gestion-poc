@@ -122,8 +122,8 @@ def test_export_resources():
         lines = f.readlines()
         assert len(lines) == 3
         # loads/dumps to compare string dates to string dates.
-        assert json.loads(lines[0]) == json.loads(dumps(mun.as_relation))
-        assert json.loads(lines[1]) == json.loads(dumps(street.as_relation))
+        assert json.loads(lines[0]) == json.loads(dumps(mun.as_resource))
+        assert json.loads(lines[1]) == json.loads(dumps(street.as_resource))
         # Plus, JSON transform internals tuples to lists.
-        assert json.loads(lines[2]) == json.loads(dumps(hn.as_relation))
+        assert json.loads(lines[2]) == json.loads(dumps(hn.as_resource))
     path.unlink()

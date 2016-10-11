@@ -16,6 +16,6 @@ def resources(path, **kwargs):
                  models.HouseNumber]
     with Path(path).open(mode='w', encoding='utf-8') as f:
         for resource in resources:
-            for data in resource.select().as_resource_list():
+            for data in resource.select().serialize({'*': {}}):
                 f.write(dumps(data) + '\n')
                 reporter.notice(resource.__name__, data)

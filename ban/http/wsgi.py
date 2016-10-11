@@ -1,59 +1,78 @@
-import falcon
-from falcon_multipart.middleware import MultipartMiddleware
-from falcon import HTTPNotFound
+import re
+from functools import wraps
+from datetime import timezone
+from dateutil.parser import parse as parse_date
 
-from .request import Request
-from .response import Response
-from . import middlewares
-from .routing import Router
+from flask import Flask, make_response
+from flask_cors import CORS
+from werkzeug.routing import BaseConverter, ValidationError
+
+from .schema import Schema
+from ban.core.encoder import dumps
 
 
-class API(falcon.API):
+class App(Flask):
+    _schema = Schema()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._router.register_route(self)
-        self.add_error_handler(HTTPNotFound, self.render_not_found)
+    def jsonify(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            rv = func(*args, **kwargs)
+            if not isinstance(rv, tuple):
+                rv = [rv]
+            else:
+                rv = list(rv)
+            rv[0] = dumps(rv[0])
+            resp = make_response(tuple(rv))
+            resp.mimetype = 'application/json'
+            return resp
+        return wrapper
 
-    def register_resource(self, resource):
-        self._router.register_resource(resource)
-
-    def endpoint(self, path='', verb=None, suffix=None):
-        """Override default endpoint path and verb."""
-
-        def wrapped(func):
-            _, autoverb, *extra = func.__name__.split('_')
-            func._path = path
-            func._suffix = suffix if suffix is not None else '-'.join(extra)
-            func._verb = verb or autoverb
+    def endpoint(self, path='/', **kwargs):
+        def wrapper(func):
+            if not hasattr(func, '_endpoints'):
+                func._endpoints = []
+            func._endpoints.append((path, kwargs))
             return func
+        return wrapper
 
-        return wrapped
+    def resource(self, cls):
+        if hasattr(cls, 'model'):
+            self._schema.register_model(cls.model)
+        instance = cls()
+        for name in dir(cls):
+            func = getattr(instance, name)
+            if hasattr(func, '_endpoints'):
+                self.register_endpoints(func)
+        return cls
 
-    def _get_responder(self, req):
-        responder, params, resource = super()._get_responder(req)
-        if responder == falcon.responders.path_not_found:
-            # See https://github.com/falconry/falcon/issues/668
-            responder = self._router.on_get
-        elif req.query_string == 'help':
-            params['responder'] = responder
-            params['resource'] = resource
-            responder = self._router.on_get_endpoint_help
-        return responder, params, resource
-
-    def render_not_found(self, ex, req, resp, params):
-        self._router.on_get(req, resp, **params)
+    def register_endpoints(self, func):
+        cls = func.__self__.__class__
+        for endpoint in func._endpoints:
+            path, kwargs = endpoint
+            path = '{}{}'.format(cls.endpoint, path)
+            endpoint = ('{}-{}'.format(cls.__name__, func.__name__)
+                               .lower().replace('_', '-'))
+            self.add_url_rule(path, view_func=func, endpoint=endpoint,
+                              strict_slashes=False, **kwargs)
+            path = re.sub(r'<(\w+:)?(\w+)>', r'{\2}', path)
+            self._schema.register_endpoint(path, func, kwargs['methods'], cls)
 
 
-application = app = API(
-    middleware=[
-        middlewares.CorsMiddleware(),
-        middlewares.SessionMiddleware(),
-        MultipartMiddleware(),
-    ],
-    response_type=Response,
-    request_type=Request,
-    router=Router(),
-)
-# Let falcon parse urlencoded forms for us.
-app.req_options.auto_parse_form_urlencoded = True
+class DateTimeConverter(BaseConverter):
+
+    def to_python(self, value):
+        try:
+            value = parse_date(value)
+        except ValueError:
+            raise ValidationError
+        # Be smart, imply that naive dt are in the same tz the API
+        # exposes, which is UTC.
+        if not value.tzinfo:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+
+
+app = application = App(__name__)
+CORS(app)
+app.url_map.converters['datetime'] = DateTimeConverter

@@ -1,5 +1,3 @@
-import falcon
-
 from ..factories import PositionFactory
 from .utils import authorize
 
@@ -20,7 +18,7 @@ def test_diff_endpoint(client):
     street.increment_version()
     street.save()
     resp = client.get('/diff')
-    assert resp.status == falcon.HTTP_200
+    assert resp.status_code == 200
     assert 'collection' in resp.json
     # Created: Municipality, Street, HouseNumber, Position
     # Modified: Street, HouseNumber, Position
@@ -58,4 +56,4 @@ def test_diff_endpoint_accept_increment_parameter(client):
 
 def test_diff_endpoint_is_protected(client):
     resp = client.get('/diff')
-    assert resp.status == falcon.HTTP_401
+    assert resp.status_code == 401

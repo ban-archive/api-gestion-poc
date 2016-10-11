@@ -70,7 +70,8 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             model_name=self.__class__.__name__,
             model_pk=self.pk,
             sequential=self.version,
-            raw=dumps(self.as_version)
+            data=self.as_version,
+            period=[self.modified_at, None]
         )
         old = None
         if self.version > 1:
@@ -119,7 +120,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
 
     def update_meta(self):
         session = context.get('session')
-        if session:
+        if session:  # TODO remove this if, session should be mandatory.
             try:
                 getattr(self, 'created_by', None)
             except Session.DoesNotExist:
@@ -141,25 +142,31 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             self.lock_version()
 
 
-class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
-
-    def process_row(self, row):
-        instance = super().process_row(row)
-        return instance.as_resource
-
-
 class SelectQuery(db.SelectQuery):
 
     @peewee.returns_clone
-    def as_resource(self):
-        self._result_wrapper = ResourceQueryResultWrapper
+    def serialize(self):
+        self._serializer = lambda inst: inst.serialize()
+        super().serialize()
 
 
 class Version(db.Model):
+
+    __openapi__ = """
+        properties:
+            data:
+                type: object
+                description: serialized resource
+            flag:
+                type: array
+                items:
+                    $ref: '#/definitions/Flag'
+        """
+
     model_name = db.CharField(max_length=64)
     model_pk = db.IntegerField()
     sequential = db.IntegerField()
-    raw = db.BinaryJSONField()
+    data = db.BinaryJSONField()
     period = db.DateRangeField()
 
     class Meta:
@@ -172,15 +179,10 @@ class Version(db.Model):
         return '<Version {} of {}({})>'.format(self.sequential,
                                                self.model_name, self.model_pk)
 
-    @property
-    def data(self):
-        return json.loads(self.raw)
-
-    @property
-    def as_resource(self):
+    def serialize(self, *args):
         return {
             'data': self.data,
-            'flags': list(self.flags.as_resource())
+            'flags': list(self.flags.serialize())
         }
 
     @property
@@ -189,7 +191,7 @@ class Version(db.Model):
 
     def load(self):
         validator = self.model.validator(**self.data)
-        return self.model(**validator.document)
+        return self.model(**validator.data)
 
     @property
     def diff(self):
@@ -208,11 +210,6 @@ class Version(db.Model):
         Flag.delete().where(Flag.version == self,
                             Flag.client == session.client).execute()
 
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.period = [utcnow(), None]
-        return super().save(*args, **kwargs)
-
     def close_period(self, bound):
         # DateTimeRange is immutable, so create new one.
         self.period = [self.period.lower, bound]
@@ -220,6 +217,29 @@ class Version(db.Model):
 
 
 class Diff(db.Model):
+
+    __openapi__ = """
+        properties:
+            resource:
+                type: string
+                description: name of the resource the diff is applied to
+            resource_id:
+                type: string
+                description: id of the resource the diff is applied to
+            created_at:
+                type: string
+                format: date-time
+                description: the date and time the diff has been created at
+            old:
+                type: object
+                description: the resource before the change
+            new:
+                type: object
+                description: the resource after the change
+            diff:
+                type: object
+                description: detail of changed properties
+            """
 
     # Allow to skip diff at very first data import.
     ACTIVE = True
@@ -244,8 +264,7 @@ class Diff(db.Model):
         super().save(*args, **kwargs)
         IdentifierRedirect.from_diff(self)
 
-    @property
-    def as_resource(self):
+    def serialize(self, *args):
         version = self.new or self.old
         return {
             'increment': self.pk,
@@ -259,10 +278,10 @@ class Diff(db.Model):
 
 
 class IdentifierRedirect(db.Model):
-    model_name = peewee.CharField(max_length=64)
-    identifier = peewee.CharField(max_length=64)
-    old = peewee.CharField(max_length=255)
-    new = peewee.CharField(max_length=255)
+    model_name = db.CharField(max_length=64)
+    identifier = db.CharField(max_length=64)
+    old = db.CharField(max_length=255)
+    new = db.CharField(max_length=255)
 
     @classmethod
     def from_diff(cls, diff):
@@ -296,6 +315,18 @@ class IdentifierRedirect(db.Model):
 
 
 class Flag(db.Model):
+
+    __openapi__ = """
+        properties:
+            at:
+                type: string
+                format: date-time
+                description: when the flag has been created
+            by:
+                type: string
+                description: identifier of the client who flagged the version
+        """
+
     version = db.ForeignKeyField(Version, related_name='flags')
     client = db.ForeignKeyField(Client)
     session = db.ForeignKeyField(Session)
@@ -309,8 +340,7 @@ class Flag(db.Model):
             self.created_at = utcnow()
         super().save(*args, **kwargs)
 
-    @property
-    def as_resource(self):
+    def serialize(self, *args):
         return {
             'at': self.created_at,
             'by': self.client.flag_id

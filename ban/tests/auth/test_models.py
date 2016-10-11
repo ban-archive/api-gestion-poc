@@ -18,7 +18,7 @@ def test_session_can_be_created_with_a_user():
     user = UserFactory()
     session = models.Session.create(user=user)
     assert session.user == user
-    assert session.as_relation == {
+    assert session.serialize() == {
         'id': session.pk,
         'user': user.username,
         'client': None
@@ -29,7 +29,7 @@ def test_session_can_be_created_with_a_client():
     client = ClientFactory()
     session = models.Session.create(client=client)
     assert session.client == client
-    assert session.as_relation == {
+    assert session.serialize() == {
         'id': session.pk,
         'user': None,
         'client': client.name

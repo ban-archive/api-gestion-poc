@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import datetime, timezone
 import json
 import re
 
@@ -33,7 +33,11 @@ postgres_ext.PostgresqlExtDatabase.register_ops({
 # TODO: mv to a third-party module.
 class PointField(peewee.Field):
     db_field = 'point'
-    schema_type = 'point'
+    __data_type__ = Point
+    # TODO how to deal properly with custom type?
+    # Or should we just accept geojson (and not [lat, lon]…)?
+    __schema_type__ = 'object'
+    __schema_format__ = 'geojson'
     srid = 4326
 
     def db_value(self, value):
@@ -75,7 +79,9 @@ postgres_ext.PostgresqlExtDatabase.register_fields({'point':
 
 class DateRangeField(peewee.Field):
     db_field = 'tstzrange'
-    schema_type = 'tstzrange'
+    __data_type__ = datetime
+    __schema_type__ = 'string'
+    __schema_format__ = 'date-time'
 
     def db_value(self, value):
         return self.coerce(value)
@@ -97,7 +103,8 @@ class DateRangeField(peewee.Field):
 
 class ForeignKeyField(peewee.ForeignKeyField):
 
-    schema_type = 'foreignkey'
+    __data_type__ = int
+    __schema_type__ = 'integer'
 
     def coerce(self, value):
         if not value:
@@ -118,7 +125,14 @@ class ForeignKeyField(peewee.ForeignKeyField):
 
 
 class CharField(peewee.CharField):
-    schema_type = 'string'
+    __data_type__ = str
+    __schema_type__ = 'string'
+
+    def __init__(self, *args, **kwargs):
+        if 'length' in kwargs:
+            kwargs['min_length'] = kwargs['max_length'] = kwargs.pop('length')
+        self.min_length = kwargs.pop('min_length', None)
+        super().__init__(*args, **kwargs)
 
     def coerce(self, value):
         if self.null and not value:
@@ -127,7 +141,8 @@ class CharField(peewee.CharField):
 
 
 class TextField(peewee.TextField):
-    schema_type = 'string'
+    __data_type__ = str
+    __schema_type__ = 'string'
 
     def coerce(self, value):
         if self.null and not value:
@@ -136,11 +151,13 @@ class TextField(peewee.TextField):
 
 
 class IntegerField(peewee.IntegerField):
-    schema_type = 'integer'
+    __data_type__ = int
+    __schema_type__ = 'integer'
 
 
 class HStoreField(postgres_ext.HStoreField):
-    schema_type = 'dict'
+    __data_type__ = dict
+    __schema_type__ = 'object'
 
     def coerce(self, value):
         if isinstance(value, str):
@@ -149,7 +166,8 @@ class HStoreField(postgres_ext.HStoreField):
 
 
 class BinaryJSONField(postgres_ext.BinaryJSONField):
-    schema_type = 'dict'
+    __data_type__ = dict
+    __schema_type__ = 'object'
 
 
 class UUIDField(peewee.UUIDField):
@@ -157,7 +175,8 @@ class UUIDField(peewee.UUIDField):
 
 
 class ArrayField(postgres_ext.ArrayField):
-    schema_type = 'list'
+    __data_type__ = list
+    __schema_type__ = 'array'
 
     def coerce(self, value):
         if value and not isinstance(value, (list, tuple)):
@@ -166,7 +185,9 @@ class ArrayField(postgres_ext.ArrayField):
 
 
 class DateTimeField(postgres_ext.DateTimeTZField):
-    schema_type = 'datetime'
+    __data_type__ = datetime
+    __schema_type__ = 'string'
+    __schema_format__ = 'date-time'
 
     def python_value(self, value):
         value = super().python_value(value)
@@ -177,7 +198,8 @@ class DateTimeField(postgres_ext.DateTimeTZField):
 
 
 class BooleanField(peewee.BooleanField):
-    schema_type = 'bool'
+    __data_type__ = bool
+    __schema_type__ = 'boolean'
 
 
 class PostCodeField(CharField):
@@ -207,26 +229,9 @@ class FantoirField(CharField):
         return value
 
 
-class ResourceListQueryResultWrapper(peewee.ModelQueryResultWrapper):
-
-    def process_row(self, row):
-        instance = super().process_row(row)
-        return instance.as_relation
-
-
-class ManyToManyQuery(fields.ManyToManyQuery):
-
-    def _get_result_wrapper(self):
-        return (getattr(self, '_result_wrapper', None) or
-                ResourceListQueryResultWrapper)
-
-    @peewee.returns_clone
-    def as_resource_list(self):
-        self._result_wrapper = ResourceListQueryResultWrapper
-
-
 class ManyToManyField(fields.ManyToManyField):
-    schema_type = 'list'
+    __data_type__ = list
+    __schema_type__ = 'array'
 
     def __init__(self, *args, **kwargs):
         # ManyToManyField is not a real "Field", so try to better conform to
@@ -238,6 +243,8 @@ class ManyToManyField(fields.ManyToManyField):
         super().__init__(*args, **kwargs)
 
     def coerce(self, value):
+        if not value:
+            return []
         if not isinstance(value, (tuple, list, peewee.SelectQuery)):
             value = [value]
         # https://github.com/coleifer/peewee/pull/795

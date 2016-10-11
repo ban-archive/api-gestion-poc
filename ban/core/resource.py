@@ -1,35 +1,20 @@
+from datetime import datetime
 import uuid
 
 import peewee
+from postgis import Point
 
 from ban import db
 
 from .validators import ResourceValidator
 
 
-class ResourceQueryResultWrapper(peewee.ModelQueryResultWrapper):
-
-    def process_row(self, row):
-        instance = super().process_row(row)
-        return instance.as_resource
-
-
-class ResourceListQueryResultWrapper(peewee.ModelQueryResultWrapper):
-
-    def process_row(self, row):
-        instance = super().process_row(row)
-        return instance.as_relation
-
-
 class SelectQuery(db.SelectQuery):
 
     @peewee.returns_clone
-    def as_resource(self):
-        self._result_wrapper = ResourceQueryResultWrapper
-
-    @peewee.returns_clone
-    def as_resource_list(self):
-        self._result_wrapper = ResourceListQueryResultWrapper
+    def serialize(self, mask=None):
+        self._serializer = lambda inst: inst.serialize(mask)
+        super().serialize()
 
 
 class BaseResource(peewee.BaseModel):
@@ -47,7 +32,6 @@ class BaseResource(peewee.BaseModel):
     def __new__(mcs, name, bases, attrs, **kwargs):
         # Inherit and extend instead of replacing.
         resource_fields = attrs.pop('resource_fields', None)
-        resource_schema = attrs.pop('resource_schema', None)
         exclude_for_collection = attrs.pop('exclude_for_collection', None)
         exclude_for_version = attrs.pop('exclude_for_version', None)
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
@@ -55,10 +39,6 @@ class BaseResource(peewee.BaseModel):
             inherited = getattr(cls, 'resource_fields', {})
             resource_fields.extend(inherited)
             cls.resource_fields = resource_fields
-        if resource_schema is not None:
-            inherited = getattr(cls, 'resource_schema', {})
-            resource_schema.update(inherited)
-            cls.resource_schema = resource_schema
         if exclude_for_collection is not None:
             inherited = getattr(cls, 'exclude_for_collection', [])
             exclude_for_collection.extend(inherited)
@@ -73,14 +53,13 @@ class BaseResource(peewee.BaseModel):
         cls.versioned_fields = [
             n for n in cls.resource_fields
             if n not in cls.exclude_for_version]
-        cls.build_resource_schema()
         return cls
 
 
 class ResourceModel(db.Model, metaclass=BaseResource):
     resource_fields = ['id']
     identifiers = []
-    resource_schema = {'id': {'readonly': True}}
+    readonly_fields = ['id', 'pk']
     exclude_for_collection = []
     exclude_for_version = []
 
@@ -100,43 +79,9 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         return super().save(*args, **kwargs)
 
     @classmethod
-    def build_resource_schema(cls):
-        """Map Peewee models to Cerberus validation schema."""
-        schema = dict(cls.resource_schema)
-        for name, field in cls._meta.fields.items():
-            if name not in cls.resource_fields:
-                continue
-            if field.primary_key:
-                continue
-            type_ = getattr(field.__class__, 'schema_type', None)
-            if not type_:
-                continue
-            row = {
-                'type': type_,
-                'required': not field.null,
-                'coerce': field.coerce,
-            }
-            if field.null:
-                row['nullable'] = True
-            if field.unique:
-                row['unique'] = True
-            max_length = getattr(field, 'max_length', None)
-            if max_length:
-                row['maxlength'] = max_length
-            if not field.null:
-                row['empty'] = False
-            if getattr(field, 'choices', None):
-                row['allowed'] = [v for v, l in field.choices]
-            row.update(cls.resource_schema.get(name, {}))
-            schema[name] = row
-            if schema[name].get('readonly'):
-                schema[name]['required'] = False
-        cls.resource_schema = schema
-
-    @classmethod
     def validator(cls, instance=None, update=False, **data):
-        validator = cls._meta.validator(cls)
-        validator(data, update=update, instance=instance)
+        validator = cls._meta.validator(cls, update=update)
+        validator.validate(data, instance=instance)
         return validator
 
     @property
@@ -144,27 +89,50 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         return self.__class__.__name__.lower()
 
     @property
+    def serialized(self):
+        return self.id
+
+    def serialize(self, mask=None):
+        if not mask:
+            return self.serialized
+        dest = {}
+        for name, subfields in mask.items():
+            if name == '*':
+                return self.serialize({k: subfields
+                                       for k in self.resource_fields})
+            field = getattr(self.__class__, name, None)
+            if not field:
+                raise ValueError('Unknown field {}'.format(name))
+            value = getattr(self, name)
+            if value is not None:
+                if isinstance(field, (db.ManyToManyField,
+                                      peewee.ReverseRelationDescriptor)):
+                    value = [v.serialize(subfields) for v in value]
+                elif isinstance(field, db.ForeignKeyField):
+                    value = value.serialize(subfields)
+                elif isinstance(value, datetime):
+                    value = value.isoformat()
+                elif isinstance(value, Point):
+                    value = value.geojson
+            dest[name] = value
+        return dest
+
+    @property
     def as_resource(self):
         """Resource plus relations."""
-        return {f: self.extended_field(f) for f in self.resource_fields}
+        # All fields and all first level relations fields.
+        return self.serialize({'*': {}})
 
     @property
     def as_relation(self):
         """Resources plus relation references without metadata."""
-        return {f: self.compact_field(f) for f in self.collection_fields}
+        # All fields plus relations references.
+        return self.serialize({f: {} for f in self.collection_fields})
 
     @property
     def as_version(self):
         """Resources plus relations references and metadata."""
-        return {f: self.compact_field(f) for f in self.versioned_fields}
-
-    def extended_field(self, name):
-        value = getattr(self, '{}_extended'.format(name), getattr(self, name))
-        return getattr(value, 'as_relation', value)
-
-    def compact_field(self, name):
-        value = getattr(self, '{}_compact'.format(name), getattr(self, name))
-        return getattr(value, 'id', value)
+        return self.serialize({f: {} for f in self.versioned_fields})
 
     @classmethod
     def coerce(cls, id, identifier=None):

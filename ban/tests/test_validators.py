@@ -1,6 +1,7 @@
 import pytest
 
 from ban.core import models
+from ban.auth.models import User
 
 from .factories import (GroupFactory, HouseNumberFactory, MunicipalityFactory,
                         PositionFactory)
@@ -36,8 +37,20 @@ def test_create_should_not_consider_bad_versions(session):
 def test_cannot_create_municipality_with_missing_fields(session):
     validator = models.Municipality.validator(name="Eu")
     assert validator.errors
-    with pytest.raises(validator.ValidationError):
+    with pytest.raises(ValueError):
         validator.save()
+
+
+def test_cannot_create_municipality_with_insee_too_short(session):
+    validator = models.Municipality.validator(name="Eu", insee="1234",
+                                              siren="12345678")
+    assert 'insee' in validator.errors
+
+
+def test_cannot_create_municipality_with_insee_too_long(session):
+    validator = models.Municipality.validator(name="Eu", insee="123456",
+                                              siren="12345678")
+    assert 'insee' in validator.errors
 
 
 def test_can_update_municipality(session):
@@ -206,7 +219,7 @@ def test_can_create_group_with_fantoir_on_9digits(session):
                                        municipality=municipality,
                                        fantoir='123456789')
     assert not validator.errors
-    assert validator.document['fantoir'] == "123456789"
+    assert validator.data['fantoir'] == "123456789"
 
 
 def test_can_create_group_with_fantoir_on_10digits(session):
@@ -216,7 +229,7 @@ def test_can_create_group_with_fantoir_on_10digits(session):
                                        municipality=municipality,
                                        fantoir='1234567890')
     assert not validator.errors
-    assert validator.document['fantoir'] == "123456789"
+    assert validator.data['fantoir'] == "123456789"
 
 
 def test_cannot_create_group_with_fantoir_less_than_9or10_digits(session):
@@ -296,7 +309,7 @@ def test_bad_foreign_key_gives_readable_message(session):
                                        municipality='insee:12345',
                                        fantoir='123456789')
     assert validator.errors['municipality'] == ('No matching resource for '
-                                                'insee:12345')
+                                                '"insee:12345"')
 
 
 def test_can_create_housenumber(session):
@@ -381,3 +394,8 @@ def test_giving_wrong_version_should_patch_if_possible_with_update(session):
     housenumber = validator.save()
     assert housenumber.number == "19"
     assert housenumber.ordinal == "bis"
+
+
+def test_can_create_user():
+    validator = User.validator(username='Banner', email='ban@er', is_staff=False)
+    assert not validator.errors

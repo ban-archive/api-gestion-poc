@@ -1,5 +1,1 @@
-from ban.http.wsgi import application  # noqa
-from ban.http.resources import *  # noqa
-from ban.http.diff import Diff  # noqa
-from ban.http.commands import Import  # noqa
-from ban.http.routing import reverse  # noqa
+from .wsgi import application

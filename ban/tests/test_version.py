@@ -15,15 +15,15 @@ def test_municipality_version():
     PostCodeFactory(municipality=municipality)
     assert municipality.as_version == {
         'siren': '123456789',
-        'modified_by': municipality.modified_by.id,
+        'modified_by': municipality.modified_by.serialize(),
         'attributes': {'key': 'value'},
         'id': municipality.id,
         'name': 'Lille',
         'insee': '12345',
-        'created_at': municipality.created_at,
+        'created_at': municipality.created_at.isoformat(),
         'alias': ['Rijsel'],
-        'created_by': municipality.created_by.id,
-        'modified_at': municipality.modified_at,
+        'created_by': municipality.created_by.serialize(),
+        'modified_at': municipality.modified_at.isoformat(),
         'version': 1}
 
 
@@ -95,16 +95,16 @@ def test_group_version():
         'municipality': group.municipality.id,
         'addressing': 'anarchical',
         'fantoir': '123456789',
-        'modified_by': group.modified_by.id,
+        'modified_by': group.modified_by.serialize(),
         'attributes': {'key': 'value'},
         'id': group.id,
         'laposte': '123456',
         'ign': None,
         'name': 'Rue de la Princesse Lila',
-        'created_at': group.created_at,
+        'created_at': group.created_at.isoformat(),
         'alias': ['Rue du Prince Louison'],
-        'created_by': group.created_by.id,
-        'modified_at': group.modified_at,
+        'created_by': group.created_by.serialize(),
+        'modified_at': group.modified_at.isoformat(),
         'version': 1}
 
 
@@ -138,14 +138,14 @@ def test_housenumber_as_version():
         'ordinal': 'bis',
         'number': '84',
         'id': hn.id,
-        'created_by': hn.created_by.id,
+        'created_by': hn.created_by.serialize(),
         'ancestors': [district.id],
         'postcode': postcode.id,
-        'modified_at': hn.modified_at,
+        'modified_at': hn.modified_at.isoformat(),
         'ign': None,
-        'created_at': hn.created_at,
+        'created_at': hn.created_at.isoformat(),
         'parent': street.id,
-        'modified_by': hn.modified_by.id,
+        'modified_by': hn.modified_by.serialize(),
         'positions': [],
         'attributes': None}
 
@@ -172,12 +172,12 @@ def test_position_as_version():
                                name='Bâtiment A', parent=parent,
                                housenumber=parent.housenumber)
     assert position.as_version == {
-        'created_by': position.created_by.id,
+        'created_by': position.created_by.serialize(),
         'housenumber': position.housenumber.id,
-        'modified_by': position.modified_by.id,
+        'modified_by': position.modified_by.serialize(),
         'attributes': {'key': 'value'},
-        'created_at': position.created_at,
-        'modified_at': position.modified_at,
+        'created_at': position.created_at.isoformat(),
+        'modified_at': position.modified_at.isoformat(),
         'source': None,
         'parent': parent.id,
         'positioning': 'imagery',

@@ -52,16 +52,7 @@ def test_municipality_as_resource():
     assert municipality.as_resource['siren'] == "210100566"
     assert municipality.as_resource['version'] == 1
     assert municipality.as_resource['id'] == municipality.id
-    assert municipality.as_resource['postcodes'] == [{
-        'code': '31310',
-        'attributes': None,
-        'resource': 'postcode',
-        'name': 'Test PostCode Area Name',
-        'municipality': municipality.id,
-        'id': postcode.id,
-        'alias': None,
-        'version': 1,
-    }]
+    assert municipality.as_resource['postcodes'] == [postcode.id]
 
 
 def test_municipality_as_relation():
@@ -166,6 +157,30 @@ def test_group_as_relation():
         'addressing': None,
         'version': 1
     }
+
+
+def test_can_create_group_with_fantoir_equal_to_9_chars(get):
+    fantoir = "900010123"
+    group = GroupFactory(fantoir=fantoir)
+    assert group.fantoir == fantoir
+
+
+def test_can_create_group_with_fantoir_equal_to_10_chars(get):
+    fantoir = "7800101234"
+    group = GroupFactory(fantoir=fantoir)
+    assert group.fantoir == fantoir[:9]
+
+
+def test_cannot_create_group_with_fantoir_less_than_9_or_10_chars():
+    fantoir = "90001012"
+    with pytest.raises(ValueError):
+        GroupFactory(fantoir=fantoir)
+
+
+def test_cannot_create_group_with_fantoir_greater_than_9_or_10_chars():
+    fantoir = "900010123456"
+    with pytest.raises(ValueError):
+        GroupFactory(fantoir=fantoir)
 
 
 def test_housenumber_should_create_cia_on_save():
@@ -296,7 +311,7 @@ def test_housenumber_as_resource():
     assert housenumber.as_resource == {
         'ancestors': [],
         'cia': '21892_1234_90_BIS',
-        'parent': housenumber.parent.as_relation,
+        'parent': housenumber.parent.id,
         'positions': [],
         'laposte': None,
         'ign': None,
@@ -306,10 +321,10 @@ def test_housenumber_as_resource():
         'number': '90',
         'postcode': None,
         'ordinal': 'bis',
-        'created_by': housenumber.created_by.as_relation,
-        'created_at': housenumber.created_at,
-        'modified_by': housenumber.modified_by.as_relation,
-        'modified_at': housenumber.modified_at,
+        'created_by': housenumber.created_by.serialize(),
+        'created_at': housenumber.created_at.isoformat(),
+        'modified_by': housenumber.modified_by.serialize(),
+        'modified_at': housenumber.modified_at.isoformat(),
     }
 
 
