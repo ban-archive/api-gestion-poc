@@ -1,1 +1,1 @@
-from .wsgi import application
+from .api import app as application  # noqa
