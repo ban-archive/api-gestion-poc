@@ -36,7 +36,8 @@ def test_follow_returns_new_value():
     municipality.increment_version()
     municipality.save()
     assert IdentifierRedirect.select().count() == 1
-    assert IdentifierRedirect.follow('Municipality', 'insee', '12345') == ('insee', '54321')  # noqa
+    assert IdentifierRedirect.follow('Municipality', 'insee', '12345') == [
+        ('insee', '54321')]
 
 
 def test_resource_update_should_refresh_if_target_is_becomming_source():
@@ -49,8 +50,10 @@ def test_resource_update_should_refresh_if_target_is_becomming_source():
     municipality.increment_version()
     municipality.save()
     assert IdentifierRedirect.select().count() == 2
-    assert IdentifierRedirect.follow('Municipality', 'insee', '54321') == ('insee', '12321')  # noqa
-    assert IdentifierRedirect.follow('Municipality', 'insee', '12345') == ('insee', '12321')  # noqa
+    assert IdentifierRedirect.follow('Municipality', 'insee', '54321') == [
+        ('insee', '12321')]
+    assert IdentifierRedirect.follow('Municipality', 'insee', '12345') == [
+        ('insee', '12321')]
 
 
 def test_can_add_a_redirect():
@@ -58,7 +61,8 @@ def test_can_add_a_redirect():
     pk = position.pk
     IdentifierRedirect.add('Position', 'pk', '939', 'pk', pk)
     assert IdentifierRedirect.select().count() == 1
-    assert IdentifierRedirect.follow('Position', 'pk', '939') == ('pk', str(pk))  # noqa
+    assert IdentifierRedirect.follow('Position', 'pk', '939') == [
+        ('pk', str(pk))]
 
 
 def test_can_remove_a_redirect():
@@ -72,4 +76,23 @@ def test_can_remove_a_redirect():
 def test_can_point_from_an_identifier_to_another():
     IdentifierRedirect.add('Municipality', 'insee', '12345', 'pk', '12')
     assert IdentifierRedirect.select().count() == 1
-    assert IdentifierRedirect.follow('Municipality', 'insee', '12345') == ('pk', '12')  # noqa
+    assert IdentifierRedirect.follow('Municipality', 'insee', '12345') == [
+        ('pk', '12')]
+
+
+def test_can_create_multiple_redirections():
+    IdentifierRedirect.add('Position', 'pk', '939', 'pk', '123')
+    assert IdentifierRedirect.select().count() == 1
+    IdentifierRedirect.add('Position', 'pk', '939', 'pk', '456')
+    assert IdentifierRedirect.select().count() == 2
+    assert IdentifierRedirect.follow('Position', 'pk', '939') == [
+        ('pk', '123'), ('pk', '456')]
+
+
+def test_cannot_duplicate_redirection():
+    IdentifierRedirect.add('Position', 'pk', '939', 'pk', '123')
+    assert IdentifierRedirect.select().count() == 1
+    IdentifierRedirect.add('Position', 'pk', '939', 'pk', '123')
+    assert IdentifierRedirect.select().count() == 1
+    assert IdentifierRedirect.follow('Position', 'pk', '939') == [
+        ('pk', '123')]

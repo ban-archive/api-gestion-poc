@@ -317,10 +317,10 @@ class IdentifierRedirect(db.Model):
 
     @classmethod
     def follow(cls, model_name, from_identifier, from_value):
-        row = cls.select().where(cls.model_name == model_name,
-                                 cls.from_identifier == from_identifier,
-                                 cls.from_value == str(from_value)).first()
-        return (row.to_identifier, row.to_value) if row else (None, None)
+        rows = cls.select().where(cls.model_name == model_name,
+                                  cls.from_identifier == from_identifier,
+                                  cls.from_value == str(from_value))
+        return [(row.to_identifier, row.to_value) for row in rows]
 
     @classmethod
     def refresh(cls, model_name, from_identifier, from_value, to_identifier,

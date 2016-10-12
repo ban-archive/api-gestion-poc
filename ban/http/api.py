@@ -8,6 +8,7 @@ from ban.auth import models as amodels
 from ban.commands.bal import bal
 from ban.core import models, versioning, context
 from ban.core.encoder import dumps
+from ban.core.exceptions import RedirectError, MultipleRedirectsError
 from ban.utils import parse_mask
 from ban.http.auth import auth
 from ban.http.wsgi import app
@@ -62,12 +63,24 @@ class ModelEndpoint(CollectionEndpoint):
     order_by = None
 
     def get_object(self, identifier):
+        endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         try:
             instance = self.model.coerce(identifier)
         except self.model.DoesNotExist:
             # TODO Flask changes the 404 message, which we don't want.
             abort(404, message='Instance for "{}" does not exist.'
                   .format(identifier))
+        except RedirectError as e:
+            identifier = '{}:{}'.format(e.redirect[0], e.redirect[1])
+            headers = {'Location': url_for(endpoint, identifier=identifier)}
+            abort(302, headers=headers)
+        except MultipleRedirectsError as e:
+            headers = {}
+            for redirect in e.redirects:
+                identifier = '{}:{}'.format(redirect[0], redirect[1])
+                link(headers, url_for(endpoint, identifier=identifier),
+                     'alternate')
+            abort(300, headers=headers)
         return instance
 
     def save_object(self, instance=None, update=False):

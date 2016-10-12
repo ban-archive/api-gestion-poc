@@ -7,6 +7,7 @@ from postgis import Point
 from ban import db
 
 from .validators import ResourceValidator
+from .exceptions import RedirectError, MultipleRedirectsError
 
 
 class SelectQuery(db.SelectQuery):
@@ -150,9 +151,9 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         except cls.DoesNotExist:
             # Is it an old identifier?
             from .versioning import IdentifierRedirect
-            identifier, id = IdentifierRedirect.follow(cls.__name__,
-                                                       identifier, id)
-            if identifier:
-                return cls.get(getattr(cls, identifier) == id)
-            else:
-                raise
+            redirects = IdentifierRedirect.follow(cls.__name__, identifier, id)
+            if redirects:
+                if len(redirects) > 1:
+                    raise MultipleRedirectsError(identifier, id, redirects)
+                raise RedirectError(identifier, id, redirects[0])
+            raise

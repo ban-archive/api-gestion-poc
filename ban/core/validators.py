@@ -2,6 +2,7 @@ import peewee
 
 from ban import db
 from ban.utils import make_diff
+from .exceptions import RedirectError, MultipleRedirectsError
 
 
 class ResourceValidator:
@@ -41,6 +42,8 @@ class ResourceValidator:
     def validate_field(self, field, value):
         try:
             value = field.coerce(value)
+        except (RedirectError, MultipleRedirectsError) as e:
+            raise ValueError(e)
         except (ValueError, TypeError):
             raise ValueError('Unable to coerce value "{}"'.format(value))
         except peewee.DoesNotExist:
