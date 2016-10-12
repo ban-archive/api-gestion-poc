@@ -12,7 +12,7 @@ from ban.utils import parse_mask
 from ban.http.auth import auth
 from ban.http.wsgi import app
 
-from .utils import abort, get_bbox
+from .utils import abort, get_bbox, link
 
 
 class CollectionEndpoint:
@@ -47,13 +47,13 @@ class CollectionEndpoint:
             query_string['offset'] = end
             uri = '{}?{}'.format(url, urlencode(sorted(query_string.items())))
             data['next'] = uri
-            # resp.add_link(uri, 'next')
+            link(headers, uri, 'next')
         if offset >= limit:
             query_string = request.args.copy()
             query_string['offset'] = offset - limit
             uri = '{}?{}'.format(url, urlencode(sorted(query_string.items())))
             data['previous'] = uri
-            # resp.add_link(uri, 'previous')
+            link(headers, uri, 'previous')
         return data, 200, headers
 
 

@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from werkzeug.exceptions import HTTPException
 from flask import Response
 
@@ -26,3 +28,12 @@ def get_bbox(args):
     if not len(bbox) == 4:
         return None
     return bbox
+
+
+# Do not encode them, as per RFC 3986
+RESERVED = ":/?#[]@!$&'()*+,;="
+
+
+def link(headers, target, rel):
+    headers.setdefault('Link', '')
+    headers['Link'] += ', <' + quote(target, safe=RESERVED) + '>; rel=' + rel
