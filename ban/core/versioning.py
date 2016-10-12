@@ -1,12 +1,10 @@
 from datetime import datetime
-import json
 
 import decorator
 import peewee
 
 from ban import db
 from ban.auth.models import Client, Session
-from ban.core.encoder import dumps
 from ban.utils import make_diff, utcnow
 
 from . import context
@@ -279,9 +277,29 @@ class Diff(db.Model):
 
 class IdentifierRedirect(db.Model):
     model_name = db.CharField(max_length=64)
-    identifier = db.CharField(max_length=64)
-    old = db.CharField(max_length=255)
-    new = db.CharField(max_length=255)
+    from_identifier = db.CharField(max_length=64)
+    from_value = db.CharField(max_length=255)
+    to_identifier = db.CharField(max_length=64)
+    to_value = db.CharField(max_length=255)
+
+    @classmethod
+    def add(cls, model_name, from_identifier, from_value, to_identifier,
+            to_value):
+        cls.get_or_create(model_name=model_name,
+                          from_identifier=from_identifier,
+                          to_identifier=to_identifier,
+                          from_value=str(from_value), to_value=str(to_value))
+        cls.refresh(model_name, from_identifier, from_value, to_identifier,
+                    to_value)
+
+    @classmethod
+    def remove(cls, model_name, from_identifier, from_value, to_identifier,
+               to_value):
+        cls.delete().where(cls.model_name == model_name,
+                           cls.from_identifier == from_identifier,
+                           cls.to_identifier == to_identifier,
+                           cls.from_value == str(from_value),
+                           cls.to_value == str(to_value)).execute()
 
     @classmethod
     def from_diff(cls, diff):
@@ -295,23 +313,23 @@ class IdentifierRedirect(db.Model):
             new = diff.diff[identifier]['new']
             if not old or not new:
                 continue
-            cls.get_or_create(model_name=diff.new.model_name,
-                              identifier=identifier, old=old, new=new)
-            cls.refresh(model, identifier, old, new)
+            cls.add(model.__name__, identifier, old, identifier, new)
 
     @classmethod
-    def follow(cls, model, identifier, old):
-        row = cls.select().where(cls.model_name == model.__name__,
-                                 cls.identifier == identifier,
-                                 cls.old == old).first()
-        return row.new if row else None
+    def follow(cls, model_name, from_identifier, from_value):
+        row = cls.select().where(cls.model_name == model_name,
+                                 cls.from_identifier == from_identifier,
+                                 cls.from_value == str(from_value)).first()
+        return (row.to_identifier, row.to_value) if row else (None, None)
 
     @classmethod
-    def refresh(cls, model, identifier, old, new):
-        """An identifier was a target and it becomes itself a target."""
-        cls.update(new=new).where(cls.new == old,
-                                  cls.model_name == model.__name__,
-                                  cls.identifier == identifier).execute()
+    def refresh(cls, model_name, from_identifier, from_value, to_identifier,
+                to_value):
+        """An identifier was a target and it becomes itself a redirect."""
+        cls.update(to_identifier=to_identifier, to_value=to_value).where(
+            cls.to_identifier == from_identifier,
+            cls.to_value == from_value,
+            cls.model_name == model_name).execute()
 
 
 class Flag(db.Model):

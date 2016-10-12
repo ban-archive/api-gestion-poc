@@ -150,8 +150,9 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         except cls.DoesNotExist:
             # Is it an old identifier?
             from .versioning import IdentifierRedirect
-            new = IdentifierRedirect.follow(cls, identifier, id)
-            if new:
-                return cls.get(getattr(cls, identifier) == new)
+            identifier, id = IdentifierRedirect.follow(cls.__name__,
+                                                       identifier, id)
+            if identifier:
+                return cls.get(getattr(cls, identifier) == id)
             else:
                 raise

@@ -1,4 +1,3 @@
-from ban.core import models
 from ban.core.versioning import IdentifierRedirect
 
 from . import factories
@@ -25,9 +24,10 @@ def test_resource_update_creates_redirect_if_some_identifier_changed():
     assert IdentifierRedirect.select().count() == 1
     redirect = IdentifierRedirect.first()
     assert redirect.model_name == 'Municipality'
-    assert redirect.identifier == 'insee'
-    assert redirect.old == '12345'
-    assert redirect.new == '54321'
+    assert redirect.from_identifier == 'insee'
+    assert redirect.to_identifier == 'insee'
+    assert redirect.from_value == '12345'
+    assert redirect.to_value == '54321'
 
 
 def test_follow_returns_new_value():
@@ -36,7 +36,7 @@ def test_follow_returns_new_value():
     municipality.increment_version()
     municipality.save()
     assert IdentifierRedirect.select().count() == 1
-    assert IdentifierRedirect.follow(models.Municipality, 'insee', '12345') == '54321'  # noqa
+    assert IdentifierRedirect.follow('Municipality', 'insee', '12345') == ('insee', '54321')  # noqa
 
 
 def test_resource_update_should_refresh_if_target_is_becomming_source():
@@ -49,5 +49,27 @@ def test_resource_update_should_refresh_if_target_is_becomming_source():
     municipality.increment_version()
     municipality.save()
     assert IdentifierRedirect.select().count() == 2
-    assert IdentifierRedirect.follow(models.Municipality, 'insee', '54321') == '12321'  # noqa
-    assert IdentifierRedirect.follow(models.Municipality, 'insee', '12345') == '12321'  # noqa
+    assert IdentifierRedirect.follow('Municipality', 'insee', '54321') == ('insee', '12321')  # noqa
+    assert IdentifierRedirect.follow('Municipality', 'insee', '12345') == ('insee', '12321')  # noqa
+
+
+def test_can_add_a_redirect():
+    position = factories.PositionFactory()
+    pk = position.pk
+    IdentifierRedirect.add('Position', 'pk', '939', 'pk', pk)
+    assert IdentifierRedirect.select().count() == 1
+    assert IdentifierRedirect.follow('Position', 'pk', '939') == ('pk', str(pk))  # noqa
+
+
+def test_can_remove_a_redirect():
+    position = factories.PositionFactory()
+    IdentifierRedirect.add('Position', 'pk', 32, 'pk', position.pk)
+    assert IdentifierRedirect.select().count() == 1
+    IdentifierRedirect.remove('Position', 'pk', 32, 'pk', position.pk)
+    assert not IdentifierRedirect.select().count()
+
+
+def test_can_point_from_an_identifier_to_another():
+    IdentifierRedirect.add('Municipality', 'insee', '12345', 'pk', '12')
+    assert IdentifierRedirect.select().count() == 1
+    assert IdentifierRedirect.follow('Municipality', 'insee', '12345') == ('pk', '12')  # noqa
