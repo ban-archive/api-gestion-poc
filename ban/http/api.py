@@ -515,6 +515,84 @@ class DiffEndpoint(CollectionEndpoint):
         return self.collection(qs.serialize())
 
 
+@app.resource
+class IdentifierRedirectEndpoint(CollectionEndpoint):
+    endpoint = '/redirect'
+    model = versioning.IdentifierRedirect
+
+    @auth.require_oauth()
+    @app.endpoint('/<resource>/<from>/<to>', methods=['PUT', 'DELETE'])
+    def put_delete_resource(self, **kwargs):
+        """Create a new redirect from an identifier to another.
+
+        parameters:
+            - name: from
+              in: path
+              type: string
+              required: true
+              description: old identifier.
+            - name: to
+              in: path
+              type: string
+              required: true
+              description: new identifier.
+        responses:
+            204:
+                description: action was successful.
+        """
+        resource = kwargs['resource'].title()
+        from_ = kwargs['from']
+        to = kwargs['to']
+        from_identifier, from_value = from_.split(':')
+        to_identifier, to_value = to.split(':')
+        if request.method == 'PUT':
+            versioning.IdentifierRedirect.add(resource, from_identifier,
+                                              from_value, to_identifier,
+                                              to_value)
+            return '', 201
+        versioning.IdentifierRedirect.remove(resource, from_identifier,
+                                             from_value, to_identifier,
+                                             to_value)
+        return '', 204
+
+    @auth.require_oauth()
+    @app.jsonify
+    @app.endpoint('/<resource>/', methods=['GET'])
+    def get_collection(self, **kwargs):
+        """Get a collection of IdentifierRedirect.
+
+        parameters:
+            - name: from
+              in: query
+              type: string
+              required: false
+              description: filter by the redirect source.
+            - name: to
+              in: query
+              type: string
+              required: false
+              description: filter by the redirect destination.
+        responses:
+            200:
+                description: A list of redirects.
+        """
+        from_ = request.args.get('from')
+        to = request.args.get('to')
+        if not from_ and not to:
+            abort('400', message='Either "from" or "to" must be passed.')
+        cls = versioning.IdentifierRedirect
+        qs = cls.select()
+        if from_:
+            from_identifier, from_value = from_.split(':')
+            qs = qs.where(cls.from_identifier == from_identifier,
+                          cls.from_value == from_value)
+        if to:
+            to_identifier, to_value = to.split(':')
+            qs = qs.where(cls.to_identifier == to_identifier,
+                          cls.to_value == to_value)
+        return self.collection(qs.serialize())
+
+
 @app.route('/openapi', methods=['GET'])
 def openapi():
     return dumps(app._schema)

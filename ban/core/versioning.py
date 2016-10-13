@@ -266,6 +266,17 @@ class Diff(db.Model):
 
 
 class IdentifierRedirect(db.Model):
+
+    __openapi__ = """
+        properties:
+            from:
+                type: string
+                description: identifier source of the redirect
+            to:
+                type: string
+                description: identifier destination of the redirect
+        """
+
     model_name = db.CharField(max_length=64)
     from_identifier = db.CharField(max_length=64)
     from_value = db.CharField(max_length=255)
@@ -320,6 +331,12 @@ class IdentifierRedirect(db.Model):
             cls.to_identifier == from_identifier,
             cls.to_value == from_value,
             cls.model_name == model_name).execute()
+
+    def serialize(self, *args):
+        return {
+            'from': '{}:{}'.format(self.from_identifier, self.from_value),
+            'to': '{}:{}'.format(self.to_identifier, self.to_value),
+        }
 
 
 class Flag(db.Model):
