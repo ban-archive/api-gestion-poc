@@ -140,14 +140,6 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             self.lock_version()
 
 
-class SelectQuery(db.SelectQuery):
-
-    @peewee.returns_clone
-    def serialize(self):
-        self._serializer = lambda inst: inst.serialize()
-        super().serialize()
-
-
 class Version(db.Model):
 
     __openapi__ = """
@@ -168,7 +160,6 @@ class Version(db.Model):
     period = db.DateRangeField()
 
     class Meta:
-        manager = SelectQuery
         indexes = (
             (('model_name', 'model_pk', 'sequential'), True),
         )
@@ -251,7 +242,6 @@ class Diff(db.Model):
 
     class Meta:
         validate_backrefs = False
-        manager = SelectQuery
         order_by = ('pk', )
 
     def save(self, *args, **kwargs):
@@ -349,9 +339,6 @@ class Flag(db.Model):
     client = db.ForeignKeyField(Client)
     session = db.ForeignKeyField(Session)
     created_at = db.DateTimeField()
-
-    class Meta:
-        manager = SelectQuery
 
     def save(self, *args, **kwargs):
         if not self.created_at:

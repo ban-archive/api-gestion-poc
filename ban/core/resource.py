@@ -10,14 +10,6 @@ from .validators import ResourceValidator
 from .exceptions import RedirectError, MultipleRedirectsError
 
 
-class SelectQuery(db.SelectQuery):
-
-    @peewee.returns_clone
-    def serialize(self, mask=None):
-        self._serializer = lambda inst: inst.serialize(mask)
-        super().serialize()
-
-
 class BaseResource(peewee.BaseModel):
 
     def include_field_for_collection(cls, name):
@@ -67,7 +59,6 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     id = db.CharField(max_length=50, unique=True, null=False)
 
     class Meta:
-        manager = SelectQuery
         validator = ResourceValidator
 
     @classmethod
