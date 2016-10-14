@@ -28,8 +28,9 @@ Install developpement tools
     pip install ipython ipdb
 
 
-Create a psql database
+Create a psql user & database
 
+    sudo -u postgres createuser youruser
     sudo -u postgres createdb ban -O youruser
 
 Add postgis and hstore extensions
