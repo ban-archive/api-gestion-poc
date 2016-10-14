@@ -276,7 +276,7 @@ def test_old_insee_return_an_error_with_new_identifier(session):
                                        municipality='insee:12345',
                                        fantoir='123456789')
     assert 'municipality' in validator.errors
-    assert '54321' in validator.errors['municipality']
+    assert municipality.id in validator.errors['municipality']
 
 
 def test_can_create_street_with_empty_laposte_id(session):

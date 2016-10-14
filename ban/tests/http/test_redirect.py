@@ -1,60 +1,75 @@
 
-from ban.core.versioning import IdentifierRedirect
+from ban.core.versioning import Redirect
 from .utils import authorize
+from .. import factories
 
 
 def test_cannot_create_redirect_if_not_authorized(client):
-    resp = client.put('/redirect/municipality/insee:12345/insee:54321')
+    factories.MunicipalityFactory(insee='54321')
+    resp = client.put('/municipality/insee:54321/redirects/insee:12345')
     assert resp.status_code == 401
-    assert not IdentifierRedirect.select().count()
+    assert not Redirect.select().count()
 
 
 @authorize
-def test_can_create_redirect(client):
-    resp = client.put('/redirect/municipality/insee:12345/insee:54321')
+def test_can_create_redirect_with_id(client):
+    municipality = factories.MunicipalityFactory(insee='54321')
+    resp = client.put('/municipality/{}/redirects/insee:12345'.format(
+                      municipality.id))
     assert resp.status_code == 201
-    assert IdentifierRedirect.select().count()
-    redirect = IdentifierRedirect.first()
-    assert redirect.from_identifier == 'insee'
-    assert redirect.from_value == '12345'
-    assert redirect.to_identifier == 'insee'
-    assert redirect.to_value == '54321'
+    assert Redirect.select().count()
+    redirect = Redirect.first()
+    assert redirect.identifier == 'insee'
+    assert redirect.value == '12345'
+    assert redirect.to == municipality.id
+
+
+@authorize
+def test_can_create_redirect_with_other_identifier(client):
+    municipality = factories.MunicipalityFactory(insee='54321')
+    resp = client.put('/municipality/insee:54321/redirects/insee:12345')
+    assert resp.status_code == 201
+    assert Redirect.select().count()
+    redirect = Redirect.first()
+    assert redirect.identifier == 'insee'
+    assert redirect.value == '12345'
+    assert redirect.to == municipality.id
 
 
 @authorize
 def test_can_delete_redirect(client):
-    IdentifierRedirect.create(from_identifier='insee', from_value='12345',
-                              to_identifier='insee', to_value='54321',
-                              model_name='Municipality')
-    assert IdentifierRedirect.select().count()
-    resp = client.delete('/redirect/municipality/insee:12345/insee:54321')
+    municipality = factories.MunicipalityFactory(insee='54321')
+    Redirect.add(identifier='insee', value='12345', instance=municipality)
+    assert Redirect.select().count()
+    resp = client.delete('/municipality/{}/redirects/insee:12345'.format(
+                         municipality.id))
     assert resp.status_code == 204
-    assert not IdentifierRedirect.select().count()
+    assert not Redirect.select().count()
 
 
 @authorize
-def test_can_list_redirects_by_source(client):
-    IdentifierRedirect.create(from_identifier='insee', from_value='12345',
-                              to_identifier='insee', to_value='54321',
-                              model_name='Municipality')
-    assert IdentifierRedirect.select().count()
-    resp = client.get('/redirect/municipality/?from=insee:12345')
-    assert resp.status_code == 200
-    assert resp.json['collection'] == [{
-        'from': 'insee:12345',
-        'to': 'insee:54321',
-    }]
+def test_can_delete_redirect_with_other_identifier(client):
+    municipality = factories.MunicipalityFactory(insee='54321')
+    Redirect.add(identifier='insee', value='12345', instance=municipality)
+    assert Redirect.select().count()
+    resp = client.delete('/municipality/insee:54321/redirects/insee:12345')
+    assert resp.status_code == 204
+    assert not Redirect.select().count()
 
 
 @authorize
-def test_can_list_redirects_by_destination(client):
-    IdentifierRedirect.create(from_identifier='insee', from_value='12345',
-                              to_identifier='insee', to_value='54321',
-                              model_name='Municipality')
-    assert IdentifierRedirect.select().count()
-    resp = client.get('/redirect/municipality/?to=insee:54321')
+def test_can_list_redirects(client):
+    municipality = factories.MunicipalityFactory(insee='54321')
+    Redirect.add(identifier='insee', value='12345', instance=municipality)
+    resp = client.get('/municipality/insee:54321/redirects')
     assert resp.status_code == 200
-    assert resp.json['collection'] == [{
-        'from': 'insee:12345',
-        'to': 'insee:54321',
-    }]
+    assert resp.json['collection'] == ['insee:12345']
+
+
+@authorize
+def test_invalid_identifier_should_raise_error(client):
+    municipality = factories.MunicipalityFactory(insee='54321')
+    resp = client.put('/municipality/{}/redirects/inse:12345'.format(
+                      municipality.id))
+    assert resp.status_code == 422
+    assert resp.json['error'] == 'Invalid identifier: inse'

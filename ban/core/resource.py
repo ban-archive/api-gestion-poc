@@ -141,8 +141,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
             return cls.get(getattr(cls, identifier) == id)
         except cls.DoesNotExist:
             # Is it an old identifier?
-            from .versioning import IdentifierRedirect
-            redirects = IdentifierRedirect.follow(cls.__name__, identifier, id)
+            from .versioning import Redirect
+            redirects = Redirect.follow(cls.__name__, identifier, id)
             if redirects:
                 if len(redirects) > 1:
                     raise MultipleRedirectsError(identifier, id, redirects)

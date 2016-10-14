@@ -3,7 +3,7 @@ from datetime import datetime
 
 from ban.core import models
 from ban.core.encoder import dumps
-from ban.core.versioning import Version, IdentifierRedirect
+from ban.core.versioning import Version, Redirect
 
 from ..factories import MunicipalityFactory, PostCodeFactory, GroupFactory
 from .utils import authorize
@@ -166,20 +166,20 @@ def test_old_insee_should_redirect(get):
     # Request with old insee.
     resp = get('/municipality/insee:12345')
     assert resp.status_code == 302
-    assert resp.headers['Location'] == 'http://localhost/municipality/insee:54321'  # noqa
+    assert resp.headers['Location'] == 'http://localhost/municipality/{}'.format(municipality.id)  # noqa
 
 
 @authorize
 def test_multiple_redirects_should_return_300(get):
-    MunicipalityFactory(insee="23456")
-    MunicipalityFactory(insee="34567")
+    municipality1 = MunicipalityFactory(insee="23456")
+    municipality2 = MunicipalityFactory(insee="34567")
     # Let's say this municipality has been split.
-    IdentifierRedirect.add('Municipality', 'insee', '12345', 'insee', '23456')
-    IdentifierRedirect.add('Municipality', 'insee', '12345', 'insee', '34567')
+    Redirect.add(municipality1, 'insee', '12345')
+    Redirect.add(municipality2, 'insee', '12345')
     resp = get('/municipality/insee:12345')
     assert resp.status_code == 300
-    assert '/municipality/insee:23456' in resp.headers['Link']
-    assert '/municipality/insee:34567' in resp.headers['Link']
+    assert '/municipality/{}'.format(municipality1.id) in resp.headers['Link']
+    assert '/municipality/{}'.format(municipality2.id) in resp.headers['Link']
 
 
 @authorize

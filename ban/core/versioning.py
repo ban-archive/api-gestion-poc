@@ -139,6 +139,11 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             self.store_version()
             self.lock_version()
 
+    def delete_instance(self, *args, **kwargs):
+        with self._meta.database.atomic():
+            Redirect.clear(self)
+            return super().delete_instance(*args, **kwargs)
+
 
 class Version(db.Model):
 
@@ -250,7 +255,7 @@ class Diff(db.Model):
             new = self.new.data if self.new else {}
             self.diff = make_diff(old, new)
         super().save(*args, **kwargs)
-        IdentifierRedirect.from_diff(self)
+        Redirect.from_diff(self)
 
     def serialize(self, *args):
         version = self.new or self.old
@@ -265,47 +270,51 @@ class Diff(db.Model):
         }
 
 
-class IdentifierRedirect(db.Model):
-
-    __openapi__ = """
-        properties:
-            from:
-                type: string
-                description: identifier source of the redirect
-            to:
-                type: string
-                description: identifier destination of the redirect
-        """
+class Redirect(db.Model):
 
     model_name = db.CharField(max_length=64)
-    from_identifier = db.CharField(max_length=64)
-    from_value = db.CharField(max_length=255)
-    to_identifier = db.CharField(max_length=64)
-    to_value = db.CharField(max_length=255)
+    identifier = db.CharField(max_length=64)
+    value = db.CharField(max_length=255)
+    to = db.CharField(max_length=255)
+
+    class Meta:
+        primary_key = peewee.CompositeKey('model_name', 'identifier', 'value',
+                                          'to')
 
     @classmethod
-    def add(cls, model_name, from_identifier, from_value, to_identifier,
-            to_value):
+    def add(cls, instance, identifier, value):
+        if isinstance(instance, tuple):
+            # Optim so we don't need to request db when creating a redirect
+            # from a diff.
+            model_name, to = instance
+        else:
+            model_name = instance.__class__.__name__
+            to = instance.id
+            if identifier not in instance.__class__.identifiers + ['id', 'pk']:
+                raise ValueError('Invalid identifier: {}'.format(identifier))
+            if getattr(instance, identifier) == value:
+                raise ValueError('Redirect cannot point to itself')
         cls.get_or_create(model_name=model_name,
-                          from_identifier=from_identifier,
-                          to_identifier=to_identifier,
-                          from_value=str(from_value), to_value=str(to_value))
-        cls.refresh(model_name, from_identifier, from_value, to_identifier,
-                    to_value)
+                          identifier=identifier,
+                          value=str(value), to=to)
+        cls.propagate(model_name, identifier, value, to)
 
     @classmethod
-    def remove(cls, model_name, from_identifier, from_value, to_identifier,
-               to_value):
-        cls.delete().where(cls.model_name == model_name,
-                           cls.from_identifier == from_identifier,
-                           cls.to_identifier == to_identifier,
-                           cls.from_value == str(from_value),
-                           cls.to_value == str(to_value)).execute()
+    def remove(cls, instance, identifier, value):
+        cls.delete().where(cls.model_name == instance.__class__.__name__,
+                           cls.identifier == identifier,
+                           cls.value == str(value),
+                           cls.to == instance.id).execute()
+
+    @classmethod
+    def clear(cls, instance):
+        cls.delete().where(cls.model_name == instance.__class__.__name__,
+                           cls.to == instance.id).execute()
 
     @classmethod
     def from_diff(cls, diff):
         if not diff.new or not diff.old:
-            # Only update makes sense for us, no creation nor deletion.
+            # Only update makes sense for us, not creation nor deletion.
             return
         model = diff.new.model
         identifiers = [i for i in model.identifiers if i in diff.diff]
@@ -314,29 +323,28 @@ class IdentifierRedirect(db.Model):
             new = diff.diff[identifier]['new']
             if not old or not new:
                 continue
-            cls.add(model.__name__, identifier, old, identifier, new)
+            cls.add((model.__name__, diff.new.data['id']), identifier, old)
 
     @classmethod
-    def follow(cls, model_name, from_identifier, from_value):
+    def follow(cls, model_name, identifier, value):
         rows = cls.select().where(cls.model_name == model_name,
-                                  cls.from_identifier == from_identifier,
-                                  cls.from_value == str(from_value))
-        return [(row.to_identifier, row.to_value) for row in rows]
+                                  cls.identifier == identifier,
+                                  cls.value == str(value))
+        return [row.to for row in rows]
 
     @classmethod
-    def refresh(cls, model_name, from_identifier, from_value, to_identifier,
-                to_value):
+    def propagate(cls, model_name, identifier, value, to):
         """An identifier was a target and it becomes itself a redirect."""
-        cls.update(to_identifier=to_identifier, to_value=to_value).where(
-            cls.to_identifier == from_identifier,
-            cls.to_value == from_value,
-            cls.model_name == model_name).execute()
+        model = BaseVersioned.registry.get(model_name)
+        if model:
+            old = model.first(getattr(model, identifier) == value)
+            if old:
+                cls.update(to=to).where(
+                    cls.to == old.id,
+                    cls.model_name == model_name).execute()
 
     def serialize(self, *args):
-        return {
-            'from': '{}:{}'.format(self.from_identifier, self.from_value),
-            'to': '{}:{}'.format(self.to_identifier, self.to_value),
-        }
+        return '{}:{}'.format(self.identifier, self.value)
 
 
 class Flag(db.Model):

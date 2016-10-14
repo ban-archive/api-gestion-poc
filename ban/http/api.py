@@ -71,14 +71,12 @@ class ModelEndpoint(CollectionEndpoint):
             abort(404, message='Instance for "{}" does not exist.'
                   .format(identifier))
         except RedirectError as e:
-            identifier = '{}:{}'.format(e.redirect[0], e.redirect[1])
-            headers = {'Location': url_for(endpoint, identifier=identifier)}
+            headers = {'Location': url_for(endpoint, identifier=e.redirect)}
             abort(302, headers=headers)
         except MultipleRedirectsError as e:
             headers = {}
             for redirect in e.redirects:
-                identifier = '{}:{}'.format(redirect[0], redirect[1])
-                link(headers, url_for(endpoint, identifier=identifier),
+                link(headers, url_for(endpoint, identifier=redirect),
                      'alternate')
             abort(300, headers=headers)
         return instance
@@ -383,6 +381,54 @@ class VersionedModelEnpoint(ModelEndpoint):
         else:
             abort(400, message='Body should contain a "status" boolean key')
 
+    @auth.require_oauth()
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
+    def put_delete_redirects(self, identifier, old):
+        """Create a new redirect to this resource.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: old
+              in: path
+              type: string
+              required: true
+              description: old identifier.
+        responses:
+            204:
+                description: redirect was successful.
+            201:
+                description: redirect was created.
+            422:
+                description: error while creating the redirect.
+        """
+        instance = self.get_object(identifier)
+        old_identifier, old_value = old.split(':')
+        if request.method == 'PUT':
+            try:
+                versioning.Redirect.add(instance, old_identifier, old_value)
+            except ValueError as e:
+                abort(422, error=str(e))
+            return '', 201
+        versioning.Redirect.remove(instance, old_identifier, old_value)
+        return '', 204
+
+    @auth.require_oauth()
+    @app.jsonify
+    @app.endpoint('/<identifier>/redirects', methods=['GET'])
+    def get_redirects(self, identifier):
+        """Get a collection of Redirect pointing to this resource.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: A list of redirects.
+        """
+        instance = self.get_object(identifier)
+        cls = versioning.Redirect
+        qs = cls.select().where(cls.to == instance.id)
+        return self.collection(qs.serialize())
+
 
 @app.resource
 class Municipality(VersionedModelEnpoint):
@@ -512,84 +558,6 @@ class DiffEndpoint(CollectionEndpoint):
             pass
         else:
             qs = qs.where(versioning.Diff.pk > increment)
-        return self.collection(qs.serialize())
-
-
-@app.resource
-class IdentifierRedirectEndpoint(CollectionEndpoint):
-    endpoint = '/redirect'
-    model = versioning.IdentifierRedirect
-
-    @auth.require_oauth()
-    @app.endpoint('/<resource>/<from>/<to>', methods=['PUT', 'DELETE'])
-    def put_delete_resource(self, **kwargs):
-        """Create a new redirect from an identifier to another.
-
-        parameters:
-            - name: from
-              in: path
-              type: string
-              required: true
-              description: old identifier.
-            - name: to
-              in: path
-              type: string
-              required: true
-              description: new identifier.
-        responses:
-            204:
-                description: action was successful.
-        """
-        resource = kwargs['resource'].title()
-        from_ = kwargs['from']
-        to = kwargs['to']
-        from_identifier, from_value = from_.split(':')
-        to_identifier, to_value = to.split(':')
-        if request.method == 'PUT':
-            versioning.IdentifierRedirect.add(resource, from_identifier,
-                                              from_value, to_identifier,
-                                              to_value)
-            return '', 201
-        versioning.IdentifierRedirect.remove(resource, from_identifier,
-                                             from_value, to_identifier,
-                                             to_value)
-        return '', 204
-
-    @auth.require_oauth()
-    @app.jsonify
-    @app.endpoint('/<resource>/', methods=['GET'])
-    def get_collection(self, **kwargs):
-        """Get a collection of IdentifierRedirect.
-
-        parameters:
-            - name: from
-              in: query
-              type: string
-              required: false
-              description: filter by the redirect source.
-            - name: to
-              in: query
-              type: string
-              required: false
-              description: filter by the redirect destination.
-        responses:
-            200:
-                description: A list of redirects.
-        """
-        from_ = request.args.get('from')
-        to = request.args.get('to')
-        if not from_ and not to:
-            abort('400', message='Either "from" or "to" must be passed.')
-        cls = versioning.IdentifierRedirect
-        qs = cls.select()
-        if from_:
-            from_identifier, from_value = from_.split(':')
-            qs = qs.where(cls.from_identifier == from_identifier,
-                          cls.from_value == from_value)
-        if to:
-            to_identifier, to_value = to.split(':')
-            qs = qs.where(cls.to_identifier == to_identifier,
-                          cls.to_value == to_value)
         return self.collection(qs.serialize())
 
 
