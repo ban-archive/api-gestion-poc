@@ -36,4 +36,7 @@ RESERVED = ":/?#[]@!$&'()*+,;="
 
 def link(headers, target, rel):
     headers.setdefault('Link', '')
-    headers['Link'] += ', <' + quote(target, safe=RESERVED) + '>; rel=' + rel
+    link = '<' + quote(target, safe=RESERVED) + '>; rel=' + rel
+    if headers['Link']:
+        link = ', ' + link
+    headers['Link'] += link
