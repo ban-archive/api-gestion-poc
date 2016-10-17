@@ -9,6 +9,8 @@ from playhouse.fields import PasswordField as PWDField
 from postgis import Point
 from psycopg2.extras import DateTimeTZRange
 
+from ban.core.exceptions import ValidationError
+
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
            'BooleanField', 'BinaryJSONField', 'PostCodeField', 'FantoirField',
@@ -210,7 +212,7 @@ class PostCodeField(CharField):
     def coerce(self, value):
         value = str(value)
         if not len(value) == 5 or not value.isdigit():
-            raise ValueError('Invalid postcode "{}"'.format(value))
+            raise ValidationError('Invalid postcode: "{}"'.format(value))
         return value
 
 
@@ -225,8 +227,9 @@ class FantoirField(CharField):
         if len(value) == 10:
             value = value[:9]
         if not len(value) == 9:
-            raise ValueError('FANTOIR must be municipality INSEE '
-                             '+ 4 first chars of FANTOIR "{}"'.format(value))
+            raise ValidationError('FANTOIR must be municipality INSEE + 4 '
+                                  'first chars of FANTOIR, '
+                                  'got "{}" instead'.format(value))
         return value
 
 

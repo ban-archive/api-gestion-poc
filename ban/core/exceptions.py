@@ -1,3 +1,7 @@
+class ValidationError(ValueError):
+    ...
+
+
 class RedirectError(ValueError):
 
     def __init__(self, identifier, value, redirect):
