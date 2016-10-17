@@ -273,43 +273,43 @@ class Diff(db.Model):
 class Redirect(db.Model):
 
     model_name = db.CharField(max_length=64)
+    model_id = db.CharField(max_length=255)
     identifier = db.CharField(max_length=64)
     value = db.CharField(max_length=255)
-    to = db.CharField(max_length=255)
 
     class Meta:
         primary_key = peewee.CompositeKey('model_name', 'identifier', 'value',
-                                          'to')
+                                          'model_id')
 
     @classmethod
     def add(cls, instance, identifier, value):
         if isinstance(instance, tuple):
             # Optim so we don't need to request db when creating a redirect
             # from a diff.
-            model_name, to = instance
+            model_name, model_id = instance
         else:
             model_name = instance.resource
-            to = instance.id
+            model_id = instance.id
             if identifier not in instance.__class__.identifiers + ['id', 'pk']:
                 raise ValueError('Invalid identifier: {}'.format(identifier))
             if getattr(instance, identifier) == value:
                 raise ValueError('Redirect cannot point to itself')
         cls.get_or_create(model_name=model_name,
                           identifier=identifier,
-                          value=str(value), to=to)
-        cls.propagate(model_name, identifier, value, to)
+                          value=str(value), model_id=model_id)
+        cls.propagate(model_name, identifier, value, model_id)
 
     @classmethod
     def remove(cls, instance, identifier, value):
         cls.delete().where(cls.model_name == instance.resource,
                            cls.identifier == identifier,
                            cls.value == str(value),
-                           cls.to == instance.id).execute()
+                           cls.model_id == instance.id).execute()
 
     @classmethod
     def clear(cls, instance):
         cls.delete().where(cls.model_name == instance.resource,
-                           cls.to == instance.id).execute()
+                           cls.model_id == instance.id).execute()
 
     @classmethod
     def from_diff(cls, diff):
@@ -328,20 +328,20 @@ class Redirect(db.Model):
 
     @classmethod
     def follow(cls, model_name, identifier, value):
-        rows = cls.select(cls.to).where(cls.model_name == model_name.lower(),
+        rows = cls.select(cls.model_id).where(cls.model_name == model_name.lower(),
                                         cls.identifier == identifier,
                                         cls.value == str(value))
-        return [row.to for row in rows]
+        return [row.model_id for row in rows]
 
     @classmethod
-    def propagate(cls, model_name, identifier, value, to):
+    def propagate(cls, model_name, identifier, value, model_id):
         """An identifier was a target and it becomes itself a redirect."""
         model = BaseVersioned.registry.get(model_name)
         if model:
             old = model.first(getattr(model, identifier) == value)
             if old:
-                cls.update(to=to).where(
-                    cls.to == old.id,
+                cls.update(model_id=model_id).where(
+                    cls.model_id == old.id,
                     cls.model_name == model_name).execute()
 
     def serialize(self, *args):

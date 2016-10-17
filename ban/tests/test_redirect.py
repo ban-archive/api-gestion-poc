@@ -29,7 +29,7 @@ def test_resource_update_creates_redirect_if_some_identifier_changed():
     assert redirect.model_name == 'municipality'
     assert redirect.identifier == 'insee'
     assert redirect.value == '12345'
-    assert redirect.to == municipality.id
+    assert redirect.model_id == municipality.id
 
 
 def test_follow_returns_new_value():

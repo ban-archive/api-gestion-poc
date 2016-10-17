@@ -429,7 +429,7 @@ class VersionedModelEnpoint(ModelEndpoint):
         """
         instance = self.get_object(identifier)
         cls = versioning.Redirect
-        qs = cls.select().where(cls.to == instance.id)
+        qs = cls.select().where(cls.model_id == instance.id)
         return self.collection(qs.serialize())
 
 

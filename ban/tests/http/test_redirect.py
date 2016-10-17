@@ -21,7 +21,7 @@ def test_can_create_redirect_with_id(client):
     redirect = Redirect.first()
     assert redirect.identifier == 'insee'
     assert redirect.value == '12345'
-    assert redirect.to == municipality.id
+    assert redirect.model_id == municipality.id
 
 
 @authorize
@@ -33,7 +33,7 @@ def test_can_create_redirect_with_other_identifier(client):
     redirect = Redirect.first()
     assert redirect.identifier == 'insee'
     assert redirect.value == '12345'
-    assert redirect.to == municipality.id
+    assert redirect.model_id == municipality.id
 
 
 @authorize
