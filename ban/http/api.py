@@ -411,8 +411,9 @@ class VersionedModelEnpoint(ModelEndpoint):
             except ValueError as e:
                 abort(422, error=str(e))
             return '', 201
-        versioning.Redirect.remove(instance, old_identifier, old_value)
-        return '', 204
+        elif request.method == 'DELETE':
+            versioning.Redirect.remove(instance, old_identifier, old_value)
+            return '', 204
 
     @auth.require_oauth()
     @app.jsonify
