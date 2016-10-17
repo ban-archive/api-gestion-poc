@@ -37,7 +37,7 @@ class BaseVersioned(peewee.BaseModel):
 
     def __new__(mcs, name, bases, attrs, **kwargs):
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
-        BaseVersioned.registry[name] = cls
+        BaseVersioned.registry[name.lower()] = cls
         return cls
 
 
@@ -65,7 +65,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
 
     def store_version(self):
         new = Version.create(
-            model_name=self.__class__.__name__,
+            model_name=self.resource,
             model_pk=self.pk,
             sequential=self.version,
             data=self.as_version,
@@ -81,7 +81,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
     @property
     def versions(self):
         return Version.select().where(
-            Version.model_name == self.__class__.__name__,
+            Version.model_name == self.resource,
             Version.model_pk == self.pk).order_by(Version.sequential)
 
     def load_version(self, ref=None):
@@ -288,7 +288,7 @@ class Redirect(db.Model):
             # from a diff.
             model_name, to = instance
         else:
-            model_name = instance.__class__.__name__
+            model_name = instance.resource
             to = instance.id
             if identifier not in instance.__class__.identifiers + ['id', 'pk']:
                 raise ValueError('Invalid identifier: {}'.format(identifier))
@@ -301,14 +301,14 @@ class Redirect(db.Model):
 
     @classmethod
     def remove(cls, instance, identifier, value):
-        cls.delete().where(cls.model_name == instance.__class__.__name__,
+        cls.delete().where(cls.model_name == instance.resource,
                            cls.identifier == identifier,
                            cls.value == str(value),
                            cls.to == instance.id).execute()
 
     @classmethod
     def clear(cls, instance):
-        cls.delete().where(cls.model_name == instance.__class__.__name__,
+        cls.delete().where(cls.model_name == instance.resource,
                            cls.to == instance.id).execute()
 
     @classmethod
@@ -323,11 +323,12 @@ class Redirect(db.Model):
             new = diff.diff[identifier]['new']
             if not old or not new:
                 continue
-            cls.add((model.__name__, diff.new.data['id']), identifier, old)
+            cls.add((model.__name__.lower(), diff.new.data['id']),
+                    identifier, old)
 
     @classmethod
     def follow(cls, model_name, identifier, value):
-        rows = cls.select(cls.to).where(cls.model_name == model_name,
+        rows = cls.select(cls.to).where(cls.model_name == model_name.lower(),
                                         cls.identifier == identifier,
                                         cls.value == str(value))
         return [row.to for row in rows]

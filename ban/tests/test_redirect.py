@@ -26,7 +26,7 @@ def test_resource_update_creates_redirect_if_some_identifier_changed():
     municipality.save()
     assert Redirect.select().count() == 1
     redirect = Redirect.first()
-    assert redirect.model_name == 'Municipality'
+    assert redirect.model_name == 'municipality'
     assert redirect.identifier == 'insee'
     assert redirect.value == '12345'
     assert redirect.to == municipality.id
@@ -38,7 +38,7 @@ def test_follow_returns_new_value():
     municipality.increment_version()
     municipality.save()
     assert Redirect.select().count() == 1
-    assert Redirect.follow('Municipality', 'insee', '12345') == [
+    assert Redirect.follow('municipality', 'insee', '12345') == [
         municipality.id]
 
 
@@ -48,16 +48,16 @@ def test_resource_update_should_propagate_if_target_is_becomming_source():
     municipality.increment_version()
     municipality.save()
     assert Redirect.select().count() == 1
-    assert Redirect.follow('Municipality', 'insee', '12345') == [
+    assert Redirect.follow('municipality', 'insee', '12345') == [
         municipality.id]
     municipality2 = factories.MunicipalityFactory(insee='12321')
     # Should also update '12345'
     Redirect.add(municipality2, 'insee', '54321')
     municipality.delete_instance()
     assert Redirect.select().count() == 2
-    assert Redirect.follow('Municipality', 'insee', '54321') == [
+    assert Redirect.follow('municipality', 'insee', '54321') == [
         municipality2.id]
-    assert Redirect.follow('Municipality', 'insee', '12345') == [
+    assert Redirect.follow('municipality', 'insee', '12345') == [
         municipality2.id]
 
 
@@ -95,7 +95,7 @@ def test_can_point_from_an_identifier_to_another():
     municipality = factories.MunicipalityFactory()
     Redirect.add(municipality, 'insee', '12345')
     assert Redirect.select().count() == 1
-    assert Redirect.follow('Municipality', 'insee', '12345') == [
+    assert Redirect.follow('municipality', 'insee', '12345') == [
         municipality.id]
 
 
