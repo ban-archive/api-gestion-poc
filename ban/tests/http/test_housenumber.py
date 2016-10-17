@@ -302,6 +302,15 @@ def test_create_housenumber_with_postcode_id(client):
 
 
 @authorize
+def test_empty_body_should_not_crash(client):
+    housenumber = HouseNumberFactory(number="22", ordinal="B")
+    assert models.HouseNumber.select().count() == 1
+    uri = '/housenumber/{}'.format(housenumber.id)
+    resp = client.put(uri, data=None)
+    assert resp.status_code == 422
+
+
+@authorize
 def test_replace_housenumber(client):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     assert models.HouseNumber.select().count() == 1

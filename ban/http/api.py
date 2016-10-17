@@ -85,7 +85,7 @@ class ModelEndpoint(CollectionEndpoint):
 
     def save_object(self, instance=None, update=False):
         validator = self.model.validator(update=update, instance=instance,
-                                         **request.json)
+                                         **request.json or {})
         if validator.errors:
             abort(422, errors=validator.errors)
         try:
