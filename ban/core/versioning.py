@@ -265,7 +265,7 @@ class Diff(db.Model):
             'new': self.new.data if self.new else None,
             'diff': self.diff,
             'resource': version.model_name.lower(),
-            'resource_pk': version.model_pk,
+            'resource_id': version.data['id'],
             'created_at': self.created_at
         }
 

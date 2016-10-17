@@ -28,7 +28,7 @@ def test_diff_endpoint(client):
     assert street_create_diff['increment'] == diffs[0]['increment'] + 1
     assert street_create_diff['old'] is None
     assert street_create_diff['new']['id'] == street.id
-    assert street_create_diff['resource_pk'] == street.pk
+    assert street_create_diff['resource_id'] == street.id
     street_update_diff = diffs[-1]
     assert street_update_diff['old']['id'] == street.id
     assert street_update_diff['new']['id'] == street.id
