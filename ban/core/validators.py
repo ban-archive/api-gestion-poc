@@ -2,7 +2,7 @@ import peewee
 
 from ban import db
 from ban.utils import make_diff
-from .exceptions import RedirectError, MultipleRedirectsError
+from .exceptions import RedirectError, MultipleRedirectsError, ValidationError
 
 
 class ResourceValidator:
@@ -44,6 +44,10 @@ class ResourceValidator:
             value = field.coerce(value)
         except (RedirectError, MultipleRedirectsError) as e:
             raise ValueError(e)
+        except ValidationError:
+            # Those are error messages created by us, we want them instead of
+            # the default coerce one.
+            raise
         except (ValueError, TypeError):
             raise ValueError('Unable to coerce value "{}"'.format(value))
         except peewee.DoesNotExist:
