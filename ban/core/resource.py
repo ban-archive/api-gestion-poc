@@ -7,14 +7,7 @@ from postgis import Point
 from ban import db
 
 from .validators import ResourceValidator
-
-
-class SelectQuery(db.SelectQuery):
-
-    @peewee.returns_clone
-    def serialize(self, mask=None):
-        self._serializer = lambda inst: inst.serialize(mask)
-        super().serialize()
+from .exceptions import RedirectError, MultipleRedirectsError
 
 
 class BaseResource(peewee.BaseModel):
@@ -66,7 +59,6 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     id = db.CharField(max_length=50, unique=True, null=False)
 
     class Meta:
-        manager = SelectQuery
         validator = ResourceValidator
 
     @classmethod
@@ -149,9 +141,10 @@ class ResourceModel(db.Model, metaclass=BaseResource):
             return cls.get(getattr(cls, identifier) == id)
         except cls.DoesNotExist:
             # Is it an old identifier?
-            from .versioning import IdentifierRedirect
-            new = IdentifierRedirect.follow(cls, identifier, id)
-            if new:
-                return cls.get(getattr(cls, identifier) == new)
-            else:
-                raise
+            from .versioning import Redirect
+            redirects = Redirect.follow(cls.__name__, identifier, id)
+            if redirects:
+                if len(redirects) > 1:
+                    raise MultipleRedirectsError(identifier, id, redirects)
+                raise RedirectError(identifier, id, redirects[0])
+            raise

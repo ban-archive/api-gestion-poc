@@ -8,6 +8,7 @@ from ban.auth import models as amodels
 from ban.commands.bal import bal
 from ban.core import models, versioning, context
 from ban.core.encoder import dumps
+from ban.core.exceptions import RedirectError, MultipleRedirectsError
 from ban.utils import parse_mask
 from ban.http.auth import auth
 from ban.http.wsgi import app
@@ -62,12 +63,24 @@ class ModelEndpoint(CollectionEndpoint):
     order_by = None
 
     def get_object(self, identifier):
+        endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         try:
             instance = self.model.coerce(identifier)
         except self.model.DoesNotExist:
             # TODO Flask changes the 404 message, which we don't want.
             abort(404, message='Instance for "{}" does not exist.'
                   .format(identifier))
+        except RedirectError as e:
+            headers = {'Location': url_for(endpoint, identifier=e.redirect)}
+            abort(302, headers=headers)
+        except MultipleRedirectsError as e:
+            headers = {}
+            choices = []
+            for redirect in e.redirects:
+                uri = url_for(endpoint, identifier=redirect)
+                link(headers, uri, 'alternate')
+                choices.append(uri)
+            abort(300, headers=headers, choices=choices)
         return instance
 
     def save_object(self, instance=None, update=False):
@@ -369,6 +382,55 @@ class VersionedModelEnpoint(ModelEndpoint):
             version.unflag()
         else:
             abort(400, message='Body should contain a "status" boolean key')
+
+    @auth.require_oauth()
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
+    def put_delete_redirects(self, identifier, old):
+        """Create a new redirect to this resource.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: old
+              in: path
+              type: string
+              required: true
+              description: old identifier.
+        responses:
+            204:
+                description: redirect was successful.
+            201:
+                description: redirect was created.
+            422:
+                description: error while creating the redirect.
+        """
+        instance = self.get_object(identifier)
+        old_identifier, old_value = old.split(':')
+        if request.method == 'PUT':
+            try:
+                versioning.Redirect.add(instance, old_identifier, old_value)
+            except ValueError as e:
+                abort(422, error=str(e))
+            return '', 201
+        elif request.method == 'DELETE':
+            versioning.Redirect.remove(instance, old_identifier, old_value)
+            return '', 204
+
+    @auth.require_oauth()
+    @app.jsonify
+    @app.endpoint('/<identifier>/redirects', methods=['GET'])
+    def get_redirects(self, identifier):
+        """Get a collection of Redirect pointing to this resource.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: A list of redirects.
+        """
+        instance = self.get_object(identifier)
+        cls = versioning.Redirect
+        qs = cls.select().where(cls.model_id == instance.id)
+        return self.collection(qs.serialize())
 
 
 @app.resource

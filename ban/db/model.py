@@ -20,7 +20,9 @@ class SelectQuery(peewee.SelectQuery):
             wrapper._serializer = self._serializer
         return wrapper
 
-    def serialize(self, *args, **kwargs):
+    @peewee.returns_clone
+    def serialize(self, mask=None):
+        self._serializer = lambda inst: inst.serialize(mask)
         self._result_wrapper = SerializerQueryResultWrapper
 
     def _get_result_wrapper(self):

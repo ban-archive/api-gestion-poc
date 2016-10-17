@@ -264,7 +264,7 @@ def test_can_create_street_with_municipality_insee(session):
     assert street.municipality == municipality
 
 
-def test_can_create_street_with_municipality_old_insee(session):
+def test_old_insee_return_an_error_with_new_identifier(session):
     municipality = MunicipalityFactory(insee="12345")
     # This should create a redirect.
     municipality.insee = '54321'
@@ -275,10 +275,8 @@ def test_can_create_street_with_municipality_old_insee(session):
                                        kind=models.Group.WAY,
                                        municipality='insee:12345',
                                        fantoir='123456789')
-    assert not validator.errors
-    street = validator.save()
-    assert len(models.Group.select()) == 1
-    assert street.municipality == municipality
+    assert 'municipality' in validator.errors
+    assert municipality.id in validator.errors['municipality']
 
 
 def test_can_create_street_with_empty_laposte_id(session):
