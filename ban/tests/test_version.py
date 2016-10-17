@@ -187,4 +187,5 @@ def test_position_as_version():
         'version': 1,
         'center': {'coordinates': (-1.1111, 48.8888), 'type': 'Point'},
         'comment': None,
+        'laposte': None,
         'id': position.id}
