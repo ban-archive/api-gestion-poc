@@ -179,7 +179,9 @@ def test_multiple_redirects_should_return_300(get):
     resp = get('/municipality/insee:12345')
     assert resp.status_code == 300
     assert '/municipality/{}'.format(municipality1.id) in resp.headers['Link']
+    assert '/municipality/{}'.format(municipality1.id) in resp.json['choices']
     assert '/municipality/{}'.format(municipality2.id) in resp.headers['Link']
+    assert '/municipality/{}'.format(municipality2.id) in resp.json['choices']
 
 
 @authorize

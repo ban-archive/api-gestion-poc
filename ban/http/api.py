@@ -75,10 +75,12 @@ class ModelEndpoint(CollectionEndpoint):
             abort(302, headers=headers)
         except MultipleRedirectsError as e:
             headers = {}
+            choices = []
             for redirect in e.redirects:
-                link(headers, url_for(endpoint, identifier=redirect),
-                     'alternate')
-            abort(300, headers=headers)
+                uri = url_for(endpoint, identifier=redirect)
+                link(headers, uri, 'alternate')
+                choices.append(uri)
+            abort(300, headers=headers, choices=choices)
         return instance
 
     def save_object(self, instance=None, update=False):
