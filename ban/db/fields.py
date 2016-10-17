@@ -157,6 +157,11 @@ class IntegerField(peewee.IntegerField):
     __data_type__ = int
     __schema_type__ = 'integer'
 
+    def coerce(self, value):
+        if not value:
+            return None
+        return super().coerce(value)
+
 
 class HStoreField(postgres_ext.HStoreField):
     __data_type__ = dict
