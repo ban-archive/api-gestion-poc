@@ -49,12 +49,12 @@ class ResourceValidator:
             # the default coerce one.
             raise
         except (ValueError, TypeError):
-            raise ValueError('Unable to coerce value "{}"'.format(value))
+            raise ValueError('Unable to coerce value `{}`'.format(value))
         except peewee.DoesNotExist:
-            raise ValueError('No matching resource for "{}"'.format(value))
+            raise ValueError('No matching resource for `{}`'.format(value))
 
         if value and not isinstance(value, field.__data_type__):
-            raise ValueError('"{value}" is not of type "{type}".'.format(
+            raise ValueError('`{value}` is not of type `{type}`.'.format(
                 value=value, type=field.__data_type__
             ))
         checks = ['null', 'choices', 'min_length', 'max_length', 'unique']
@@ -73,18 +73,18 @@ class ResourceValidator:
     def validate_choices(self, field, value):
         choices = [choice[0] for choice in field.choices]
         if value and value not in choices:
-            raise ValueError('"{}" should be one of the following choices: {}'
+            raise ValueError('`{}` should be one of the following choices: {}'
                              .format(value, ','.join(choices)))
 
     def validate_min_length(self, field, value):
         if value and len(value) < field.min_length:
-            raise ValueError('"{}" should be minimum {} characters'.format(
+            raise ValueError('`{}` should be minimum {} characters'.format(
                 value, field.min_length
             ))
 
     def validate_max_length(self, field, value):
         if value and len(value) > field.max_length:
-            raise ValueError('"{}" should be maximum {} characters'.format(
+            raise ValueError('`{}` should be maximum {} characters'.format(
                 value, field.max_length
             ))
 
@@ -95,7 +95,7 @@ class ResourceValidator:
         if self.instance:
             qs = qs.where(self.model.pk != self.instance.pk)
         if qs.exists():
-            raise ValueError('"{}" already exists'.format(value))
+            raise ValueError('`{}` already exists'.format(value))
 
     def patch(self):
         for key, value in self.data.items():

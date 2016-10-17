@@ -198,21 +198,21 @@ def test_cannot_create_postcode_with_code_shorter_than_5_chars(session):
     municipality = MunicipalityFactory(insee='12345')
     validator = models.PostCode.validator(code="3131", name="Montbrun-Bocage",
                                           municipality=municipality)
-    assert validator.errors['code'] == 'Invalid postcode: "3131"'
+    assert validator.errors['code'] == 'Invalid postcode: `3131`'
 
 
 def test_cannot_create_postcode_with_code_bigger_than_5_chars(session):
     municipality = MunicipalityFactory(insee='12345')
     validator = models.PostCode.validator(code="313100", name="Montbrun",
                                           municipality=municipality)
-    assert validator.errors['code'] == 'Invalid postcode: "313100"'
+    assert validator.errors['code'] == 'Invalid postcode: `313100`'
 
 
 def test_cannot_create_postcode_with_code_non_digit(session):
     municipality = MunicipalityFactory(insee='12345')
     validator = models.PostCode.validator(code="2A000", name="Montbrun-Bocage",
                                           municipality=municipality)
-    assert validator.errors['code'] == 'Invalid postcode: "2A000"'
+    assert validator.errors['code'] == 'Invalid postcode: `2A000`'
 
 
 def test_can_create_street(session):
@@ -273,7 +273,7 @@ def test_cannot_create_group_with_fantoir_greater_than_9or10_digits(session):
                                        fantoir='123456789012')
     assert validator.errors['fantoir'] == ('FANTOIR must be municipality INSEE'
                                            ' + 4 first chars of FANTOIR, got '
-                                           '"123456789012" instead')
+                                           '`123456789012` instead')
 
 
 def test_can_create_street_with_municipality_insee(session):
@@ -333,7 +333,7 @@ def test_bad_foreign_key_gives_readable_message(session):
                                        municipality='insee:12345',
                                        fantoir='123456789')
     assert validator.errors['municipality'] == ('No matching resource for '
-                                                '"insee:12345"')
+                                                '`insee:12345`')
 
 
 def test_can_create_housenumber(session):

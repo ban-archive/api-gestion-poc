@@ -67,8 +67,7 @@ class ModelEndpoint(CollectionEndpoint):
         try:
             instance = self.model.coerce(identifier)
         except self.model.DoesNotExist:
-            # TODO Flask changes the 404 message, which we don't want.
-            abort(404, message='Instance for "{}" does not exist.'
+            abort(404, error='Resource for `{}` does not exist.'
                   .format(identifier))
         except RedirectError as e:
             headers = {'Location': url_for(endpoint, identifier=e.redirect)}
@@ -107,7 +106,7 @@ class ModelEndpoint(CollectionEndpoint):
                 try:
                     values = list(map(field.coerce, values))
                 except ValueError:
-                    abort('400', 'Invalid value for filter {}'.format(key))
+                    abort(400, error='Invalid value for filter {}'.format(key))
                 except peewee.DoesNotExist:
                     # Return an empty collection as the fk is not found.
                     return None
@@ -304,7 +303,7 @@ class ModelEndpoint(CollectionEndpoint):
             instance.delete_instance()
         except peewee.IntegrityError:
             # This model was still pointed by a FK.
-            abort(409)
+            abort(409, error='Cannot delete this resource')
         return {'resource_id': identifier}
 
 
@@ -381,7 +380,7 @@ class VersionedModelEnpoint(ModelEndpoint):
         elif status is False:
             version.unflag()
         else:
-            abort(400, message='Body should contain a "status" boolean key')
+            abort(400, error='Body should contain a `status` boolean key')
 
     @auth.require_oauth()
     @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
@@ -556,7 +555,7 @@ class DiffEndpoint(CollectionEndpoint):
         try:
             increment = int(request.args.get('increment'))
         except ValueError:
-            abort(400, 'Invalid value for increment')
+            abort(400, error='Invalid value for increment')
         except TypeError:
             pass
         else:

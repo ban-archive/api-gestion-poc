@@ -217,7 +217,7 @@ class PostCodeField(CharField):
     def coerce(self, value):
         value = str(value)
         if not len(value) == 5 or not value.isdigit():
-            raise ValidationError('Invalid postcode: "{}"'.format(value))
+            raise ValidationError('Invalid postcode: `{}`'.format(value))
         return value
 
 
@@ -234,7 +234,7 @@ class FantoirField(CharField):
         if not len(value) == 9:
             raise ValidationError('FANTOIR must be municipality INSEE + 4 '
                                   'first chars of FANTOIR, '
-                                  'got "{}" instead'.format(value))
+                                  'got `{}` instead'.format(value))
         return value
 
 
