@@ -74,6 +74,30 @@ def test_cannot_update_municipality_without_version(session):
     assert 'version' in validator.errors
 
 
+def test_cannot_update_municipality_with_null_version(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Municipality.validator(instance=municipality,
+                                              update=True, version=None,
+                                              insee="54321")
+    assert validator.errors['version'] == 'Value should not be null'
+
+
+def test_cannot_update_municipality_with_empty_version(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Municipality.validator(instance=municipality,
+                                              update=True, version='',
+                                              insee="54321")
+    assert validator.errors['version'] == 'Value should not be null'
+
+
+def test_cannot_update_municipality_with_version_equal_to_0(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Municipality.validator(instance=municipality,
+                                              update=True, version=0,
+                                              insee="54321")
+    assert validator.errors['version'] == 'Value should not be null'
+
+
 def test_cannot_duplicate_municipality_insee(session):
     MunicipalityFactory(insee='12345')
     validator = models.Municipality.validator(name='Carbone',
