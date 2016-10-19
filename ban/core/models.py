@@ -160,6 +160,7 @@ class Position(Model):
     SEGMENT = 'segment'
     UTILITY = 'utility'
     UNKNOWN = 'unknown'
+    AREA = 'area'
     KIND = (
         (POSTAL, _('postal delivery')),
         (ENTRANCE, _('entrance')),
@@ -169,6 +170,7 @@ class Position(Model):
         (PARCEL, _('parcel')),
         (SEGMENT, _('road segment')),
         (UTILITY, _('utility service')),
+        (AREA, _('area')),
         (UNKNOWN, _('unknown')),
     )
 
