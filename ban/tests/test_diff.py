@@ -34,3 +34,12 @@ def test_adding_value_to_arrayfield_column():
     assert len(diff.diff) == 1  # name, siren
     assert diff.diff['alias']['old'] is None
     assert diff.diff['alias']['new'] == ['Orvanne']
+
+
+def test_delete_should_create_a_diff():
+    municipality = MunicipalityFactory()
+    municipality.mark_deleted()
+    diff = municipality.versions[1].diff
+    assert len(diff.diff) == 1  # name, siren
+    assert diff.diff['status']['old'] == 'active'
+    assert diff.diff['status']['new'] == 'deleted'

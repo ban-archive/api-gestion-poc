@@ -328,9 +328,10 @@ class Redirect(db.Model):
 
     @classmethod
     def follow(cls, model_name, identifier, value):
-        rows = cls.select(cls.model_id).where(cls.model_name == model_name.lower(),
-                                        cls.identifier == identifier,
-                                        cls.value == str(value))
+        rows = cls.select(cls.model_id).where(
+            cls.model_name == model_name.lower(),
+            cls.identifier == identifier,
+            cls.value == str(value))
         return [row.model_id for row in rows]
 
     @classmethod

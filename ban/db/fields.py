@@ -112,13 +112,13 @@ class ForeignKeyField(peewee.ForeignKeyField):
     def coerce(self, value):
         if not value:
             return None
-        if isinstance(value, peewee.Model):
-            value = value.pk
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             # We have a resource dict.
             value = value['id']
-        if isinstance(value, str) and hasattr(self.rel_model, 'coerce'):
-            value = self.rel_model.coerce(value).pk
+        if hasattr(self.rel_model, 'coerce'):
+            value = self.rel_model.coerce(value)
+        if isinstance(value, peewee.Model):
+            value = value.pk
         return super().coerce(value)
 
     def _get_related_name(self):
@@ -256,11 +256,7 @@ class ManyToManyField(fields.ManyToManyField):
             return []
         if not isinstance(value, (tuple, list, peewee.SelectQuery)):
             value = [value]
-        # https://github.com/coleifer/peewee/pull/795
-        value = [self.rel_model.coerce(item)
-                 if not isinstance(item, self.rel_model)
-                 else item
-                 for item in value]
+        value = [self.rel_model.coerce(item) for item in value]
         return super().coerce(value)
 
     def add_to_class(self, model_class, name):
