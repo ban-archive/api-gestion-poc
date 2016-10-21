@@ -99,7 +99,7 @@ class ModelEndpoint(CollectionEndpoint):
         return instance
 
     def get_queryset(self):
-        qs = self.model.active()
+        qs = self.model.select()
         for key in self.filters:
             values = request.args.getlist(key)
             if values:

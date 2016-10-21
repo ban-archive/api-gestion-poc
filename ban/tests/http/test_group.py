@@ -234,8 +234,9 @@ def test_delete_street(client):
     resp = client.delete('/group/{}'.format(street.id))
     assert resp.status_code == 200
     assert resp.json['resource_id'] == street.id
-    assert not models.Group.active().count()
-    assert models.Group.first(models.Group.pk == street.pk).deleted_at
+    assert not models.Group.select().count()
+    assert models.Group.raw_select().where(
+                                models.Group.pk == street.pk).get().deleted_at
 
 
 def test_cannot_delete_group_if_not_authorized(client):

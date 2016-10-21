@@ -265,9 +265,9 @@ def test_delete_municipality(client):
     resp = client.delete('/municipality/{}'.format(municipality.id))
     assert resp.status_code == 200
     assert resp.json['resource_id'] == municipality.id
-    assert not models.Municipality.active().count()
-    assert models.Municipality.first(
-                        models.Municipality.pk == municipality.pk).deleted_at
+    assert not models.Municipality.select().count()
+    assert models.Municipality.raw_select().where(
+                models.Municipality.pk == municipality.pk).first().deleted_at
 
 
 def test_cannot_delete_municipality_if_not_authorized(client):
@@ -364,8 +364,8 @@ def test_cannot_restore_municipality_without_changing_version(client):
     data = municipality.serialize({'*': {}})
     resp = client.put('/municipality/{}'.format(municipality.id), data=data)
     assert resp.status_code == 409
-    assert models.Municipality.get(
-        models.Municipality.pk == municipality.pk).deleted_at
+    assert models.Municipality.raw_select().where(
+        models.Municipality.pk == municipality.pk).get().deleted_at
 
 
 @authorize
@@ -377,8 +377,8 @@ def test_cannot_restore_municipality_with_invalid_data(client):
     data['version'] = 3
     resp = client.put('/municipality/{}'.format(municipality.id), data=data)
     assert resp.status_code == 422
-    assert models.Municipality.get(
-        models.Municipality.pk == municipality.pk).deleted_at
+    assert models.Municipality.raw_select().where(
+        models.Municipality.pk == municipality.pk).get().deleted_at
 
 
 @authorize

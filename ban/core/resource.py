@@ -134,8 +134,12 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         return 'deleted' if self.deleted_at else 'active'
 
     @classmethod
-    def active(cls):
-        return cls.select().where(cls.deleted_at.is_null())
+    def select(cls, *selection):
+        return super().select(*selection).where(cls.deleted_at.is_null())
+
+    @classmethod
+    def raw_select(cls, *selection):
+        return super().select(*selection)
 
     def mark_deleted(self):
         if self.deleted_at:
@@ -168,7 +172,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 elif isinstance(id, int):
                     identifier = 'pk'
             try:
-                instance = cls.get(getattr(cls, identifier) == id)
+                instance = cls.raw_select().where(
+                    getattr(cls, identifier) == id).get()
             except cls.DoesNotExist:
                 # Is it an old identifier?
                 from .versioning import Redirect
