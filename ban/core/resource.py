@@ -1,5 +1,5 @@
-from datetime import datetime
 import uuid
+from datetime import datetime
 
 import peewee
 from postgis import Point
@@ -7,8 +7,9 @@ from postgis import Point
 from ban import db
 from ban.utils import utcnow
 
+from .exceptions import (IsDeletedError, MultipleRedirectsError, RedirectError,
+                         ResourceLinkedError)
 from .validators import ResourceValidator
-from .exceptions import RedirectError, MultipleRedirectsError, IsDeletedError
 
 
 class BaseResource(peewee.BaseModel):
@@ -147,7 +148,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     def ensure_no_reverse_relation(self):
         for name, field in self._meta.reverse_rel.items():
             if getattr(self, name).count():
-                raise ValueError('Resource still linked by `{}`'.format(name))
+                raise ResourceLinkedError(
+                    'Resource still linked by `{}`'.format(name))
 
     @classmethod
     def coerce(cls, id, identifier=None):

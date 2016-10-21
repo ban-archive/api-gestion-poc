@@ -9,7 +9,7 @@ from ban.commands.bal import bal
 from ban.core import context, models, versioning
 from ban.core.encoder import dumps
 from ban.core.exceptions import (IsDeletedError, MultipleRedirectsError,
-                                 RedirectError)
+                                 RedirectError, ResourceLinkedError)
 from ban.http.auth import auth
 from ban.http.wsgi import app
 from ban.utils import parse_mask
@@ -336,9 +336,8 @@ class ModelEndpoint(CollectionEndpoint):
         instance = self.get_object(identifier)
         try:
             instance.mark_deleted()
-        except ValueError:
-            # This model was still pointed by a FK.
-            abort(409, error='Cannot delete this resource')
+        except ResourceLinkedError as e:
+            abort(409, error=str(e))
         return {'resource_id': identifier}
 
 

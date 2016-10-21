@@ -283,6 +283,7 @@ def test_cannot_delete_municipality_if_linked_to_street(client):
     GroupFactory(municipality=municipality)
     resp = client.delete('/municipality/{}'.format(municipality.id))
     assert resp.status_code == 409
+    assert resp.json['error'] == 'Resource still linked by `groups`'
     assert models.Municipality.get(models.Municipality.id == municipality.id)
 
 

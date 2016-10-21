@@ -2,6 +2,10 @@ class ValidationError(ValueError):
     ...
 
 
+class ResourceLinkedError(ValidationError):
+    ...
+
+
 class IsDeletedError(ValidationError):
 
     def __init__(self, instance):
