@@ -129,6 +129,8 @@ class ModelEndpoint(CollectionEndpoint):
     def get_collection(self):
         """Get {resource} collection.
 
+        tags: [{resource}]
+
         responses:
             200:
                 description: Get {resource} collection.
@@ -163,6 +165,8 @@ class ModelEndpoint(CollectionEndpoint):
     def get_resource(self, identifier):
         """Get {resource} with 'identifier'.
 
+        tags: [{resource}]
+
         parameters:
             - $ref: '#/parameters/identifier'
         responses:
@@ -182,6 +186,8 @@ class ModelEndpoint(CollectionEndpoint):
     @app.endpoint('/<identifier>', methods=['POST'])
     def post_resource(self, identifier):
         """Patch {resource} with 'identifier'.
+
+        tags: [{resource}]
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -209,6 +215,8 @@ class ModelEndpoint(CollectionEndpoint):
     def post(self):
         """Create {resource}
 
+        tags: [{resource}]
+
         responses:
             201:
                 description: Instance has been created successfully.
@@ -233,6 +241,8 @@ class ModelEndpoint(CollectionEndpoint):
     @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
         """Patch {resource}
+
+        tags: [{resource}]
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -260,6 +270,8 @@ class ModelEndpoint(CollectionEndpoint):
     def put(self, identifier):
         """Replace {resource}.
 
+        tags: [{resource}]
+
         parameters:
             - $ref: '#/parameters/identifier'
         responses:
@@ -285,6 +297,8 @@ class ModelEndpoint(CollectionEndpoint):
     @app.endpoint('/<identifier>', methods=['DELETE'])
     def delete(self, identifier):
         """Delete {resource}.
+
+        tags: [{resource}]
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -314,6 +328,8 @@ class VersionedModelEnpoint(ModelEndpoint):
     def get_versions(self, identifier):
         """Get resource versions.
 
+        tags: [{resource}]
+
         parameters:
             - $ref: '#/parameters/identifier'
         responses:
@@ -333,6 +349,8 @@ class VersionedModelEnpoint(ModelEndpoint):
     @app.endpoint('/<identifier>/versions/<int:ref>', methods=['GET'])
     def get_version(self, identifier, ref):
         """Get {resource} version corresponding to 'ref' number or datetime.
+
+        tags: [{resource}]
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -358,6 +376,8 @@ class VersionedModelEnpoint(ModelEndpoint):
     @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
     def post_version(self, identifier, ref):
         """Flag a version.
+
+        tags: [{resource}]
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -386,6 +406,8 @@ class VersionedModelEnpoint(ModelEndpoint):
     @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
     def put_delete_redirects(self, identifier, old):
         """Create a new redirect to this resource.
+
+        tags: [{resource}]
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -419,6 +441,8 @@ class VersionedModelEnpoint(ModelEndpoint):
     @app.endpoint('/<identifier>/redirects', methods=['GET'])
     def get_redirects(self, identifier):
         """Get a collection of Redirect pointing to this resource.
+
+        tags: [{resource}]
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -538,6 +562,8 @@ class DiffEndpoint(CollectionEndpoint):
     @app.endpoint('', methods=['GET'])
     def get_collection(self):
         """Get database diffs.
+
+        tags: ['Diff']
 
         parameters:
         - name: increment
