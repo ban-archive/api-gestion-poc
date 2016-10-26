@@ -24,6 +24,15 @@ BASE = {
         'url': 'https://adresse.data.gouv.fr/api-gestion/',
     },
     'paths': {},
+    'tags': [
+        {'name': 'Municipality'},
+        {'name': 'Postcode'},
+        {'name': 'Group'},
+        {'name': 'Housenumber'},
+        {'name': 'Position'},
+        {'name': 'Diff'},
+        {'name': 'User'},
+    ],
     'definitions': {
         'Error': {
             'properties': {
