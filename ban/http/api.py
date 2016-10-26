@@ -185,7 +185,7 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['POST'])
     def post_resource(self, identifier):
-        """Patch {resource} with 'identifier'.
+        """Post {resource} with 'identifier'.
 
         tags: [{resource}]
 
@@ -213,7 +213,7 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('', methods=['POST'])
     def post(self):
-        """Create {resource}
+        """Create a {resource}.
 
         tags: [{resource}]
 
@@ -240,7 +240,7 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
-        """Patch {resource}
+        """Patch {resource} with 'identifier'.
 
         tags: [{resource}]
 
@@ -268,7 +268,7 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
     def put(self, identifier):
-        """Replace {resource}.
+        """Replace {resource} with 'identifier'.
 
         tags: [{resource}]
 
@@ -326,7 +326,7 @@ class VersionedModelEnpoint(ModelEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>/versions', methods=['GET'])
     def get_versions(self, identifier):
-        """Get resource versions.
+        """Get {resource} versions.
 
         tags: [{resource}]
 
@@ -375,7 +375,7 @@ class VersionedModelEnpoint(ModelEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
     def post_version(self, identifier, ref):
-        """Flag a version.
+        """Flag a {resource} version.
 
         tags: [{resource}]
 
@@ -403,9 +403,37 @@ class VersionedModelEnpoint(ModelEndpoint):
             abort(400, error='Body should contain a `status` boolean key')
 
     @auth.require_oauth()
-    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
-    def put_delete_redirects(self, identifier, old):
-        """Create a new redirect to this resource.
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT'])
+    def put_redirects(self, identifier, old):
+        """Create a new redirect to this {resource}.
+
+        tags: [{resource}]
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: old
+              in: path
+              type: string
+              required: true
+              description: old identifier.
+        responses:
+            201:
+                description: redirect was created.
+            422:
+                description: error while creating the redirect.
+        """
+        instance = self.get_object(identifier)
+        old_identifier, old_value = old.split(':')
+        try:
+            versioning.Redirect.add(instance, old_identifier, old_value)
+        except ValueError as e:
+            abort(422, error=str(e))
+        return '', 201
+
+    @auth.require_oauth()
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['DELETE'])
+    def delete_redirects(self, identifier, old):
+        """Delete a redirect to this {resource}.
 
         tags: [{resource}]
 
@@ -419,28 +447,19 @@ class VersionedModelEnpoint(ModelEndpoint):
         responses:
             204:
                 description: redirect was successful.
-            201:
-                description: redirect was created.
             422:
                 description: error while creating the redirect.
         """
         instance = self.get_object(identifier)
         old_identifier, old_value = old.split(':')
-        if request.method == 'PUT':
-            try:
-                versioning.Redirect.add(instance, old_identifier, old_value)
-            except ValueError as e:
-                abort(422, error=str(e))
-            return '', 201
-        elif request.method == 'DELETE':
-            versioning.Redirect.remove(instance, old_identifier, old_value)
-            return '', 204
+        versioning.Redirect.remove(instance, old_identifier, old_value)
+        return '', 204
 
     @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>/redirects', methods=['GET'])
     def get_redirects(self, identifier):
-        """Get a collection of Redirect pointing to this resource.
+        """Get a collection of Redirect pointing to this {resource}.
 
         tags: [{resource}]
 
