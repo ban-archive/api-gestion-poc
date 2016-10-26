@@ -1,6 +1,7 @@
 from io import StringIO
 from urllib.parse import urlencode
 
+import json
 import peewee
 from flask import request, url_for
 
@@ -610,7 +611,7 @@ class DiffEndpoint(CollectionEndpoint):
 
 @app.route('/openapi', methods=['GET'])
 def openapi():
-    return dumps(app._schema)
+    return json.dumps(app._schema, sort_keys=True)
 
 
 app._schema.register_model(amodels.Session)
