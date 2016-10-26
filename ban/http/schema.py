@@ -24,6 +24,15 @@ BASE = {
         'url': 'https://adresse.data.gouv.fr/api-gestion/',
     },
     'paths': {},
+    'tags': [
+        {'name': 'Municipality'},
+        {'name': 'Postcode'},
+        {'name': 'Group'},
+        {'name': 'Housenumber'},
+        {'name': 'Position'},
+        {'name': 'Diff'},
+        {'name': 'User'},
+    ],
     'definitions': {
         'Error': {
             'properties': {
@@ -57,7 +66,7 @@ class Schema(dict):
 
     def get_responder_summary(self, responder, resource):
         return (responder.__doc__ or '').split('\n\n')[0].format(
-            resource=resource.__class__.__name__)
+            resource=resource.__name__.lower())
 
     def get_responder_doc(self, func, resource):
         default = {
