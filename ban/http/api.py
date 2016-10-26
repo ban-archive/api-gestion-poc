@@ -131,7 +131,6 @@ class ModelEndpoint(CollectionEndpoint):
         """Get {resource} collection.
 
         tags: [{resource}]
-
         responses:
             200:
                 description: Get {resource} collection.
@@ -167,7 +166,6 @@ class ModelEndpoint(CollectionEndpoint):
         """Get {resource} with 'identifier'.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
         responses:
@@ -189,7 +187,6 @@ class ModelEndpoint(CollectionEndpoint):
         """Post {resource} with 'identifier'.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
         responses:
@@ -217,7 +214,6 @@ class ModelEndpoint(CollectionEndpoint):
         """Create a {resource}.
 
         tags: [{resource}]
-
         responses:
             201:
                 description: Instance has been created successfully.
@@ -244,7 +240,6 @@ class ModelEndpoint(CollectionEndpoint):
         """Patch {resource} with 'identifier'.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
         responses:
@@ -272,7 +267,6 @@ class ModelEndpoint(CollectionEndpoint):
         """Replace {resource} with 'identifier'.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
         responses:
@@ -300,7 +294,6 @@ class ModelEndpoint(CollectionEndpoint):
         """Delete {resource}.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
         responses:
@@ -330,7 +323,6 @@ class VersionedModelEnpoint(ModelEndpoint):
         """Get {resource} versions.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
         responses:
@@ -352,7 +344,6 @@ class VersionedModelEnpoint(ModelEndpoint):
         """Get {resource} version corresponding to 'ref' number or datetime.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
             - name: ref
@@ -379,7 +370,6 @@ class VersionedModelEnpoint(ModelEndpoint):
         """Flag a {resource} version.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
             - name: ref
@@ -409,7 +399,6 @@ class VersionedModelEnpoint(ModelEndpoint):
         """Create a new redirect to this {resource}.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
             - name: old
@@ -437,7 +426,6 @@ class VersionedModelEnpoint(ModelEndpoint):
         """Delete a redirect to this {resource}.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
             - name: old
@@ -463,7 +451,6 @@ class VersionedModelEnpoint(ModelEndpoint):
         """Get a collection of Redirect pointing to this {resource}.
 
         tags: [{resource}]
-
         parameters:
             - $ref: '#/parameters/identifier'
         responses:
