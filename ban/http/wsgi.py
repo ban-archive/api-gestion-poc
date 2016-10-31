@@ -8,6 +8,7 @@ from flask_cors import CORS
 from werkzeug.routing import BaseConverter, ValidationError
 
 from .schema import Schema
+from .utils import abort
 from ban.core.encoder import dumps
 
 
@@ -76,3 +77,15 @@ class DateTimeConverter(BaseConverter):
 app = application = App(__name__)
 CORS(app)
 app.url_map.converters['datetime'] = DateTimeConverter
+
+
+@app.errorhandler(404)
+@app.jsonify
+def page_not_found(error):
+    return {'error': 'Path not found'}, 404
+
+
+@app.errorhandler(405)
+@app.jsonify
+def method_not_allowed(error):
+    return {'error': 'Method not allowed'}, 405

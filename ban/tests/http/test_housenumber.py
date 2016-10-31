@@ -343,6 +343,7 @@ def test_replace_housenumber_with_missing_field_fails(client):
     }
     resp = client.put(uri, data=data)
     assert resp.status_code == 422
+    assert resp.json['error'] == 'Invalid data'
     assert 'errors' in resp.json
     assert models.HouseNumber.select().count() == 1
 

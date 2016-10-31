@@ -67,7 +67,7 @@ class ModelEndpoint(CollectionEndpoint):
         try:
             instance = self.model.coerce(identifier)
         except self.model.DoesNotExist:
-            abort(404, error='Resource for `{}` does not exist.'
+            abort(404, error='Resource with identifier `{}` does not exist.'
                   .format(identifier))
         except RedirectError as e:
             headers = {'Location': url_for(endpoint, identifier=e.redirect)}
@@ -86,7 +86,7 @@ class ModelEndpoint(CollectionEndpoint):
         validator = self.model.validator(update=update, instance=instance,
                                          **request.json or {})
         if validator.errors:
-            abort(422, errors=validator.errors)
+            abort(422, error='Invalid data', errors=validator.errors)
         try:
             instance = validator.save()
         except models.Model.ForcedVersionError as e:
@@ -350,7 +350,7 @@ class VersionedModelEnpoint(ModelEndpoint):
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
         if not version:
-            abort(404)
+            abort(404, error='Version reference `{}` not found'.format(ref))
         return version.serialize()
 
     @auth.require_oauth()
@@ -373,7 +373,7 @@ class VersionedModelEnpoint(ModelEndpoint):
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
         if not version:
-            abort(404)
+            abort(404, error='Version reference `{}` not found'.format(ref))
         status = request.json.get('status')
         if status is True:
             version.flag()
