@@ -48,7 +48,7 @@ def staff():
 
 @pytest.fixture()
 def session():
-    session = SessionFactory()
+    session = SessionFactory(user__is_staff=True)
     context.set('session', session)
     return session
 
