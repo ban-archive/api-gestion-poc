@@ -42,3 +42,10 @@ def test_config_get_should_return_none_if_missing_and_no_default(config):
 def test_config_set_should_normalize_key(config):
     config.set('db-password', 'password')
     assert config.DB_PASSWORD == 'password'
+
+
+def test_should_allow_deleting_keys(config):
+    config.FOO = 'bar'
+    del config.FOO
+    with pytest.raises(AttributeError):
+        config.FOO

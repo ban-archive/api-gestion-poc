@@ -28,6 +28,9 @@ class Config(dict):
     def __setattr__(self, name, value):
         self[name] = value
 
+    def __delattr__(self, name):
+        del self[name]
+
     def get(self, name, default=None):
         return getattr(self, name, default)
 
