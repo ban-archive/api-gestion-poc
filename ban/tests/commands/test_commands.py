@@ -51,6 +51,13 @@ def test_listusers(capsys):
     assert user.username in out
 
 
+def test_listusers_with_invoke(capsys):
+    user = factories.UserFactory()
+    listusers.invoke([])
+    out, err = capsys.readouterr()
+    assert user.username in out
+
+
 def test_create_client_should_accept_username():
     user = factories.UserFactory()
     assert not amodels.Client.select().count()
