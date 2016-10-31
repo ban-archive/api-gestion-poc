@@ -1,13 +1,14 @@
 import json
+from unittest.mock import Mock
 from pathlib import Path
 
 from ban.auth import models as amodels
-from ban.commands.auth import createuser, listusers, createclient, listclients
+from ban.commands.auth import (createclient, createuser, dummytoken,
+                               listclients, listusers)
 from ban.commands.db import truncate
 from ban.commands.export import resources
 from ban.core import models
 from ban.core.encoder import dumps
-from ban.core.versioning import Diff
 from ban.tests import factories
 
 
@@ -121,3 +122,12 @@ def test_export_resources():
         # Plus, JSON transform internals tuples to lists.
         assert json.loads(lines[2]) == json.loads(dumps(hn.as_resource))
     path.unlink()
+
+
+def test_dummytoken():
+    factories.UserFactory(is_staff=True)
+    token = 'tokenname'
+    args = Mock(spec='token')
+    args.token = token
+    dummytoken.invoke(args)
+    assert amodels.Token.select().where(amodels.Token.access_token == token)
