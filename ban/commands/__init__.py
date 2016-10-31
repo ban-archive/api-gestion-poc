@@ -1,6 +1,7 @@
 import argparse
 import inspect
 import os
+from pathlib import Path
 from itertools import zip_longest
 
 from ban.core import config, context
@@ -27,6 +28,7 @@ class Command:
         'workers': os.cpu_count(),
         'batch_executor': 'thread',
         'verbose': {'action': 'count', 'default': None},
+        'report_to': None,
     }
 
     def __init__(self, command):
@@ -47,6 +49,14 @@ class Command:
         finally:
             # Display reports, if any.
             print(reporter)
+            filepath = config.get('REPORT_TO')
+            if filepath:
+                try:
+                    with Path(filepath).open('w') as f:
+                        f.write(str(reporter))
+                except (OSError, IOError) as e:
+                    print('Unable to write report to', filepath)
+                    print(e)
 
     def invoke(self, parsed):
         """Run command from command line args."""

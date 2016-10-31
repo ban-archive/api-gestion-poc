@@ -131,3 +131,15 @@ def test_dummytoken():
     args.token = token
     dummytoken.invoke(args)
     assert amodels.Token.select().where(amodels.Token.access_token == token)
+
+
+def test_report_to(tmpdir, config):
+    report_to = tmpdir.join('report')
+    config.REPORT_TO = str(report_to)
+    factories.UserFactory(is_staff=True)
+    token = 'tokenname'
+    args = Mock(spec='token')
+    args.token = token
+    dummytoken.invoke(args)
+    with report_to.open() as f:
+        assert 'Created token' in f.read()
