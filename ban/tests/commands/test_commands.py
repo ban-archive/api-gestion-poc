@@ -115,6 +115,8 @@ def test_export_resources():
     street = factories.GroupFactory(municipality=mun)
     hn = factories.HouseNumberFactory(parent=street)
     factories.PositionFactory(housenumber=hn)
+    deleted = factories.PositionFactory(housenumber=hn)
+    deleted.mark_deleted()
     path = Path(__file__).parent / 'data/export.sjson'
     resources(path)
 

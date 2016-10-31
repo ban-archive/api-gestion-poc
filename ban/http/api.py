@@ -6,12 +6,13 @@ from flask import request, url_for
 
 from ban.auth import models as amodels
 from ban.commands.bal import bal
-from ban.core import models, versioning, context
+from ban.core import context, models, versioning
 from ban.core.encoder import dumps
-from ban.core.exceptions import RedirectError, MultipleRedirectsError
-from ban.utils import parse_mask
+from ban.core.exceptions import (IsDeletedError, MultipleRedirectsError,
+                                 RedirectError, ResourceLinkedError)
 from ban.http.auth import auth
 from ban.http.wsgi import app
+from ban.utils import parse_mask
 
 from .utils import abort, get_bbox, link
 
@@ -80,6 +81,10 @@ class ModelEndpoint(CollectionEndpoint):
                 link(headers, uri, 'alternate')
                 choices.append(uri)
             abort(300, headers=headers, choices=choices)
+        except IsDeletedError as err:
+            if request.method not in ['GET', 'PUT']:
+                abort(410, error='Resource `{}` is deleted'.format(identifier))
+            instance = err.instance
         return instance
 
     def save_object(self, instance=None, update=False):
@@ -170,10 +175,15 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Get {resource} instance.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                description: Resource is deleted.
+                schema:
+                    $ref: '#/definitions/{resource}'
         """
         instance = self.get_object(identifier)
+        status = 410 if instance.deleted_at else 200
         try:
-            return instance.serialize(self.get_mask())
+            return instance.serialize(self.get_mask()), status
         except ValueError as e:
             abort(400, error=str(e))
 
@@ -190,10 +200,14 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Instance has been updated successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
-            419:
+            409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                description: Resource is deleted.
+                schema:
+                    $ref: '#/definitions/Error'
             422:
                 description: Invalid data.
                 schema:
@@ -214,10 +228,14 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Instance has been created successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
-            419:
+            409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                description: Resource is deleted.
+                schema:
+                    $ref: '#/definitions/Error'
             422:
                 description: Invalid data.
                 schema:
@@ -241,10 +259,14 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Instance has been updated successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
-            419:
+            409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                description: Resource is deleted.
+                schema:
+                    $ref: '#/definitions/Error'
             422:
                 description: Invalid data.
                 schema:
@@ -258,7 +280,7 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
     def put(self, identifier):
-        """Replace {resource}.
+        """Replace or restore {resource}.
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -267,16 +289,25 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Instance has been replaced successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
-            419:
+            409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                description: Resource is deleted.
+                schema:
+                    $ref: '#/definitions/Error'
             422:
                 description: Invalid data.
                 schema:
                     $ref: '#/definitions/Error'
         """
         instance = self.get_object(identifier)
+        if instance.deleted_at:
+            # We want to create only one new version for a restore. Change the
+            # property here, but let the save_object do the actual save
+            # if the data is valid.
+            instance.deleted_at = None
         instance = self.save_object(instance)
         return instance.as_resource
 
@@ -293,17 +324,20 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Instance has been deleted successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
-            419:
+            409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                description: Resource is already deleted.
+                schema:
+                    $ref: '#/definitions/Error'
         """
         instance = self.get_object(identifier)
         try:
-            instance.delete_instance()
-        except peewee.IntegrityError:
-            # This model was still pointed by a FK.
-            abort(409, error='Cannot delete this resource')
+            instance.mark_deleted()
+        except ResourceLinkedError as e:
+            abort(409, error=str(e))
         return {'resource_id': identifier}
 
 
@@ -478,7 +512,7 @@ class HouseNumber(VersionedModelEnpoint):
                 qs = (parent_qs | qs)
             # We evaluate the qs ourselves here, because it's a CompoundSelect
             # that does not know about our SelectQuery custom methods (like
-            # `as_resource_list`), and CompoundSelect is hardcoded in peewee
+            # `serialize`), and CompoundSelect is hardcoded in peewee
             # SelectQuery, and we'd need to copy-paste code to be able to use
             # a custom CompoundQuery class instead.
             mask = self.get_collection_mask()

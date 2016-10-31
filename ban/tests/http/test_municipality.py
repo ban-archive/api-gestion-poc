@@ -4,6 +4,7 @@ from datetime import datetime
 from ban.core import models
 from ban.core.encoder import dumps
 from ban.core.versioning import Version, Redirect
+from ban.utils import utcnow
 
 from ..factories import MunicipalityFactory, PostCodeFactory, GroupFactory
 from .utils import authorize
@@ -265,6 +266,8 @@ def test_delete_municipality(client):
     assert resp.status_code == 200
     assert resp.json['resource_id'] == municipality.id
     assert not models.Municipality.select().count()
+    assert models.Municipality.raw_select().where(
+                models.Municipality.pk == municipality.pk).first().deleted_at
 
 
 def test_cannot_delete_municipality_if_not_authorized(client):
@@ -280,6 +283,7 @@ def test_cannot_delete_municipality_if_linked_to_street(client):
     GroupFactory(municipality=municipality)
     resp = client.delete('/municipality/{}'.format(municipality.id))
     assert resp.status_code == 409
+    assert resp.json['error'] == 'Resource still linked by `groups`'
     assert models.Municipality.get(models.Municipality.id == municipality.id)
 
 
@@ -290,6 +294,94 @@ def test_delete_unknown_municipality_should_return_not_found(client):
 
 
 @authorize
+def test_can_get_deleted_municipality(get):
+    municipality = MunicipalityFactory()
+    municipality.mark_deleted()
+    resp = get('/municipality/{}'.format(municipality.id))
+    assert resp.status_code == 410
+    assert resp.json['id'] == municipality.id
+    assert len(municipality.versions) == 2
+
+
+@authorize
+def test_can_get_deleted_municipality_versions(get):
+    municipality = MunicipalityFactory(name="Cabour")
+    municipality.version = 2
+    municipality.name = "Cabour2"
+    municipality.save()
+    resp = get('/municipality/{}/versions'.format(municipality.id))
+    assert resp.status_code == 200
+    assert len(resp.json['collection']) == 2
+    assert resp.json['total'] == 2
+    assert resp.json['collection'][0]['data']['name'] == 'Cabour'
+    assert resp.json['collection'][1]['data']['name'] == 'Cabour2'
+
+
+@authorize
+def test_can_get_deleted_municipality_version(get):
+    municipality = MunicipalityFactory(name="Cabour")
+    municipality.version = 2
+    municipality.name = "Cabour2"
+    municipality.save()
+    resp = get('/municipality/{}/versions/2'.format(municipality.id))
+    assert resp.status_code == 200
+    assert resp.json['data']['name'] == 'Cabour2'
+
+
+@authorize
+def test_cannot_post_on_deleted_municipality(post):
+    municipality = MunicipalityFactory()
+    municipality.mark_deleted()
+    resp = post('/municipality/{}'.format(municipality.id), data={})
+    assert resp.status_code == 410
+
+
+@authorize
+def test_cannot_patch_on_deleted_municipality(patch):
+    municipality = MunicipalityFactory()
+    municipality.mark_deleted()
+    resp = patch('/municipality/{}'.format(municipality.id), data={})
+    assert resp.status_code == 410
+
+
+@authorize
+def test_can_restore_municipality(client):
+    municipality = MunicipalityFactory()
+    municipality.mark_deleted()
+    data = municipality.serialize({'*': {}})
+    data['version'] = 3
+    resp = client.put('/municipality/{}'.format(municipality.id), data=data)
+    assert resp.status_code == 200
+    assert not models.Municipality.get(
+        models.Municipality.pk == municipality.pk).deleted_at
+    assert len(municipality.versions) == 3
+
+
+@authorize
+def test_cannot_restore_municipality_without_changing_version(client):
+    municipality = MunicipalityFactory()
+    municipality.mark_deleted()
+    data = municipality.serialize({'*': {}})
+    resp = client.put('/municipality/{}'.format(municipality.id), data=data)
+    assert resp.status_code == 409
+    assert models.Municipality.raw_select().where(
+        models.Municipality.pk == municipality.pk).get().deleted_at
+
+
+@authorize
+def test_cannot_restore_municipality_with_invalid_data(client):
+    municipality = MunicipalityFactory()
+    municipality.mark_deleted()
+    data = municipality.serialize({'*': {}})
+    data['name'] = ''
+    data['version'] = 3
+    resp = client.put('/municipality/{}'.format(municipality.id), data=data)
+    assert resp.status_code == 422
+    assert models.Municipality.raw_select().where(
+        models.Municipality.pk == municipality.pk).get().deleted_at
+
+
+@authorize
 def test_municipality_select_use_default_orderby(get):
     MunicipalityFactory(insee="90002")
     MunicipalityFactory(insee="90001")
@@ -297,3 +389,49 @@ def test_municipality_select_use_default_orderby(get):
     assert resp.status_code == 200
     assert resp.json['total'] == 2
     assert resp.json['collection'][0]['insee'] == '90001'
+
+
+@authorize
+def test_status_is_readonly(post):
+    municipality = MunicipalityFactory()
+    data = municipality.serialize({'*': {}})
+    data['status'] = 'deleted'
+    data['version'] = 2
+    resp = post('/municipality/{}'.format(municipality.id), data=data)
+    assert resp.status_code == 200
+
+
+@authorize
+def test_cannot_change_deleted_at_with_post(post):
+    municipality = MunicipalityFactory()
+    data = municipality.serialize({'*': {}})
+    data['deleted_at'] = utcnow().isoformat()
+    data['version'] = 2
+    resp = post('/municipality/{}'.format(municipality.id), data=data)
+    assert resp.status_code == 200
+    assert not models.Municipality.get(
+        models.Municipality.pk == municipality.pk).deleted_at
+
+
+@authorize
+def test_cannot_change_deleted_at_with_patch(patch):
+    municipality = MunicipalityFactory()
+    data = municipality.serialize({'*': {}})
+    data['deleted_at'] = utcnow().isoformat()
+    data['version'] = 2
+    resp = patch('/municipality/{}'.format(municipality.id), data=data)
+    assert resp.status_code == 200
+    assert not models.Municipality.get(
+        models.Municipality.pk == municipality.pk).deleted_at
+
+
+@authorize
+def test_cannot_change_deleted_at_with_put(put):
+    municipality = MunicipalityFactory()
+    data = municipality.serialize({'*': {}})
+    data['deleted_at'] = utcnow().isoformat()
+    data['version'] = 2
+    resp = put('/municipality/{}'.format(municipality.id), data=data)
+    assert resp.status_code == 200
+    assert not models.Municipality.get(
+        models.Municipality.pk == municipality.pk).deleted_at

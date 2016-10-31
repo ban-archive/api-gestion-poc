@@ -34,7 +34,8 @@ def test_get_housenumber(get):
         'laposte': None,
         'ordinal': 'bis',
         'positions': [],
-        'postcode': None
+        'postcode': None,
+        'status': 'active',
     }
 
 
@@ -387,6 +388,8 @@ def test_delete_housenumber(client):
     assert resp.status_code == 200
     assert resp.json['resource_id'] == housenumber.id
     assert not models.HouseNumber.select().count()
+    assert models.HouseNumber.raw_select().where(
+                    models.HouseNumber.pk == housenumber.pk).get().deleted_at
 
 
 def test_cannot_delete_housenumber_if_not_authorized(client):

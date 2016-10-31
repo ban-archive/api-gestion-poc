@@ -155,7 +155,7 @@ def test_group_as_relation():
         'attributes': None,
         'laposte': None,
         'addressing': None,
-        'version': 1
+        'version': 1,
     }
 
 
@@ -325,6 +325,7 @@ def test_housenumber_as_resource():
         'created_at': housenumber.created_at.isoformat(),
         'modified_by': housenumber.modified_by.serialize(),
         'modified_at': housenumber.modified_at.isoformat(),
+        'status': 'active',
     }
 
 

@@ -383,9 +383,8 @@ def test_giving_wrong_version_should_patch_if_possible(session):
     resource = housenumber.as_resource
     resource['number'] = "19"
     resource['version'] = 2
-    del resource['positions']  # This is not a real resource field.
-    del resource['cia']  # Readonly field.
-    validator = models.HouseNumber.validator(instance=housenumber, **resource)
+    validator = models.HouseNumber.validator(instance=housenumber, update=True,
+                                             **resource)
     assert not validator.errors
     validator.save()
     # Update another field and give again version=2 as if we were only aware
@@ -393,7 +392,8 @@ def test_giving_wrong_version_should_patch_if_possible(session):
     resource['number'] = "18"  # Pretend we haven't changed it.
     resource['ordinal'] = 'bis'
     resource['version'] = 2
-    validator = models.HouseNumber.validator(instance=housenumber, **resource)
+    validator = models.HouseNumber.validator(instance=housenumber, update=True,
+                                             **resource)
     assert not validator.errors
     housenumber = validator.save()
     assert housenumber.number == "19"
@@ -421,5 +421,26 @@ def test_giving_wrong_version_should_patch_if_possible_with_update(session):
 
 
 def test_can_create_user():
-    validator = User.validator(username='Banner', email='ban@er', is_staff=False)
+    validator = User.validator(username='Banner', email='ban@er',
+                               is_staff=False)
     assert not validator.errors
+
+
+def test_cannot_add_a_deleted_resource_as_fk():
+    deleted = MunicipalityFactory()
+    deleted.mark_deleted()
+    validator = models.Group.validator(municipality=deleted,
+                                       name='Rue des Pianos',
+                                       kind=models.Group.AREA)
+    assert validator.errors['municipality'] == (
+        'Resource `municipality` with id `{}` is deleted'.format(deleted.id))
+
+
+def test_cannot_add_a_deleted_resource_in_m2m():
+    housenumber = HouseNumberFactory()
+    deleted = GroupFactory()
+    deleted.mark_deleted()
+    validator = models.HouseNumber.validator(instance=housenumber, update=True,
+                                             ancestors=[deleted], version=2)
+    assert validator.errors['ancestors'] == (
+        'Resource `group` with id `{}` is deleted'.format(deleted.id))

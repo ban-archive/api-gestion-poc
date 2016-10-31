@@ -2,6 +2,20 @@ class ValidationError(ValueError):
     ...
 
 
+class ResourceLinkedError(ValidationError):
+    ...
+
+
+class IsDeletedError(ValidationError):
+
+    def __init__(self, instance):
+        self.instance = instance
+
+    def __str__(self):
+        msg = 'Resource `{}` with id `{}` is deleted'
+        return msg.format(self.instance.resource, self.instance.id)
+
+
 class RedirectError(ValueError):
 
     def __init__(self, identifier, value, redirect):

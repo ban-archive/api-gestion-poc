@@ -353,6 +353,8 @@ def test_delete_position(client, url):
     assert resp.status_code == 200
     assert resp.json['resource_id'] == position.id
     assert not models.Position.select().count()
+    assert models.Position.raw_select().where(
+                        models.Position.pk == position.pk).get().deleted_at
 
 
 def test_cannot_delete_position_if_not_authorized(client, url):
