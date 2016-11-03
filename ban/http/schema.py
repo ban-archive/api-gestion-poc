@@ -17,7 +17,7 @@ BASE = {
         'version': __version__,
     },
     'swagger': '2.0',
-    'schemes': ['https'],
+    'schemes': ['http'],
     'consumes': ['application/json'],
     'produces': ['application/json'],
     'externalDocs': {
@@ -95,7 +95,7 @@ class Schema(dict):
     def model_definition(self, model):
         """Map Peewee models to jsonschema."""
         schema = {'required': [], 'properties': {},
-                  'type': ['object', 'string', 'null']}
+                  'type': 'object'}
         for name, field in model._meta.fields.items():
             if name not in model.resource_fields:
                 continue
@@ -105,7 +105,7 @@ class Schema(dict):
             if not type_:
                 continue
             row = {
-                'type': [type_]
+                'type': type_
             }
             if hasattr(field.__class__, '__schema_format__'):
                 row['format'] = field.__class__.__schema_format__
@@ -120,27 +120,28 @@ class Schema(dict):
                 }
             elif type_ == 'array':
                 row['items'] = {'type': field.db_field}
-            if field.null and 'type' in row:
-                row['type'].append('null')
+            # if field.null and 'type' in row:
+            #    row['type'].append('null')
             if field.unique:
                 row['unique'] = True
-            max_length = getattr(field, 'max_length', None)
-            if max_length:
-                row['maxLength'] = max_length
-            min_length = getattr(field, 'min_length', None)
-            if not min_length and type_ == 'string' and not field.null:
-                min_length = 1
-            if min_length:
-                row['minLength'] = min_length
+            # max_length = getattr(field, 'max_length', None)
+            # if max_length:
+            #    row['maxLength'] = max_length
+            # min_length = getattr(field, 'min_length', None)
+            # if not min_length and type_ == 'string' and not field.null:
+            #    min_length = 1
+            # if min_length:
+            #    row['minLength'] = min_length
             if getattr(field, 'choices', None):
                 row['enum'] = [v for v, l in field.choices]
                 if field.null:
-                    row['enum'].append(None)
+                    row['enum'].append('null')
             schema['properties'][name] = row
             readonly = name in model.readonly_fields
             if (not field.null and not readonly
                and name not in schema['required']):
                 schema['required'].append(name)
+
         return schema
 
     def register_endpoint(self, path, func, methods, endpoint):

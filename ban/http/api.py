@@ -146,6 +146,8 @@ class ModelEndpoint(CollectionEndpoint):
                         name: total
                         type: integer
                         description: total resources available
+            401:
+                description: Unauthorized access.
         """
         qs = self.get_queryset()
         if qs is None:
@@ -168,11 +170,16 @@ class ModelEndpoint(CollectionEndpoint):
         tags: [{resource}]
         parameters:
             - $ref: '#/parameters/identifier'
+              description: {resource} identifier
         responses:
             200:
                 description: Get {resource} instance.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                description: Unauthorized access.
+            404:
+                description: Resource does not exist.
         """
         instance = self.get_object(identifier)
         try:
@@ -189,11 +196,25 @@ class ModelEndpoint(CollectionEndpoint):
         tags: [{resource}]
         parameters:
             - $ref: '#/parameters/identifier'
+              description: {resource} identifier
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be updated to the BAN
         responses:
             200:
-                description: Instance has been updated successfully.
+                description: Instance has been successfully updated.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                description: Bad Request.
+            401:
+                description: Unauthorized access.
+            404:
+                description: Resource does not exist.
             419:
                 description: Conflict.
                 schema:
@@ -214,11 +235,23 @@ class ModelEndpoint(CollectionEndpoint):
         """Create a {resource}.
 
         tags: [{resource}]
+        parameters:
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be added to the BAN
         responses:
             201:
                 description: Instance has been created successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                description: Bad Request.
+            401:
+                description: Unauthorized access.
             419:
                 description: Conflict.
                 schema:
@@ -242,11 +275,25 @@ class ModelEndpoint(CollectionEndpoint):
         tags: [{resource}]
         parameters:
             - $ref: '#/parameters/identifier'
+              description: {resource} identifier
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be updated to the BAN
         responses:
             200:
                 description: Instance has been updated successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                description: Bad Request.
+            401:
+                description: Unauthorized access.
+            404:
+                description: Resource does not exist.
             419:
                 description: Conflict.
                 schema:
@@ -269,11 +316,25 @@ class ModelEndpoint(CollectionEndpoint):
         tags: [{resource}]
         parameters:
             - $ref: '#/parameters/identifier'
+              description: {resource} identifier
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be replaced to the BAN
         responses:
             200:
                 description: Instance has been replaced successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                description: Bad Request.
+            401:
+                description: Unauthorized access.
+            404:
+                description: Resource does not exist.
             419:
                 description: Conflict.
                 schema:
@@ -301,6 +362,10 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Instance has been deleted successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                description: Unauthorized access.
+            404:
+                description: Resource does not exist.
             419:
                 description: Conflict.
                 schema:
@@ -325,13 +390,25 @@ class VersionedModelEnpoint(ModelEndpoint):
         tags: [{resource}]
         parameters:
             - $ref: '#/parameters/identifier'
+              description: {resource} identifier
         responses:
             200:
                 description: Version collection for resource {resource}.
                 schema:
-                    type: array
-                    items:
-                        $ref: '#/definitions/Version'
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Version'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+            401:
+                description: Unauthorized access.
+            404:
+                description: Resource does not exist.
         """
         instance = self.get_object(identifier)
         return self.collection(instance.versions.serialize())
@@ -346,9 +423,10 @@ class VersionedModelEnpoint(ModelEndpoint):
         tags: [{resource}]
         parameters:
             - $ref: '#/parameters/identifier'
+              description: {resource} identifier
             - name: ref
               in: path
-              type: string
+              type: integer
               required: true
               description: version reference, either a date or an increment.
         responses:
@@ -356,6 +434,12 @@ class VersionedModelEnpoint(ModelEndpoint):
                 description: get specific Version for resource {resource}.
                 schema:
                     $ref: '#/definitions/Version'
+            400:
+                description: Bad Request.
+            401:
+                description: Unauthorized access.
+            404:
+                description: Resource does not exist.
         """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
@@ -372,14 +456,25 @@ class VersionedModelEnpoint(ModelEndpoint):
         tags: [{resource}]
         parameters:
             - $ref: '#/parameters/identifier'
+              description: {resource} identifier
             - name: ref
               in: path
-              type: string
+              type: integer
               required: true
               description: version reference, either a date or an increment.
+            - name: body
+              in: body
+              type: string
+              required: true
+              description:
+                A status boolean key (= true to flag, false to unflag).
         responses:
-            204:
+            200:
                 description: version flag was updated.
+            400:
+                description: Bad Request.
+            401:
+                description: Unauthorized access.
         """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
@@ -401,14 +496,19 @@ class VersionedModelEnpoint(ModelEndpoint):
         tags: [{resource}]
         parameters:
             - $ref: '#/parameters/identifier'
+              description: {resource} identifier
             - name: old
               in: path
               type: string
               required: true
-              description: old identifier.
+              description: Old {resource} identifier:value
         responses:
             201:
-                description: redirect was created.
+                description: redirect was successfully created.
+            401:
+                description: Unauthorized access.
+            404:
+                description: Resource does not exist.
             422:
                 description: error while creating the redirect.
         """
@@ -428,16 +528,21 @@ class VersionedModelEnpoint(ModelEndpoint):
         tags: [{resource}]
         parameters:
             - $ref: '#/parameters/identifier'
+              description: {resource} identifier
             - name: old
               in: path
               type: string
               required: true
-              description: old identifier.
+              description: old {resource} identifier:value
         responses:
             204:
-                description: redirect was successful.
+                description: redirect was successfully deleted.
+            401:
+                description: Unauthorized access.
+            404:
+                description: Resource does not exist.
             422:
-                description: error while creating the redirect.
+                description: error while deleting the redirect.
         """
         instance = self.get_object(identifier)
         old_identifier, old_value = old.split(':')
@@ -453,9 +558,14 @@ class VersionedModelEnpoint(ModelEndpoint):
         tags: [{resource}]
         parameters:
             - $ref: '#/parameters/identifier'
+              description: {resource} identifier
         responses:
             200:
-                description: A list of redirects.
+                description: A list of redirects (identifier:value)
+            401:
+                description: Unauthorized access.
+            404:
+                description: Resource does not exist.
         """
         instance = self.get_object(identifier)
         cls = versioning.Redirect
@@ -571,18 +681,31 @@ class DiffEndpoint(CollectionEndpoint):
         """Get database diffs.
 
         tags: ['Diff']
-
         parameters:
-        - name: increment
-          in: query
-          description: The minimal increment value to retrieve
-          type: integer
-          required: false
+            - name: increment
+              in: query
+              description: The minimal increment value to retrieve
+              type: integer
+              required: false
         responses:
-          200:
-            description: A list of diff objects
-            schema:
-              $ref: '#/definitions/Diff'
+            200:
+                description: A list of diff objects
+                schema:
+                    type: object
+                    properties:
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+                        collection:
+                            name: collection
+                            type: array
+                            items:
+                                $ref: '#/definitions/Diff'
+            400:
+                description: Invalid value for increment
+            401:
+                description: Unauthorized access.
          """
         qs = versioning.Diff.select()
         try:
