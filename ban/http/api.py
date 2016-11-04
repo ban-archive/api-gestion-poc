@@ -147,7 +147,8 @@ class ModelEndpoint(CollectionEndpoint):
                         type: integer
                         description: total resources available
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
+
         """
         qs = self.get_queryset()
         if qs is None:
@@ -177,9 +178,9 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             404:
-                description: Resource does not exist.
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         try:
@@ -210,11 +211,11 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             400:
-                description: Bad Request.
+                $ref: '#/responses/400'
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             404:
-                description: Resource does not exist.
+                $ref: '#/responses/404'
             419:
                 description: Conflict.
                 schema:
@@ -249,9 +250,9 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             400:
-                description: Bad Request.
+                $ref: '#/responses/400'
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             419:
                 description: Conflict.
                 schema:
@@ -289,11 +290,11 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             400:
-                description: Bad Request.
+                $ref: '#/responses/400'
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             404:
-                description: Resource does not exist.
+                $ref: '#/responses/404'
             419:
                 description: Conflict.
                 schema:
@@ -330,11 +331,11 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             400:
-                description: Bad Request.
+                $ref: '#/responses/400'
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             404:
-                description: Resource does not exist.
+                $ref: '#/responses/404'
             419:
                 description: Conflict.
                 schema:
@@ -363,9 +364,9 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             404:
-                description: Resource does not exist.
+                $ref: '#/responses/404'
             419:
                 description: Conflict.
                 schema:
@@ -406,9 +407,9 @@ class VersionedModelEnpoint(ModelEndpoint):
                             type: integer
                             description: total resources available
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             404:
-                description: Resource does not exist.
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         return self.collection(instance.versions.serialize())
@@ -435,11 +436,11 @@ class VersionedModelEnpoint(ModelEndpoint):
                 schema:
                     $ref: '#/definitions/Version'
             400:
-                description: Bad Request.
+                $ref: '#/responses/400'
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             404:
-                description: Resource does not exist.
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
@@ -472,9 +473,9 @@ class VersionedModelEnpoint(ModelEndpoint):
             200:
                 description: version flag was updated.
             400:
-                description: Bad Request.
+                $ref: '#/responses/400'
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
         """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
@@ -506,9 +507,9 @@ class VersionedModelEnpoint(ModelEndpoint):
             201:
                 description: redirect was successfully created.
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             404:
-                description: Resource does not exist.
+                $ref: '#/responses/404'
             422:
                 description: error while creating the redirect.
         """
@@ -538,9 +539,9 @@ class VersionedModelEnpoint(ModelEndpoint):
             204:
                 description: redirect was successfully deleted.
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             404:
-                description: Resource does not exist.
+                $ref: '#/responses/404'
             422:
                 description: error while deleting the redirect.
         """
@@ -563,9 +564,9 @@ class VersionedModelEnpoint(ModelEndpoint):
             200:
                 description: A list of redirects (identifier:value)
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
             404:
-                description: Resource does not exist.
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         cls = versioning.Redirect
@@ -705,7 +706,8 @@ class DiffEndpoint(CollectionEndpoint):
             400:
                 description: Invalid value for increment
             401:
-                description: Unauthorized access.
+                $ref: '#/responses/401'
+
          """
         qs = versioning.Diff.select()
         try:

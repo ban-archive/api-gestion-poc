@@ -54,6 +54,17 @@ BASE = {
             'type': 'string',
             'required': True,
         }
+    },
+    'responses': {
+        '400': {
+            'description': 'Bad Request.'
+        },
+        '401': {
+            'description': 'Unauthorized access.'
+        },
+        '404': {
+            'description': 'Resource does not exist.'
+        },
     }
 }
 
