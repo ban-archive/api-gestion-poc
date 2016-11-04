@@ -1,7 +1,7 @@
 from io import StringIO
 from urllib.parse import urlencode
 
-import json
+# import json
 import peewee
 from flask import request, url_for
 
@@ -721,9 +721,10 @@ class Diff(CollectionEndpoint):
         return self.collection(qs.serialize())
 
 
+@app.jsonify
 @app.route('/openapi', methods=['GET'])
 def openapi():
-    return json.dumps(app._schema, sort_keys=True)
+    return dumps(app._schema, sort_keys=True)
 
 
 app._schema.register_model(amodels.Session)

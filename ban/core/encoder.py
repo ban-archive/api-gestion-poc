@@ -15,5 +15,7 @@ class ResourceEncoder(json.JSONEncoder):
             return o.__json__()
 
 
-def dumps(data):
-    return json.dumps(data, cls=ResourceEncoder)
+def dumps(data, **kwargs):
+    kwargs.setdefault('cls', ResourceEncoder)
+    # return json.dumps(data, cls=ResourceEncoder)
+    return json.dumps(data, **kwargs)
