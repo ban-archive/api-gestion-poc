@@ -671,7 +671,7 @@ def bal_post():
 
 
 @app.resource
-class DiffEndpoint(CollectionEndpoint):
+class Diff(CollectionEndpoint):
     endpoint = '/diff'
     model = versioning.Diff
 
