@@ -124,14 +124,14 @@ class Schema(dict):
             #    row['type'].append('null')
             if field.unique:
                 row['unique'] = True
-            # max_length = getattr(field, 'max_length', None)
-            # if max_length:
-            #    row['maxLength'] = max_length
-            # min_length = getattr(field, 'min_length', None)
-            # if not min_length and type_ == 'string' and not field.null:
-            #    min_length = 1
-            # if min_length:
-            #    row['minLength'] = min_length
+            max_length = getattr(field, 'max_length', None)
+            if max_length:
+                row['maxLength'] = max_length
+            min_length = getattr(field, 'min_length', None)
+            if not min_length and type_ == 'string' and not field.null:
+                min_length = 1
+            if min_length:
+                row['minLength'] = min_length
             if getattr(field, 'choices', None):
                 row['enum'] = [v for v, l in field.choices]
                 if field.null:
