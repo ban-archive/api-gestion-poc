@@ -506,6 +506,17 @@ class VersionedModelEnpoint(ModelEndpoint):
         responses:
             201:
                 description: redirect was successfully created.
+                schema:
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Redirect'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
             401:
                 $ref: '#/responses/401'
             404:
@@ -538,6 +549,17 @@ class VersionedModelEnpoint(ModelEndpoint):
         responses:
             204:
                 description: redirect was successfully deleted.
+                schema:
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Redirect'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
             401:
                 $ref: '#/responses/401'
             404:
@@ -563,6 +585,17 @@ class VersionedModelEnpoint(ModelEndpoint):
         responses:
             200:
                 description: A list of redirects (identifier:value)
+                schema:
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Redirect'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
             401:
                 $ref: '#/responses/401'
             404:
@@ -731,3 +764,4 @@ app._schema.register_model(amodels.Session)
 app._schema.register_model(versioning.Diff)
 app._schema.register_model(versioning.Version)
 app._schema.register_model(versioning.Flag)
+app._schema.register_model(versioning.Redirect)

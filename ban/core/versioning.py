@@ -272,6 +272,13 @@ class Diff(db.Model):
 
 class Redirect(db.Model):
 
+    __openapi__ = """
+        properties:
+            identifier_value:
+                type: string
+                description: Identifier name ':' Value for identifier
+        """
+
     model_name = db.CharField(max_length=64)
     model_id = db.CharField(max_length=255)
     identifier = db.CharField(max_length=64)
@@ -328,9 +335,11 @@ class Redirect(db.Model):
 
     @classmethod
     def follow(cls, model_name, identifier, value):
-        rows = cls.select(cls.model_id).where(cls.model_name == model_name.lower(),
-                                        cls.identifier == identifier,
-                                        cls.value == str(value))
+        rows = cls.select(cls.model_id).where(
+            cls.model_name == model_name.lower(),
+            cls.identifier == identifier,
+            cls.value == str(value)
+        )
         return [row.model_id for row in rows]
 
     @classmethod
