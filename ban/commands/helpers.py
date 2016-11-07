@@ -107,15 +107,16 @@ def batch(func, iterable, chunksize=1000, total=None, progress=True):
             loop()
 
 
-def prompt(text, default=None, confirmation=False, coerce=None, hidden=False):
+def prompt(text, default=..., confirmation=False, coerce=None, hidden=False):
     """Prompts a user for input.  This is a convenience function that can
     be used to prompt a user for input later.
 
     :param text: the text to show for the prompt.
     :param default: the default value to use if no input happens.  If this
                     is not given it will prompt until it's aborted.
-    :param confirmation_prompt: asks for confirmation for the value.
-    :param type: the type to use to check the value against.
+    :param confirmation: asks for confirmation for the value.
+    :param coerce: a callable to use to coerce the value.
+    :param hidden: define if the input should be hidden (for password for eg.)
     """
     result = None
     func = getpass.getpass if hidden else input
@@ -125,10 +126,10 @@ def prompt(text, default=None, confirmation=False, coerce=None, hidden=False):
             try:
                 result = func('{}: '.format(text))
             except (KeyboardInterrupt, EOFError):
-                abort('Bye.')
+                abort('Aborted.')
             if result:
                 break
-            elif default is not None:
+            elif default is not ...:
                 return default
         if coerce:
             try:
@@ -142,12 +143,11 @@ def prompt(text, default=None, confirmation=False, coerce=None, hidden=False):
             try:
                 confirm = func('{} (again): '.format(text))
             except (KeyboardInterrupt, EOFError):
-                abort('Bye.')
+                abort('Aborted.')
             if confirm:
-                break
-        if result == confirm:
-            return result
-        sys.stderr.write('Error: the two entered values do not match')
+                if result == confirm:
+                    return result
+                print('Error: the two entered values do not match')
 
 
 def confirm(text, default=None):
