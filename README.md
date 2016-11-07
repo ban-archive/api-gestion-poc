@@ -13,10 +13,11 @@ Install system dependencies with homebrew (or by hand)
 
 ### Linux
 
-Install system dependencies
+Install system dependencies (you may need to use python3.4 or postgresql-9.4, depending on your
+distribution):
 
     sudo apt-get build-dep python-psycopg2
-    sudo apt-get install python3.4 python3.4-dev python-virtualenv postgresql-9.4 postgis build-essential libffi-dev
+    sudo apt-get install python3.5 python3.5-dev python-virtualenv postgresql-9.5 postgis build-essential libffi-dev
 
 Create a virtualenv (but you'd better use virtualenvwrapper or pew):
 
@@ -35,9 +36,7 @@ Create a psql user & database
 
 Add postgis and hstore extensions
 
-    psql ban
-    CREATE EXTENSION postgis;
-    CREATE EXTENSION hstore;
+    sudo -u postgres psql -d ban -c 'CREATE EXTENSION postgis; CREATE EXTENSION hstore;'
 
 ### Windows
 
@@ -80,11 +79,7 @@ Clone repository
     git clone https://github.com/BaseAdresseNationale/ban
     cd ban/
 
-Install python dependencies
-
-    pip install -r requirements.txt
-
-Install ban locally
+Install ban locally:
 
     python setup.py develop
 
@@ -97,16 +92,11 @@ Create tables
 
 Create at least use staff user
 
-    ban auth:createuser --is-staff
+    ban auth:createuser --is-staff -v
 
-Import municipalities (get the file from
-http://www.collectivites-locales.gouv.fr/files/files/epcicom2015.csv)
+Import data (ask for the files):
 
-    ban import:municipalities epcicom2015.csv --departement 33
-
-Import some adresses (get data from http://bano.openstreetmap.fr/BAN_odbl/)
-
-    ban import:oldban BAN_odbl_33-json
+    ban import:init path/to/files/* -v
 
 ## Run the server
 
@@ -117,7 +107,7 @@ Create a dummy token for development:
 You will need to use it for any request to the API, passing the header `Authorization: Bearer blablablabla`.
 Replace `blablablabla` both on the command line and header value by any other value you can remember easily.
 
-    http 'http://localhost:5959/' Authorization:'Bearer blablablabla'
+    http http://localhost:5959/ Authorization:'Bearer blablablabla'
 
 This is **just** for development, never user this command in production servers.
 
@@ -127,6 +117,10 @@ For development:
 
 For production, you need to use either gunicorn or uwsgi.
 
-Load the API root to get the available endpoints:
+Load the API OpenAPI schema to get the available endpoints:
 
-    http http://localhost:5959/
+    http http://localhost:5959/openapi
+
+Or just try requesting Municipalities:
+
+    http http://localhost:5959/municipality Authorization:'Bearer blablablabla'
