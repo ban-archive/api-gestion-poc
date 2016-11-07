@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from ban.core import models
+from ban.core import models, context
 from ban.core.encoder import dumps
 from ban.core.versioning import Version, Redirect
 from ban.utils import utcnow
@@ -435,3 +435,13 @@ def test_cannot_change_deleted_at_with_put(put):
     assert resp.status_code == 200
     assert not models.Municipality.get(
         models.Municipality.pk == municipality.pk).deleted_at
+
+
+@authorize
+def test_authorized_responses_contain_sessions_data(get):
+    municipality = MunicipalityFactory(name="Cabour")
+    resp = get('/municipality/{}'.format(municipality.id))
+    assert resp.status_code == 200
+    session = context.get('session')
+    assert resp.headers['Session-Client'] == session.client.id
+    assert resp.headers['Session-User'] == session.user.id
