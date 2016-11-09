@@ -8,13 +8,13 @@ from ban.commands.municipality import merge
 def test_unknown_destination_is_aborted():
     factories.MunicipalityFactory(insee='33001')
     with pytest.raises(SystemExit):
-        merge('12345', sources=['33001'])
+        merge('12345', sources=['33001'], name='Toto', label='TOTO')
     mun = models.Municipality.get(models.Municipality.insee == '33001')
     assert mun.version == 1
 
 
 def test_no_sources_is_aborted():
-    factories.MunicipalityFactory(insee='33001')
+    factories.MunicipalityFactory(insee='33001', name='Toto', label='TOTO')
     with pytest.raises(SystemExit):
         merge('33001')
 
@@ -23,7 +23,7 @@ def test_unknown_source_is_aborted():
     factories.MunicipalityFactory(insee='33001')
     factories.MunicipalityFactory(insee='33002')
     with pytest.raises(SystemExit):
-        merge('33001', sources=['33002', '33333'])
+        merge('33001', sources=['33002', '33333'], name='Toto', label='TOTO')
     mun = models.Municipality.get(models.Municipality.insee == '33001')
     assert mun.version == 1
     mun = models.Municipality.get(models.Municipality.insee == '33002')
@@ -34,7 +34,29 @@ def test_destination_in_sources_is_aborted():
     factories.MunicipalityFactory(insee='33001')
     factories.MunicipalityFactory(insee='33002')
     with pytest.raises(SystemExit):
-        merge('33001', sources=['33002', '33001'])
+        merge('33001', sources=['33002', '33001'], name='Toto', label='TOTO')
+    mun = models.Municipality.get(models.Municipality.insee == '33001')
+    assert mun.version == 1
+    mun = models.Municipality.get(models.Municipality.insee == '33002')
+    assert mun.version == 1
+
+
+def test_no_name_is_aborted():
+    factories.MunicipalityFactory(insee='33001')
+    factories.MunicipalityFactory(insee='33002')
+    with pytest.raises(SystemExit):
+        merge('33001', sources=['33002'], label='TOTO')
+    mun = models.Municipality.get(models.Municipality.insee == '33001')
+    assert mun.version == 1
+    mun = models.Municipality.get(models.Municipality.insee == '33002')
+    assert mun.version == 1
+
+
+def test_no_label_is_aborted():
+    factories.MunicipalityFactory(insee='33001')
+    factories.MunicipalityFactory(insee='33002')
+    with pytest.raises(SystemExit):
+        merge('33001', sources=['33002'], name='Toto')
     mun = models.Municipality.get(models.Municipality.insee == '33001')
     assert mun.version == 1
     mun = models.Municipality.get(models.Municipality.insee == '33002')
