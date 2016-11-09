@@ -17,11 +17,11 @@ Install system dependencies (you may need to use python3.4 or postgresql-9.4, de
 distribution):
 
     sudo apt-get build-dep python-psycopg2
-    sudo apt-get install python3.5 python3.5-dev python-virtualenv postgresql-9.5 postgis build-essential libffi-dev
+    sudo apt-get install python3.5 python3.5-dev python-virtualenv postgresql-9.5 postgis build-essential libffi-dev git
 
 Create a virtualenv (but you'd better use virtualenvwrapper or pew):
 
-    virtualenv banenv --python=`which python3.4`
+    virtualenv banenv --python=`which python3.5`
     source banenv/bin/activate
 
 Install developpement tools
