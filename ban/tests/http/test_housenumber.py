@@ -430,3 +430,36 @@ def test_housenumber_select_use_default_orderby(get):
     assert resp.json['collection'][3]['ordinal'] == 'bis'
     assert resp.json['collection'][4]['number'] == '2'
     assert resp.json['collection'][4]['ordinal'] == 'ter'
+
+
+@authorize
+def test_cannot_duplicate_number_and_ordinal_for_same_parent(client):
+    assert not models.HouseNumber.select().count()
+    housenumber = HouseNumberFactory(number='4', ordinal='bis')
+    data = {
+        "number": "4",
+        "ordinal": "bis",
+        "parent": housenumber.parent.id,
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 422
+    assert models.HouseNumber.select().count() == 1
+    assert 'number' in resp.json['errors']
+    assert 'ordinal' in resp.json['errors']
+    assert 'parent' in resp.json['errors']
+
+
+@authorize
+def test_cannot_duplicate_number_with_empty_ordinal_for_same_parent(client):
+    assert not models.HouseNumber.select().count()
+    housenumber = HouseNumberFactory(number='4', ordinal=None)
+    data = {
+        "number": "4",
+        "parent": housenumber.parent.id,
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 422
+    assert models.HouseNumber.select().count() == 1
+    assert 'number' in resp.json['errors']
+    assert 'ordinal' in resp.json['errors']
+    assert 'parent' in resp.json['errors']

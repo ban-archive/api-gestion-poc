@@ -60,6 +60,41 @@ def test_can_update_postcode_complement(client):
 
 
 @authorize
+def test_can_create_postcode_with_same_code_but_different_complement(client):
+    assert not models.PostCode.select().count()
+    postcode = PostCodeFactory(code='12345', name='VILLE',
+                               complement="QUARTIER")
+    data = {
+        "code": "12345",
+        "name": "VILLE",
+        "complement": "AUTRE QUARTIER",
+        "municipality": postcode.municipality.id,
+    }
+    resp = client.post('/postcode', data)
+    assert resp.status_code == 201
+    assert models.PostCode.select().count() == 2
+
+
+@authorize
+def test_cannot_duplicate_code_complement_and_municipality(client):
+    assert not models.PostCode.select().count()
+    postcode = PostCodeFactory(code='12345', name='VILLE',
+                               complement="QUARTIER")
+    data = {
+        "code": "12345",
+        "name": "VILLE",
+        "complement": "QUARTIER",
+        "municipality": postcode.municipality.id,
+    }
+    resp = client.post('/postcode', data)
+    assert resp.status_code == 422
+    assert models.PostCode.select().count() == 1
+    assert 'code' in resp.json['errors']
+    assert 'complement' in resp.json['errors']
+    assert 'municipality' in resp.json['errors']
+
+
+@authorize
 def test_postcode_select_use_default_orderby(get):
     mun1 = MunicipalityFactory(insee="90002")
     mun2 = MunicipalityFactory(insee="90001")

@@ -34,6 +34,8 @@ class ResourceValidator:
                 self.error(name, str(e))
                 continue
 
+        self.validate_unique_indexes()
+
         if hasattr(self.model, 'validate'):
             for key, message in self.model.validate(self, self.data,
                                                     instance).items():
@@ -96,6 +98,22 @@ class ResourceValidator:
             qs = qs.where(self.model.pk != self.instance.pk)
         if qs.exists():
             raise ValueError('`{}` already exists'.format(value))
+
+    def validate_unique_indexes(self):
+        for names, unique in self.model._meta.indexes:
+            if not unique:
+                continue
+            where = []
+            for name in names:
+                field = getattr(self.model, name)
+                where.append(field == self.data.get(name))
+            qs = self.model.select().where(*where)
+            if self.instance:
+                qs = qs.where(self.model.pk != self.instance.pk)
+            if qs.exists():
+                msg = 'Duplicate entries: {}'.format(', '.join(names))
+                for name in names:
+                    self.error(name, msg)
 
     def patch(self):
         for key, value in self.data.items():
