@@ -53,14 +53,15 @@ class Municipality(NamedModel):
 
 
 class PostCode(NamedModel):
-    resource_fields = ['code', 'name', 'alias', 'municipality']
+    resource_fields = ['code', 'name', 'alias', 'complement', 'municipality']
 
+    complement = db.CharField(max_length=38, null=True)
     code = db.PostCodeField(index=True)
     municipality = db.ForeignKeyField(Municipality, related_name='postcodes')
 
     class Meta:
         indexes = (
-            (('code', 'municipality'), True),
+            (('code', 'complement', 'municipality'), True),
         )
 
     @property
