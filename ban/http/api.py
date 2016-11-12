@@ -599,7 +599,7 @@ class DiffEndpoint(CollectionEndpoint):
 
 @app.route('/openapi', methods=['GET'])
 def openapi():
-    return dumps(app._schema)
+    return dumps(app._schema, sort_keys=True)
 
 
 app._schema.register_model(amodels.Session)
