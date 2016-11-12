@@ -173,11 +173,20 @@ class ModelEndpoint(CollectionEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
         responses:
             200:
                 description: Get {resource} instance.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             410:
                 description: Resource is deleted.
                 schema:
