@@ -149,6 +149,9 @@ class ModelEndpoint(CollectionEndpoint):
                         name: total
                         type: integer
                         description: total resources available
+            401:
+                $ref: '#/responses/401'
+
         """
         qs = self.get_queryset()
         if qs is None:
