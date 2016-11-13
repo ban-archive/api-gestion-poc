@@ -398,11 +398,20 @@ class ModelEndpoint(CollectionEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
         responses:
             204:
                 description: Instance has been deleted successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
