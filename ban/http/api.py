@@ -429,7 +429,7 @@ class ModelEndpoint(CollectionEndpoint):
         return {'resource_id': identifier}
 
 
-class VersionedModelEnpoint(ModelEndpoint):
+class VersionedModelEndpoint(ModelEndpoint):
     @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>/versions', methods=['GET'])
@@ -571,14 +571,14 @@ class VersionedModelEnpoint(ModelEndpoint):
 
 
 @app.resource
-class Municipality(VersionedModelEnpoint):
+class Municipality(VersionedModelEndpoint):
     endpoint = '/municipality'
     model = models.Municipality
     order_by = [model.insee]
 
 
 @app.resource
-class PostCode(VersionedModelEnpoint):
+class PostCode(VersionedModelEndpoint):
     endpoint = '/postcode'
     model = models.PostCode
     order_by = [model.code, model.municipality]
@@ -586,14 +586,14 @@ class PostCode(VersionedModelEnpoint):
 
 
 @app.resource
-class Group(VersionedModelEnpoint):
+class Group(VersionedModelEndpoint):
     endpoint = '/group'
     model = models.Group
     filters = ['municipality']
 
 
 @app.resource
-class HouseNumber(VersionedModelEnpoint):
+class HouseNumber(VersionedModelEndpoint):
     endpoint = '/housenumber'
     model = models.HouseNumber
     filters = ['parent', 'postcode', 'ancestors', 'group']
@@ -637,7 +637,7 @@ class HouseNumber(VersionedModelEnpoint):
 
 
 @app.resource
-class Position(VersionedModelEnpoint):
+class Position(VersionedModelEndpoint):
     endpoint = '/position'
     model = models.Position
     filters = ['kind', 'housenumber']
