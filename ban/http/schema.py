@@ -56,6 +56,20 @@ BASE = {
         '404': {
             'description': 'Resource does not exist.'
         },
+        '410': {
+            'description': 'Resource is deleted.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
+        },
+        '422': {
+            'description': 'Invalid data.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
+        },
     }
 }
 

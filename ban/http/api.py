@@ -188,9 +188,7 @@ class ModelEndpoint(CollectionEndpoint):
             404:
                 $ref: '#/responses/404'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/{resource}'
+                $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
         status = 410 if instance.deleted_at else 200
@@ -235,13 +233,9 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
@@ -275,13 +269,9 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.save_object()
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
@@ -324,13 +314,9 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
@@ -373,13 +359,9 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         if instance.deleted_at:
@@ -417,9 +399,7 @@ class ModelEndpoint(CollectionEndpoint):
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is already deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
         try:
