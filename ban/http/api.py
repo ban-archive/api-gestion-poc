@@ -434,17 +434,33 @@ class VersionedModelEnpoint(ModelEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>/versions', methods=['GET'])
     def get_versions(self, identifier):
-        """Get resource versions.
+        """Get {resource} versions.
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
         responses:
             200:
                 description: Version collection for resource {resource}.
                 schema:
-                    type: array
-                    items:
-                        $ref: '#/definitions/Version'
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Version'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         return self.collection(instance.versions.serialize())
