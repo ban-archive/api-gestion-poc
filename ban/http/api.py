@@ -253,11 +253,23 @@ class ModelEndpoint(CollectionEndpoint):
     def post(self):
         """Create {resource}
 
+        parameters:
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be added to the BAN
         responses:
             201:
-                description: Instance has been created successfully.
+                description: Instance has been successfully created.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
             409:
                 description: Conflict.
                 schema:
