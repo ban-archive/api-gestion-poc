@@ -292,15 +292,33 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
-        """Patch {resource}
+        """Patch {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be updated to the BAN
         responses:
             200:
                 description: Instance has been updated successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
