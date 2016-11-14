@@ -45,6 +45,31 @@ BASE = {
             'type': 'string',
             'required': True,
         }
+    },
+    'responses': {
+        '400': {
+            'description': 'Bad Request.'
+        },
+        '401': {
+            'description': 'Unauthorized access.'
+        },
+        '404': {
+            'description': 'Resource does not exist.'
+        },
+        '410': {
+            'description': 'Resource is deleted.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
+        },
+        '422': {
+            'description': 'Invalid data.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
+        },
     }
 }
 
