@@ -57,7 +57,7 @@ class Schema(dict):
 
     def get_responder_summary(self, responder, resource):
         return (responder.__doc__ or '').split('\n\n')[0].format(
-            resource=resource.__class__.__name__)
+            resource=resource.__name__)
 
     def get_responder_doc(self, func, resource):
         default = {
