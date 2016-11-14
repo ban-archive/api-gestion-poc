@@ -574,16 +574,33 @@ class Diff(CollectionEndpoint):
         """Get database diffs.
 
         parameters:
-        - name: increment
-          in: query
-          description: The minimal increment value to retrieve
-          type: integer
-          required: false
+            - name: increment
+              in: query
+              type: integer
+              required: false
+              description: The minimal increment value to retrieve
         responses:
-          200:
-            description: A list of diff objects
-            schema:
-              $ref: '#/definitions/Diff'
+            200:
+                description: A list of diff objects
+                schema:
+                    type: object
+                    properties:
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+                        collection:
+                            name: collection
+                            type: array
+                            items:
+                                $ref: '#/definitions/Diff'
+            400:
+                description: Invalid value for increment
+                schema:
+                    type: object
+                    $ref: '#/definitions/Error'
+            401:
+                $ref: '#/responses/401'
          """
         qs = versioning.Diff.select()
         try:
@@ -606,3 +623,4 @@ app._schema.register_model(amodels.Session)
 app._schema.register_model(versioning.Diff)
 app._schema.register_model(versioning.Version)
 app._schema.register_model(versioning.Flag)
+app._schema.register_model(versioning.Redirect)
