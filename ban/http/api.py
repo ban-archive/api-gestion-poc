@@ -149,6 +149,9 @@ class ModelEndpoint(CollectionEndpoint):
                         name: total
                         type: integer
                         description: total resources available
+            401:
+                $ref: '#/responses/401'
+
         """
         qs = self.get_queryset()
         if qs is None:
@@ -170,15 +173,22 @@ class ModelEndpoint(CollectionEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
         responses:
             200:
                 description: Get {resource} instance.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/{resource}'
+                $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
         status = 410 if instance.deleted_at else 200
@@ -191,27 +201,41 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['POST'])
     def post_resource(self, identifier):
-        """Patch {resource} with 'identifier'.
+        """Post {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be updated to the BAN
         responses:
             200:
-                description: Instance has been updated successfully.
+                description: Instance has been successfully updated.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
@@ -223,23 +247,31 @@ class ModelEndpoint(CollectionEndpoint):
     def post(self):
         """Create {resource}
 
+        parameters:
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be added to the BAN
         responses:
             201:
-                description: Instance has been created successfully.
+                description: Instance has been successfully created.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.save_object()
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
@@ -250,27 +282,41 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
-        """Patch {resource}
+        """Patch {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be updated to the BAN
         responses:
             200:
                 description: Instance has been updated successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
@@ -280,27 +326,42 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
     def put(self, identifier):
-        """Replace or restore {resource}.
+        """Replace or restore {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              description: {resource} identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be replaced to the BAN
         responses:
             200:
-                description: Instance has been replaced successfully.
+                description: Instance has been successfully replaced.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         if instance.deleted_at:
@@ -319,19 +380,26 @@ class ModelEndpoint(CollectionEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
         responses:
             204:
                 description: Instance has been deleted successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is already deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
         try:
@@ -346,17 +414,33 @@ class VersionedModelEndpoint(ModelEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>/versions', methods=['GET'])
     def get_versions(self, identifier):
-        """Get resource versions.
+        """Get {resource} versions.
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
         responses:
             200:
                 description: Version collection for resource {resource}.
                 schema:
-                    type: array
-                    items:
-                        $ref: '#/definitions/Version'
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Version'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         return self.collection(instance.versions.serialize())
@@ -370,9 +454,14 @@ class VersionedModelEndpoint(ModelEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
-            - name: ref
+              name: identifier
               in: path
               type: string
+              required: true
+              description: {resource} identifier
+            - name: ref
+              in: path
+              type: integer
               required: true
               description: version reference, either a date or an increment.
         responses:
@@ -380,6 +469,12 @@ class VersionedModelEndpoint(ModelEndpoint):
                 description: get specific Version for resource {resource}.
                 schema:
                     $ref: '#/definitions/Version'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
@@ -391,18 +486,37 @@ class VersionedModelEndpoint(ModelEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
     def post_version(self, identifier, ref):
-        """Flag a version.
+        """Flag a {resource} version.
 
         parameters:
             - $ref: '#/parameters/identifier'
-            - name: ref
+              name: identifier
               in: path
               type: string
               required: true
+              description: {resource} identifier
+            - name: ref
+              in: path
+              type: integer
+              required: true
               description: version reference, either a date or an increment.
+            - name: body
+              in: body
+              type: string
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                A status boolean key (= true to flag, false to unflag).
         responses:
-            204:
+            200:
                 description: version flag was updated.
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
@@ -417,48 +531,125 @@ class VersionedModelEndpoint(ModelEndpoint):
             abort(400, error='Body should contain a `status` boolean key')
 
     @auth.require_oauth()
-    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
-    def put_delete_redirects(self, identifier, old):
-        """Create a new redirect to this resource.
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT'])
+    def put_redirects(self, identifier, old):
+        """Create a new redirect to this {resource}.
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
             - name: old
               in: path
               type: string
               required: true
-              description: old identifier.
+              description: Old {resource} identifier:value
         responses:
-            204:
-                description: redirect was successful.
             201:
-                description: redirect was created.
+                description: redirect was successfully created.
+                schema:
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Redirect'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             422:
                 description: error while creating the redirect.
         """
         instance = self.get_object(identifier)
         old_identifier, old_value = old.split(':')
-        if request.method == 'PUT':
-            try:
-                versioning.Redirect.add(instance, old_identifier, old_value)
-            except ValueError as e:
-                abort(422, error=str(e))
-            return '', 201
-        elif request.method == 'DELETE':
-            versioning.Redirect.remove(instance, old_identifier, old_value)
-            return '', 204
+        try:
+            versioning.Redirect.add(instance, old_identifier, old_value)
+        except ValueError as e:
+            abort(422, error=str(e))
+        return '', 201
+
+    @auth.require_oauth()
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['DELETE'])
+    def delete_redirects(self, identifier, old):
+        """Delete a redirect to this {resource}.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
+            - name: old
+              in: path
+              type: string
+              required: true
+              description: old {resource} identifier:value
+        responses:
+            204:
+                description: redirect was successfully deleted.
+                schema:
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Redirect'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
+            422:
+                description: error while deleting the redirect.
+        """
+        instance = self.get_object(identifier)
+        old_identifier, old_value = old.split(':')
+        versioning.Redirect.remove(instance, old_identifier, old_value)
+        return '', 204
 
     @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>/redirects', methods=['GET'])
     def get_redirects(self, identifier):
-        """Get a collection of Redirect pointing to this resource.
+        """Get a collection of Redirect pointing to this {resource}.
 
         parameters:
-            - $ref: '#/parameters/identifier'
+        - $ref: '#/parameters/identifier'
+          name: identifier
+          in: path
+          type: string
+          required: true
+          description: {resource} identifier
         responses:
             200:
-                description: A list of redirects.
+                description: A list of redirects (identifier:value)
+                schema:
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Redirect'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         cls = versioning.Redirect
@@ -574,16 +765,30 @@ class Diff(CollectionEndpoint):
         """Get database diffs.
 
         parameters:
-        - name: increment
-          in: query
-          description: The minimal increment value to retrieve
-          type: integer
-          required: false
+            - name: increment
+              in: query
+              type: integer
+              required: false
+              description: The minimal increment value to retrieve
         responses:
-          200:
-            description: A list of diff objects
-            schema:
-              $ref: '#/definitions/Diff'
+            200:
+                description: A list of diff objects
+                schema:
+                    type: object
+                    properties:
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+                        collection:
+                            name: collection
+                            type: array
+                            items:
+                                $ref: '#/definitions/Diff'
+            400:
+                description: Invalid value for increment
+            401:
+                $ref: '#/responses/401'
          """
         qs = versioning.Diff.select()
         try:
@@ -606,3 +811,4 @@ app._schema.register_model(amodels.Session)
 app._schema.register_model(versioning.Diff)
 app._schema.register_model(versioning.Version)
 app._schema.register_model(versioning.Flag)
+app._schema.register_model(versioning.Redirect)
