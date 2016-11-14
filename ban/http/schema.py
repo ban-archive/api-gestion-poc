@@ -48,13 +48,25 @@ BASE = {
     },
     'responses': {
         '400': {
-            'description': 'Bad Request.'
+            'description': 'Bad Request.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
         },
         '401': {
-            'description': 'Unauthorized access.'
+            'description': 'Unauthorized access.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
         },
         '404': {
-            'description': 'Resource does not exist.'
+            'description': 'Resource does not exist.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
         },
         '410': {
             'description': 'Resource is deleted.',
