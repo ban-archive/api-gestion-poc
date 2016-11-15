@@ -498,13 +498,33 @@ class VersionedModelEndpoint(ModelEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>/redirects', methods=['GET'])
     def get_redirects(self, identifier):
-        """Get a collection of Redirect pointing to this resource.
+        """Get a collection of Redirect pointing to this {resource}.
 
-        parameters:
-            - $ref: '#/parameters/identifier'
-        responses:
-            200:
-                description: A list of redirects.
+            parameters:
+                - $ref: '#/parameters/identifier'
+                  name: identifier
+                  in: path
+                  type: string
+                  required: true
+                  description: {resource} identifier
+            responses:
+                200:
+                    description: A list of redirects (identifier:value)
+                    schema:
+                        type: object
+                        properties:
+                            collection:
+                                type: array
+                                items:
+                                    $ref: '#/definitions/Redirect'
+                            total:
+                                name: total
+                                type: integer
+                                description: total resources available
+                401:
+                    $ref: '#/responses/401'
+                404:
+                    $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         cls = versioning.Redirect
