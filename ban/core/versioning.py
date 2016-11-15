@@ -274,9 +274,13 @@ class Redirect(db.Model):
 
     __openapi__ = """
         properties:
-            identifier_value:
+            identifier:
                 type: string
-                description: Identifier name ':' Value for identifier
+                description:
+                    key/value pair for identifier.
+                        . key = identifier name. e.g., 'id'.
+                        . value = identifier value.
+                        . key and value are separated by a ':'
         """
 
     model_name = db.CharField(max_length=64)
