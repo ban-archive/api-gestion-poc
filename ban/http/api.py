@@ -418,18 +418,37 @@ class VersionedModelEndpoint(ModelEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
     def post_version(self, identifier, ref):
-        """Flag a version.
+        """Flag a {resource} version.
 
         parameters:
             - $ref: '#/parameters/identifier'
-            - name: ref
+              name: identifier
               in: path
               type: string
               required: true
+              description: {resource} identifier
+            - name: ref
+              in: path
+              type: integer
+              required: true
               description: version reference, either a date or an increment.
+            - name: body
+              in: body
+              type: string
+              schema:
+                $ref: '#/definitions/{resoure}'
+              required: true
+              description:
+                A status boolean key (= true to flag, false to unflag).
         responses:
-            204:
+            200:
                 description: version flag was updated.
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
