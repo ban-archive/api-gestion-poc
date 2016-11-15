@@ -172,15 +172,22 @@ class ModelEndpoint(CollectionEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
         responses:
             200:
                 description: Get {resource} instance.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/{resource}'
+                $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
         status = 410 if instance.deleted_at else 200
