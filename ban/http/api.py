@@ -374,23 +374,30 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['DELETE'])
     def delete(self, identifier):
-        """Delete {resource}.
+        """Delete {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
         responses:
             204:
                 description: Instance has been deleted successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is already deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
         try:
