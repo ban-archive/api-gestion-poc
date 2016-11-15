@@ -1,9 +1,11 @@
 from ban.commands import command, reporter
 from ban.core import models
+from ban.core import versioning
 from . import helpers
 
 
 @command
+@helpers.session
 def merge(destination, sources=[], name='', label='', **kwargs):
     if destination in sources:
         helpers.abort('Destination in sources')
@@ -28,54 +30,48 @@ def merge(destination, sources=[], name='', label='', **kwargs):
             helpers.abort('Source {} does not exist'.format(source))
         else:
             sources_inst.append(source)
+    process_destination(destination, name)
+    source_done = []
     for source in sources_inst:
-        process_source(destination, source)
+        if source.insee not in source_done:
+            source_done.append(source.insee)
+            process_source(destination, source)
 
 
 def process_source(destination, source):
-    # Redirection (si on recherche 01002, on recoit 01001).
-    # Creation group_area.
-    # HouseNumber
-    # Delete source
-    pass
+    versioning.Redirect.add(destination, 'insee', source.insee)
+    process_redirect(destination, source)
+    source.delete_instance()
 
-# @command
-# def oldmerge(insee_maitresse, insee_secondaire, name_nouvelle_commune,libelle_nouvelle_commune, **kwargs):
-#     insee_secondaire = insee_secondaire.split(',')
-#
-#     name_area_maitresse = mun_maitresse.name
-#     mun_maitresse.name = name_nouvelle_commune
-#     mun_maitresse.version += 1
-#     mun_maitresse.save()
-#     group_area_maitresse = Group()
-#     group_area_maitresse.kind = 'area'
-#     group_area_maitresse.name = name_area_maitresse
-#     group_area_maitresse.created_by_id = 1
-#     group_area_maitresse.modified_by_id = 1
-#     group_area_maitresse.municipality = mun_maitresse
-#     group_area_maitresse.save()
-#     pc_maitresse = PostCode.get(PostCode.municipality == mun_maitresse)
-#     if pc_maitresse.name is None:
-#         pc_maitresse.name = libelle_nouvelle_commune
-#     group_rue_maitresse = Group.select().where(Group.municipality == mun_maitresse)
-#     for gr_rue_maitresse in group_rue_maitresse:
-#         if gr_rue_maitresse.name != group_area_maitresse.name:
-#             hn_maitresse = HouseNumber.select().where(HouseNumber.parent == gr_rue_maitresse)
-#             print(gr_rue_maitresse)
-#             for hn in hn_maitresse:
-#                 hn.ancestors = group_area_maitresse
-#                 hn.version += 1
-#                 hn.save()
-#     for insee in insee_secondaire:
-#         print(insee)
-#         mun_secondaire = Municipality.get(Municipality.insee == insee)
-#         pc_secondaire = PostCode.select().where(PostCode.municipality == mun_secondaire).first()
-#         if pc_secondaire is not None:
-#             pc_secondaire.municipality = mun_maitresse
-#             pc_secondaire.version += 1
-#             pc_secondaire.save()
-#         group_rue_secondaire=Group.select().where(Group.municipality==mun_secondaire)
-#         for group_rue in group_rue_secondaire:
-#                 group_rue.municipality=mun_maitresse
-#                 group_rue.version+=1
-#                 group_rue.save()
+
+def process_destination(destination, name):
+    process_redirect(destination, destination)
+    destination.name = name
+    destination.increment_version()
+    destination.save()
+
+
+def process_redirect(destination, source):
+    group_area = models.Group.validator(
+        name=source.name, municipality=destination, version=1, kind='area')
+    group_area.save()
+    gr_area = models.Group.select().where(
+        models.Group.name == source.name).first()
+    postcodes = models.PostCode.select().where(
+        models.PostCode.municipality == source)
+    for postcode in postcodes:
+        postcode.municipality = destination
+        postcode.increment_version()
+        postcode.save()
+    groups = models.Group.select().where(models.Group.municipality == source)
+    for group in groups:
+        if group != gr_area:
+            group.municipality = destination
+            group.increment_version()
+            group.save()
+            housenumbers = models.HouseNumber.select().where(
+                models.HouseNumber.parent == group)
+            for housenumber in housenumbers:
+                housenumber.ancestors = gr_area
+                housenumber.increment_version()
+                housenumber.save()
