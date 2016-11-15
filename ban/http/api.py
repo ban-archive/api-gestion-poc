@@ -244,25 +244,33 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('', methods=['POST'])
     def post(self):
-        """Create {resource}
+        """Create {resource}.
 
+        parameters:
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be added to the BAN.
         responses:
             201:
-                description: Instance has been created successfully.
+                description: Instance has been successfully created.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.save_object()
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
