@@ -386,6 +386,11 @@ class VersionedModelEndpoint(ModelEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
             - name: ref
               in: path
               type: string
@@ -396,6 +401,12 @@ class VersionedModelEndpoint(ModelEndpoint):
                 description: get specific Version for resource {resource}.
                 schema:
                     $ref: '#/definitions/Version'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
