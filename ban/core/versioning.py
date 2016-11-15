@@ -272,6 +272,17 @@ class Diff(db.Model):
 
 class Redirect(db.Model):
 
+    __openapi__ = """
+        properties:
+            identifier:
+                type: string
+                description:
+                    key/value pair for identifier.
+                        . key = identifier name. e.g., 'id'.
+                        . value = identifier value.
+                        . key and value are separated by a ':'
+        """
+
     model_name = db.CharField(max_length=64)
     model_id = db.CharField(max_length=255)
     identifier = db.CharField(max_length=64)
