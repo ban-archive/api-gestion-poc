@@ -44,6 +44,7 @@ BASE = {
             'in': 'path',
             'type': 'string',
             'required': True,
+            'description': 'resource identifier'
         }
     },
     'responses': {

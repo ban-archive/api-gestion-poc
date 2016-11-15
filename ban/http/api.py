@@ -172,11 +172,6 @@ class ModelEndpoint(CollectionEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
-              name: identifier
-              in: path
-              type: string
-              required: true
-              description: {resource} identifier
         responses:
             200:
                 description: Get {resource} instance.
