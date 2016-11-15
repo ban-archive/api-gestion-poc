@@ -463,9 +463,9 @@ class VersionedModelEndpoint(ModelEndpoint):
             abort(400, error='Body should contain a `status` boolean key')
 
     @auth.require_oauth()
-    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
-    def put_delete_redirects(self, identifier, old):
-        """Create a new redirect to this resource.
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT'])
+    def put_redirects(self, identifier, old):
+        """Create a new redirect to this {resource}.
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -473,26 +473,73 @@ class VersionedModelEndpoint(ModelEndpoint):
               in: path
               type: string
               required: true
-              description: old identifier.
+              description: Old {resource} identifier:value
         responses:
-            204:
-                description: redirect was successful.
             201:
-                description: redirect was created.
+                description: redirect was successfully created.
+                schema:
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Redirect'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             422:
                 description: error while creating the redirect.
         """
         instance = self.get_object(identifier)
         old_identifier, old_value = old.split(':')
-        if request.method == 'PUT':
-            try:
-                versioning.Redirect.add(instance, old_identifier, old_value)
-            except ValueError as e:
-                abort(422, error=str(e))
-            return '', 201
-        elif request.method == 'DELETE':
-            versioning.Redirect.remove(instance, old_identifier, old_value)
-            return '', 204
+        try:
+            versioning.Redirect.add(instance, old_identifier, old_value)
+        except ValueError as e:
+            abort(422, error=str(e))
+        return '', 201
+
+    @auth.require_oauth()
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['DELETE'])
+    def delete_redirects(self, identifier, old):
+        """Delete a redirect to this {resource}.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: old
+              in: path
+              type: string
+              required: true
+              description: old {resource} identifier:value
+        responses:
+            204:
+                description: redirect was successfully deleted.
+                schema:
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Redirect'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
+            422:
+                description: error while deleting the redirect.
+        """
+        instance = self.get_object(identifier)
+        old_identifier, old_value = old.split(':')
+        versioning.Redirect.remove(instance, old_identifier, old_value)
+        return '', 204
 
     @auth.require_oauth()
     @app.jsonify
