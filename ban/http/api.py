@@ -200,27 +200,41 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['POST'])
     def post_resource(self, identifier):
-        """Patch {resource} with 'identifier'.
+        """Post {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+              name: identifier
+              in: path
+              type: string
+              required: true
+              description: {resource} identifier
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be updated to the BAN.
         responses:
             200:
-                description: Instance has been updated successfully.
+                description: Instance has been successfully updated.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
