@@ -89,6 +89,7 @@ def test_create_group_area(session):
     gr = models.Group.select().where(models.Group.name == mun2.name).first()
     assert gr.municipality == mun1
     assert gr.version == 1
+    assert gr.attributes == {'insee': mun2.insee}
 
 
 def test_modify_postcode_municipality(session):

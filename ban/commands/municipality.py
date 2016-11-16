@@ -53,7 +53,9 @@ def process_destination(destination, name):
 
 def process_redirect(destination, source):
     group_area = models.Group.validator(
-        name=source.name, municipality=destination, version=1, kind='area')
+        name=source.name,
+        municipality=destination,
+        version=1, kind='area', attributes={'insee': source.insee})
     group_area.save()
     gr_area = models.Group.select().where(
         models.Group.name == source.name).first()
