@@ -123,7 +123,7 @@ class Schema(dict):
     def model_definition(self, model):
         """Map Peewee models to jsonschema."""
         schema = {'required': [], 'properties': {},
-                  'type': ['object', 'string', 'null']}
+                  'type': ''}
         for name, field in model._meta.fields.items():
             if name not in model.resource_fields:
                 continue
@@ -133,12 +133,13 @@ class Schema(dict):
             if not type_:
                 continue
             row = {
-                'type': [type_]
+                'type': type_
             }
             if hasattr(field.__class__, '__schema_format__'):
                 row['format'] = field.__class__.__schema_format__
             if isinstance(field, db.ForeignKeyField):
-                row['type'] = ['object', 'string']
+                row['type'] = 'object'
+                row['items'] = {'type': 'string'}
                 row['$ref'] = '#/definitions/{}'.format(
                     field.rel_model.__name__)
             if isinstance(field, db.ManyToManyField):
@@ -148,8 +149,6 @@ class Schema(dict):
                 }
             elif type_ == 'array':
                 row['items'] = {'type': field.db_field}
-            if field.null and 'type' in row:
-                row['type'].append('null')
             if field.unique:
                 row['unique'] = True
             max_length = getattr(field, 'max_length', None)
