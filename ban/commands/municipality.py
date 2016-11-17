@@ -30,28 +30,29 @@ def merge(destination, sources=[], name='', label='', **kwargs):
             helpers.abort('Source {} does not exist'.format(source))
         else:
             sources_inst.append(source)
-    process_destination(destination, name)
     source_done = []
+    areas = []
     for source in sources_inst:
         if source.insee not in source_done:
             source_done.append(source.insee)
-            process_source(destination, source)
+            process_source(destination, source, areas, label)
+    process_destination(destination, areas, name, label)
 
 
-def process_source(destination, source):
+def process_source(destination, source, areas, label):
     versioning.Redirect.add(destination, 'insee', source.insee)
-    process_redirect(destination, source)
+    process_redirect(destination, source, areas, label)
     source.delete_instance()
 
 
-def process_destination(destination, name):
-    process_redirect(destination, destination)
+def process_destination(destination, areas, name, label):
+    process_redirect(destination, destination, areas, label)
     destination.name = name
     destination.increment_version()
     destination.save()
 
 
-def process_redirect(destination, source):
+def process_redirect(destination, source, areas, label):
     group_area = models.Group.validator(
         name=source.name,
         municipality=destination,
@@ -59,15 +60,14 @@ def process_redirect(destination, source):
     group_area.save()
     gr_area = models.Group.select().where(
         models.Group.name == source.name).first()
+    areas.append(gr_area)
     postcodes = models.PostCode.select().where(
         models.PostCode.municipality == source)
     for postcode in postcodes:
-        postcode.municipality = destination
-        postcode.increment_version()
-        postcode.save()
+        process_postcode(destination, postcode, source, label)
     groups = models.Group.select().where(models.Group.municipality == source)
     for group in groups:
-        if group != gr_area:
+        if group not in areas:
             group.municipality = destination
             group.increment_version()
             group.save()
@@ -77,3 +77,10 @@ def process_redirect(destination, source):
                 housenumber.ancestors = gr_area
                 housenumber.increment_version()
                 housenumber.save()
+
+
+def process_postcode(destination, postcode, source, label):
+    postcode.municipality = destination
+    postcode.attributes = {'ligne6': label}
+    postcode.increment_version()
+    postcode.save()

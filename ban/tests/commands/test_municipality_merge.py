@@ -95,11 +95,12 @@ def test_create_group_area(session):
 def test_modify_postcode_municipality(session):
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
-    pc = factories.PostCodeFactory(municipality=mun2, name='PCToto')
+    pc = factories.PostCodeFactory(municipality=mun2, name='PC2')
     merge(mun1.insee, sources=[mun2.insee], name='Toto', label='TOTO')
     pc = models.PostCode.select().where(
-        models.PostCode.name == 'PCToto').first()
+        models.PostCode.name == 'PC2').first()
     assert pc.municipality == mun1
+    assert pc.attributes == {'ligne6': 'TOTO'}
 
 
 def test_modify_housenumber_ancestors(session):
