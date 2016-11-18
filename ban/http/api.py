@@ -350,11 +350,6 @@ class VersionedModelEndpoint(ModelEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
-              name: identifier
-              in: path
-              type: string
-              required: true
-                description: {resource} identifier
         responses:
             200:
                 description: Version collection for resource {resource}.
@@ -436,7 +431,7 @@ class VersionedModelEndpoint(ModelEndpoint):
               in: body
               type: string
               schema:
-                $ref: '#/definitions/{resoure}'
+                $ref: '#/definitions/{resource}'
               required: true
               description:
                 A status boolean key (= true to flag, false to unflag).
