@@ -199,11 +199,6 @@ class ModelEndpoint(CollectionEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
-              name: identifier
-              in: path
-              type: string
-              required: true
-              description: {resource} identifier
             - name: body
               in: body
               schema:
@@ -280,11 +275,6 @@ class ModelEndpoint(CollectionEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
-              name: identifier
-              in: path
-              type: string
-              required: true
-              description: {resource} identifier
             - name: body
               in: body
               schema:
@@ -324,11 +314,6 @@ class ModelEndpoint(CollectionEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
-              name: identifier
-              description: {resource} identifier
-              in: path
-              type: string
-              required: true
             - name: body
               in: body
               schema:
@@ -373,11 +358,6 @@ class ModelEndpoint(CollectionEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
-              name: identifier
-              in: path
-              type: string
-              required: true
-              description: {resource} identifier
         responses:
             204:
                 description: Instance has been deleted successfully.
