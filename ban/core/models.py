@@ -49,7 +49,7 @@ class Municipality(NamedModel):
     exclude_for_version = ['postcodes']
 
     insee = db.CharField(length=5, unique=True)
-    siren = db.CharField(max_length=9, unique=True, null=True)
+    siren = db.CharField(length=9, format='\d*', unique=True, null=True)
 
 
 class PostCode(NamedModel):
