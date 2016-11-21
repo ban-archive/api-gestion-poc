@@ -149,6 +149,8 @@ class ModelEndpoint(CollectionEndpoint):
                         name: total
                         type: integer
                         description: total resources available
+            401:
+                $ref: '#/responses/401'
         """
         qs = self.get_queryset()
         if qs is None:
@@ -175,10 +177,12 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Get {resource} instance.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/{resource}'
+                $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
         status = 410 if instance.deleted_at else 200
@@ -191,27 +195,36 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['POST'])
     def post_resource(self, identifier):
-        """Patch {resource} with 'identifier'.
+        """Post {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be updated to the BAN.
         responses:
             200:
-                description: Instance has been updated successfully.
+                description: Instance has been successfully updated.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
@@ -221,25 +234,33 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('', methods=['POST'])
     def post(self):
-        """Create {resource}
+        """Create {resource}.
 
+        parameters:
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be added to the BAN.
         responses:
             201:
-                description: Instance has been created successfully.
+                description: Instance has been successfully created.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.save_object()
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
@@ -250,27 +271,36 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
-        """Patch {resource}
+        """Patch {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that need to be patched to the BAN.
         responses:
             200:
                 description: Instance has been updated successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
@@ -280,27 +310,36 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
     def put(self, identifier):
-        """Replace or restore {resource}.
+        """Replace or restore {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be replaced to the BAN
         responses:
             200:
-                description: Instance has been replaced successfully.
+                description: Instance has been successfully replaced.
                 schema:
                     $ref: '#/definitions/{resource}'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         if instance.deleted_at:
@@ -315,7 +354,7 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['DELETE'])
     def delete(self, identifier):
-        """Delete {resource}.
+        """Delete {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -324,14 +363,16 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Instance has been deleted successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
             410:
-                description: Resource is already deleted.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
         try:
