@@ -13,7 +13,7 @@ from ban.core.exceptions import ValidationError
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
-           'BooleanField', 'BinaryJSONField', 'PostCodeField', 'FantoirField',
+           'BooleanField', 'BinaryJSONField', 'FantoirField',
            'ManyToManyField', 'PasswordField', 'DateRangeField', 'TextField']
 
 
@@ -132,6 +132,8 @@ class CharField(peewee.CharField):
     __schema_type__ = 'string'
 
     def __init__(self, *args, **kwargs):
+        if 'format' in kwargs:
+            self.regex = re.compile(kwargs.pop('format'))
         if 'length' in kwargs:
             kwargs['min_length'] = kwargs['max_length'] = kwargs.pop('length')
         self.min_length = kwargs.pop('min_length', None)
@@ -208,17 +210,6 @@ class DateTimeField(postgres_ext.DateTimeTZField):
 class BooleanField(peewee.BooleanField):
     __data_type__ = bool
     __schema_type__ = 'boolean'
-
-
-class PostCodeField(CharField):
-
-    max_length = 5
-
-    def coerce(self, value):
-        value = str(value)
-        if not len(value) == 5 or not value.isdigit():
-            raise ValidationError('Invalid postcode: `{}`'.format(value))
-        return value
 
 
 class FantoirField(CharField):

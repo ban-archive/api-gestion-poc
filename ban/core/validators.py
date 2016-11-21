@@ -59,7 +59,8 @@ class ResourceValidator:
             raise ValueError('`{value}` is not of type `{type}`.'.format(
                 value=value, type=field.__data_type__
             ))
-        checks = ['null', 'choices', 'min_length', 'max_length', 'unique']
+        checks = ['null', 'choices', 'min_length', 'max_length', 'regex',
+                  'unique']
         for check in checks:
             if getattr(field, check, None) is not None:
                 getattr(self, 'validate_{}'.format(check))(field, value)
@@ -89,6 +90,11 @@ class ResourceValidator:
             raise ValueError('`{}` should be maximum {} characters'.format(
                 value, field.max_length
             ))
+
+    def validate_regex(self, field, value):
+        if value and not bool(field.regex.fullmatch(value)):
+            raise ValueError('Wrong format. Value should '
+                             'match `{}`'.format(field.regex.pattern))
 
     def validate_unique(self, field, value):
         if not value or not field.unique:

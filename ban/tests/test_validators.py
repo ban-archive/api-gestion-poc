@@ -9,17 +9,17 @@ from .factories import (GroupFactory, HouseNumberFactory, MunicipalityFactory,
 
 def test_can_create_municipality(session):
     validator = models.Municipality.validator(name="Eu", insee="12345",
-                                              siren="12345678")
+                                              siren="123456789")
     assert not validator.errors
     municipality = validator.save()
     assert municipality.name == "Eu"
     assert municipality.insee == "12345"
-    assert municipality.siren == "12345678"
+    assert municipality.siren == "123456789"
 
 
 def test_can_create_municipality_with_version(session):
     validator = models.Municipality.validator(name="Eu", insee="12345",
-                                              siren="12345678", version=1)
+                                              siren="123456789", version=1)
     assert not validator.errors
     municipality = validator.save()
     assert municipality.id
@@ -27,7 +27,7 @@ def test_can_create_municipality_with_version(session):
 
 def test_create_should_not_consider_bad_versions(session):
     validator = models.Municipality.validator(name="Eu", insee="12345",
-                                              siren="12345678", version=10)
+                                              siren="123456789", version=10)
     assert not validator.errors
     municipality = validator.save()
     assert municipality.id
@@ -43,14 +43,37 @@ def test_cannot_create_municipality_with_missing_fields(session):
 
 def test_cannot_create_municipality_with_insee_too_short(session):
     validator = models.Municipality.validator(name="Eu", insee="1234",
-                                              siren="12345678")
+                                              siren="123456789")
     assert 'insee' in validator.errors
 
 
 def test_cannot_create_municipality_with_insee_too_long(session):
     validator = models.Municipality.validator(name="Eu", insee="123456",
-                                              siren="12345678")
+                                              siren="123456789")
     assert 'insee' in validator.errors
+
+
+def test_cannot_create_municipality_with_bad_insee(session):
+    validator = models.Municipality.validator(name="Eu", insee="test")
+    assert 'insee' in validator.errors
+
+
+def test_cannot_create_municipality_with_siren_too_short(session):
+    validator = models.Municipality.validator(name="Eu", insee="12345",
+                                              siren="12345678")
+    assert 'siren' in validator.errors
+
+
+def test_cannot_create_municipality_with_siren_too_long(session):
+    validator = models.Municipality.validator(name="Eu", insee="12345",
+                                              siren="1234567890")
+    assert 'siren' in validator.errors
+
+
+def test_cannot_create_municipality_with_bad_siren(session):
+    validator = models.Municipality.validator(name="Eu", insee="12345",
+                                              siren="12345678A")
+    assert 'siren' in validator.errors
 
 
 def test_can_update_municipality(session):
@@ -111,7 +134,7 @@ def test_can_create_municipality_with_alias(session):
     validator = models.Municipality.validator(name="Orvane",
                                               alias=["Moret-sur-Loing"],
                                               insee="12345",
-                                              siren="12345678")
+                                              siren="123456789")
     assert not validator.errors
     municipality = validator.save()
     assert 'Moret-sur-Loing' in municipality.alias
@@ -198,21 +221,22 @@ def test_cannot_create_postcode_with_code_shorter_than_5_chars(session):
     municipality = MunicipalityFactory(insee='12345')
     validator = models.PostCode.validator(code="3131", name="Montbrun-Bocage",
                                           municipality=municipality)
-    assert validator.errors['code'] == 'Invalid postcode: `3131`'
+    assert validator.errors['code'] == '`3131` should be minimum 5 characters'
 
 
 def test_cannot_create_postcode_with_code_bigger_than_5_chars(session):
     municipality = MunicipalityFactory(insee='12345')
     validator = models.PostCode.validator(code="313100", name="Montbrun",
                                           municipality=municipality)
-    assert validator.errors['code'] == 'Invalid postcode: `313100`'
+    assert validator.errors['code'] == ('`313100` should be maximum 5 '
+                                        'characters')
 
 
 def test_cannot_create_postcode_with_code_non_digit(session):
     municipality = MunicipalityFactory(insee='12345')
     validator = models.PostCode.validator(code="2A000", name="Montbrun-Bocage",
                                           municipality=municipality)
-    assert validator.errors['code'] == 'Invalid postcode: `2A000`'
+    assert validator.errors['code'] == 'Wrong format. Value should match `\d*`'
 
 
 def test_can_create_street(session):

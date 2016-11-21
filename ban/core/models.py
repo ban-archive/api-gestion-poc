@@ -48,15 +48,15 @@ class Municipality(NamedModel):
     resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
     exclude_for_version = ['postcodes']
 
-    insee = db.CharField(length=5, unique=True)
-    siren = db.CharField(max_length=9, unique=True, null=True)
+    insee = db.CharField(length=5, unique=True, format='[\dAB]{2}\d{3}')
+    siren = db.CharField(length=9, format='\d*', unique=True, null=True)
 
 
 class PostCode(NamedModel):
     resource_fields = ['code', 'name', 'alias', 'complement', 'municipality']
 
     complement = db.CharField(max_length=38, null=True)
-    code = db.PostCodeField(index=True)
+    code = db.CharField(index=True, format='\d*', length=5)
     municipality = db.ForeignKeyField(Municipality, related_name='postcodes')
 
     class Meta:
