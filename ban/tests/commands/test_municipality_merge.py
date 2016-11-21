@@ -68,7 +68,7 @@ def test_redirect(session):
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
     merge(mun1.insee, sources=[mun2.insee], name='Toto', label='TOTO')
-    assert versioning.Redirect.select().count() == 1
+    assert versioning.Redirect.select().count() == 2
     assert versioning.Redirect.follow('Municipality', 'insee', '33002') == [
         mun1.id]
 
@@ -138,7 +138,7 @@ def test_double_source_process_once(session):
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
     merge(mun1.insee,
-          sources=[mun2.insee], name='Toto', label='TOTO')
+          sources=[mun2.insee, mun2.insee], name='Toto', label='TOTO')
     gr = models.Group.select().where(models.Group.name == mun1.name)
     assert len(gr) == 1
     assert gr[0].version == 1

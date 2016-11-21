@@ -7,11 +7,20 @@ from . import helpers
 @command
 @helpers.session
 def merge(destination, sources=[], name='', label='', **kwargs):
+    """
+    Municipality merge command.
+    Steps:
+    - for each Municipality to be removed:
+    - create a new Group with its name
+    - attach all HouseNumbers of this Municipality to this new Group
+    - attach sources Groups and sources PostCodes to destination
+    - Remove the Municipality
+    """
     if destination in sources:
         helpers.abort('Destination in sources')
-    if name == '':
+    if not name or not name.split():
         helpers.abort('Name should not be empty')
-    if label == '':
+    if not label or not label.split():
         helpers.abort('Label should not be empty')
     try:
         destination = models.Municipality.get(
@@ -41,46 +50,45 @@ def merge(destination, sources=[], name='', label='', **kwargs):
 
 def process_source(destination, source, areas, label):
     versioning.Redirect.add(destination, 'insee', source.insee)
-    process_redirect(destination, source, areas, label)
+    versioning.Redirect.add(destination, 'id', source.id)
+    process_postcode(destination, source, label)
+    process_source_to_group(destination, source, areas, label)
     source.delete_instance()
 
 
 def process_destination(destination, areas, name, label):
-    process_redirect(destination, destination, areas, label)
+    process_postcode(destination, destination, label)
+    process_source_to_group(destination, destination, areas, label)
     destination.name = name
     destination.increment_version()
     destination.save()
 
 
-def process_redirect(destination, source, areas, label):
-    group_area = models.Group.validator(
+def process_source_to_group(destination, source, areas, label):
+    validator = models.Group.validator(
         name=source.name,
         municipality=destination,
-        version=1, kind='area', attributes={'insee': source.insee})
-    group_area.save()
-    gr_area = models.Group.select().where(
-        models.Group.name == source.name).first()
+        version=1, kind=models.Group.AREA, attributes={'insee': source.insee})
+    gr_area = validator.save()
     areas.append(gr_area)
-    postcodes = models.PostCode.select().where(
-        models.PostCode.municipality == source)
-    for postcode in postcodes:
-        process_postcode(destination, postcode, source, label)
-    groups = models.Group.select().where(models.Group.municipality == source)
-    for group in groups:
-        if group not in areas:
-            group.municipality = destination
-            group.increment_version()
-            group.save()
-            housenumbers = models.HouseNumber.select().where(
-                models.HouseNumber.parent == group)
-            for housenumber in housenumbers:
-                housenumber.ancestors = gr_area
-                housenumber.increment_version()
-                housenumber.save()
+    for group in source.groups:
+        move_group(destination, group, areas)
+        for housenumber in group.housenumber_set:
+            housenumber.ancestors.add(gr_area)
+            housenumber.increment_version()
+            housenumber.save()
 
 
-def process_postcode(destination, postcode, source, label):
-    postcode.municipality = destination
-    postcode.attributes = {'ligne6': label}
-    postcode.increment_version()
-    postcode.save()
+def process_postcode(destination, source, label):
+    for postcode in source.postcodes:
+        postcode.municipality = destination
+        postcode.attributes = {'ligne6': label}
+        postcode.increment_version()
+        postcode.save()
+
+
+def move_group(destination, group, areas):
+    if group not in areas:
+        group.municipality = destination
+        group.increment_version()
+        group.save()
