@@ -53,14 +53,15 @@ class Municipality(NamedModel):
 
 
 class PostCode(NamedModel):
-    resource_fields = ['code', 'name', 'alias', 'municipality']
+    resource_fields = ['code', 'name', 'alias', 'complement', 'municipality']
 
+    complement = db.CharField(max_length=38, null=True)
     code = db.PostCodeField(index=True)
     municipality = db.ForeignKeyField(Municipality, related_name='postcodes')
 
     class Meta:
         indexes = (
-            (('code', 'municipality'), True),
+            (('code', 'complement', 'municipality'), True),
         )
 
     @property
@@ -203,11 +204,6 @@ class Position(Model):
     ign = db.CharField(max_length=24, null=True, unique=True)
     laposte = db.CharField(max_length=10, null=True, unique=True)
     comment = db.TextField(null=True)
-
-    class Meta:
-        indexes = (
-            (('housenumber', 'source'), True),
-        )
 
     @classmethod
     def validate(cls, validator, document, instance):
