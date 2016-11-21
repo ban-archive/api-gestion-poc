@@ -48,7 +48,7 @@ class Municipality(NamedModel):
     resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
     exclude_for_version = ['postcodes']
 
-    insee = db.CharField(length=5, unique=True)
+    insee = db.CharField(length=5, unique=True, format='[\dAB]{2}\d{3}')
     siren = db.CharField(length=9, format='\d*', unique=True, null=True)
 
 

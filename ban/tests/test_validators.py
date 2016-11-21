@@ -53,6 +53,11 @@ def test_cannot_create_municipality_with_insee_too_long(session):
     assert 'insee' in validator.errors
 
 
+def test_cannot_create_municipality_with_bad_insee(session):
+    validator = models.Municipality.validator(name="Eu", insee="test")
+    assert 'insee' in validator.errors
+
+
 def test_cannot_create_municipality_with_siren_too_short(session):
     validator = models.Municipality.validator(name="Eu", insee="12345",
                                               siren="12345678")
