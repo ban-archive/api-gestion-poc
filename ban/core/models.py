@@ -44,11 +44,12 @@ class NamedModel(Model):
 
 
 class Municipality(NamedModel):
+    INSEE_FORMAT = '(2[AB]|\d{2})\d{3}'
     identifiers = ['siren', 'insee']
     resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
     exclude_for_version = ['postcodes']
 
-    insee = db.CharField(length=5, unique=True, format='[\dAB]{2}\d{3}')
+    insee = db.CharField(length=5, unique=True, format=INSEE_FORMAT)
     siren = db.CharField(length=9, format='\d*', unique=True, null=True)
 
 
@@ -117,9 +118,9 @@ class Group(NamedModel):
 
 
 class HouseNumber(Model):
-    # Set of characters from La Poste to optimize OCR removing confusing ones
-    # (like 0/O, 1/I…).
-    CEA_FORMAT = '[\dAB]{2}\d{3}[234679ABCEGHILMNPRSTUVXYZ]{5}'
+    # INSEE + set of OCR-friendly characters (dropped confusing ones
+    # (like 0/O, 1/I…)) from La Poste.
+    CEA_FORMAT = Municipality.INSEE_FORMAT + '[234679ABCEGHILMNPRSTUVXYZ]{5}'
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'positions', 'ign', 'postcode']
