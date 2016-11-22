@@ -107,4 +107,4 @@ def move_group(destination, group, areas):
         group.municipality = destination
         group.increment_version()
         group.save()
-        reporter('municipality modified', group)
+        reporter.notice('municipality modified', group)
