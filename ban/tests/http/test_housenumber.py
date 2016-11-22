@@ -125,7 +125,7 @@ def test_get_housenumber_with_districts(get):
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
     housenumber = HouseNumberFactory(ancestors=[district],
-                                     municipality=municipality)
+                                     parent__municipality=municipality)
     resp = get('/housenumber/{}'.format(housenumber.id))
     assert resp.status_code == 200
     assert 'ancestors' in resp.json
