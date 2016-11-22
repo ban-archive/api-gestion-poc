@@ -4,7 +4,7 @@ import peewee
 from unidecode import unidecode
 
 from ban import db
-from ban.utils import compute_cia
+from ban.utils import compute_cia, cached_property
 from .versioning import Versioned, BaseVersioned
 from .resource import ResourceModel, BaseResource
 from .validators import VersionedResourceValidator
@@ -51,6 +51,10 @@ class Municipality(NamedModel):
 
     insee = db.CharField(length=5, unique=True, format=INSEE_FORMAT)
     siren = db.CharField(length=9, format='\d*', unique=True, null=True)
+
+    @property
+    def municipality(self):
+        return self
 
 
 class PostCode(NamedModel):
@@ -154,6 +158,11 @@ class HouseNumber(Model):
                            self.parent.get_fantoir(),
                            self.number, self.ordinal)
 
+    @cached_property
+    def municipality(self):
+        return Municipality.select().join(
+           Group, on=Municipality.pk == self.parent.municipality.pk).first()
+
 
 class Position(Model):
 
@@ -223,3 +232,9 @@ class Position(Model):
             errors['center'] = msg
             errors['name'] = msg
         return errors
+
+    @cached_property
+    def municipality(self):
+        return Municipality.select().join(
+               Group, on=Municipality.pk == Group.municipality).join(
+               HouseNumber, on=Group.pk == self.housenumber.parent.pk).first()
