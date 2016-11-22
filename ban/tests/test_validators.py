@@ -329,7 +329,7 @@ def test_old_insee_return_an_error_with_new_identifier(session):
     assert municipality.id in validator.errors['municipality']
 
 
-def test_can_create_street_with_empty_laposte_id(session):
+def test_can_create_group_with_empty_laposte_id(session):
     municipality = MunicipalityFactory(insee="12345")
     validator = models.Group.validator(name='Rue des Girafes',
                                        kind=models.Group.WAY,
@@ -340,7 +340,7 @@ def test_can_create_street_with_empty_laposte_id(session):
     assert street.laposte is None
 
 
-def test_can_create_street_with_falsy_laposte(session):
+def test_can_create_group_with_falsy_laposte(session):
     municipality = MunicipalityFactory(insee="12345")
     validator = models.Group.validator(name='Rue des Girafes',
                                        kind=models.Group.WAY,
@@ -349,6 +349,26 @@ def test_can_create_street_with_falsy_laposte(session):
     assert not validator.errors
     street = validator.save()
     assert models.Group.get(models.Group.pk == street.pk).laposte is None
+
+
+def test_cannot_create_group_with_laposte_too_big(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality=municipality,
+                                       laposte='123456789')
+    assert validator.errors['laposte'] == ('`123456789` should be maximum 8 '
+                                           'characters')
+
+
+def test_cannot_create_group_with_non_digit_laposte(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality=municipality,
+                                       laposte='1234567B')
+    assert validator.errors['laposte'] == ('Wrong format. Value should match '
+                                           '`\d*`')
 
 
 def test_bad_foreign_key_gives_readable_message(session):
