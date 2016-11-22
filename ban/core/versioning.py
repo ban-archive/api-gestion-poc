@@ -214,6 +214,9 @@ class Diff(db.Model):
 
     __openapi__ = """
         properties:
+            increment:
+                type: integer
+                description: incremental id of the diff
             resource:
                 type: string
                 description: name of the resource the diff is applied to
