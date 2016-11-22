@@ -97,7 +97,7 @@ class Group(NamedModel):
     kind = db.CharField(max_length=64, choices=KIND)
     addressing = db.CharField(max_length=16, choices=ADDRESSING, null=True)
     fantoir = db.FantoirField(null=True, unique=True)
-    laposte = db.CharField(max_length=10, null=True, unique=True)
+    laposte = db.CharField(max_length=8, null=True, unique=True, format='\d*')
     ign = db.CharField(max_length=24, null=True, unique=True)
     municipality = db.ForeignKeyField(Municipality, related_name='groups')
 
@@ -117,6 +117,9 @@ class Group(NamedModel):
 
 
 class HouseNumber(Model):
+    # Set of characters from La Poste to optimize OCR removing confusing ones
+    # (like 0/O, 1/I…).
+    CEA_FORMAT = '[\dAB]{2}\d{3}[234679ABCEGHILMNPRSTUVXYZ]{5}'
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'positions', 'ign', 'postcode']
@@ -126,7 +129,8 @@ class HouseNumber(Model):
     ordinal = db.CharField(max_length=16, null=True)
     parent = db.ForeignKeyField(Group)
     cia = db.CharField(max_length=100, null=True, unique=True)
-    laposte = db.CharField(max_length=10, null=True, unique=True)
+    laposte = db.CharField(length=10, null=True, unique=True,
+                           format=CEA_FORMAT)
     ign = db.CharField(max_length=24, null=True, unique=True)
     ancestors = db.ManyToManyField(Group, related_name='_housenumbers')
     postcode = db.ForeignKeyField(PostCode, null=True)
@@ -202,7 +206,8 @@ class Position(Model):
     kind = db.CharField(max_length=64, choices=KIND)
     positioning = db.CharField(max_length=32, choices=POSITIONING)
     ign = db.CharField(max_length=24, null=True, unique=True)
-    laposte = db.CharField(max_length=10, null=True, unique=True)
+    laposte = db.CharField(length=10, null=True, unique=True,
+                           format=HouseNumber.CEA_FORMAT)
     comment = db.TextField(null=True)
 
     @classmethod

@@ -201,6 +201,30 @@ def test_invalid_point_should_raise_an_error(session):
     assert 'center' in validator.errors
 
 
+def test_can_create_position_with_laposte(session):
+    housenumber = HouseNumberFactory()
+    validator = models.Position.validator(housenumber=housenumber,
+                                          kind=models.Position.ENTRANCE,
+                                          positioning=models.Position.IMAGERY,
+                                          center=(1, 2),
+                                          laposte='12345AB3HH')
+    assert not validator.errors
+    position = validator.save()
+    assert position.laposte == '12345AB3HH'
+
+
+def test_cannot_create_position_with_invalid_laposte(session):
+    housenumber = HouseNumberFactory()
+    validator = models.Position.validator(housenumber=housenumber,
+                                          kind=models.Position.ENTRANCE,
+                                          positioning=models.Position.IMAGERY,
+                                          center=(1, 2),
+                                          laposte='12345AB1DH')
+    assert validator.errors['laposte'] == ('Wrong format. Value should match '
+                                           '`[\dAB]{2}\d{3}[234679ABCEGHILMNPR'
+                                           'STUVXYZ]{5}`')
+
+
 def test_can_create_postcode(session):
     municipality = MunicipalityFactory(insee='12345')
     validator = models.PostCode.validator(code="31310", name="Montbrun-Bocage",
@@ -329,7 +353,7 @@ def test_old_insee_return_an_error_with_new_identifier(session):
     assert municipality.id in validator.errors['municipality']
 
 
-def test_can_create_street_with_empty_laposte_id(session):
+def test_can_create_group_with_empty_laposte_id(session):
     municipality = MunicipalityFactory(insee="12345")
     validator = models.Group.validator(name='Rue des Girafes',
                                        kind=models.Group.WAY,
@@ -340,7 +364,7 @@ def test_can_create_street_with_empty_laposte_id(session):
     assert street.laposte is None
 
 
-def test_can_create_street_with_falsy_laposte(session):
+def test_can_create_group_with_falsy_laposte(session):
     municipality = MunicipalityFactory(insee="12345")
     validator = models.Group.validator(name='Rue des Girafes',
                                        kind=models.Group.WAY,
@@ -349,6 +373,26 @@ def test_can_create_street_with_falsy_laposte(session):
     assert not validator.errors
     street = validator.save()
     assert models.Group.get(models.Group.pk == street.pk).laposte is None
+
+
+def test_cannot_create_group_with_laposte_too_big(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality=municipality,
+                                       laposte='123456789')
+    assert validator.errors['laposte'] == ('`123456789` should be maximum 8 '
+                                           'characters')
+
+
+def test_cannot_create_group_with_non_digit_laposte(session):
+    municipality = MunicipalityFactory(insee="12345")
+    validator = models.Group.validator(name='Rue des Girafes',
+                                       kind=models.Group.WAY,
+                                       municipality=municipality,
+                                       laposte='1234567B')
+    assert validator.errors['laposte'] == ('Wrong format. Value should match '
+                                           '`\d*`')
 
 
 def test_bad_foreign_key_gives_readable_message(session):
@@ -366,6 +410,40 @@ def test_can_create_housenumber(session):
     assert not validator.errors
     housenumber = validator.save()
     assert housenumber.number == '11'
+
+
+def test_can_create_housenumber_with_laposte(session):
+    street = GroupFactory()
+    validator = models.HouseNumber.validator(parent=street, number='11',
+                                             laposte='12345AB3HH')
+    assert not validator.errors
+    housenumber = validator.save()
+    assert housenumber.laposte == '12345AB3HH'
+
+
+def test_cannot_create_housenumber_with_invalid_laposte(session):
+    street = GroupFactory()
+    validator = models.HouseNumber.validator(parent=street, number='11',
+                                             laposte='12345AB5HH')
+    assert validator.errors['laposte'] == ('Wrong format. Value should match '
+                                           '`[\dAB]{2}\d{3}[234679ABCEGHILMNPR'
+                                           'STUVXYZ]{5}`')
+
+
+def test_cannot_create_housenumber_with_laposte_too_short(session):
+    street = GroupFactory()
+    validator = models.HouseNumber.validator(parent=street, number='11',
+                                             laposte='1234')
+    assert validator.errors['laposte'] == ('`1234` should be minimum 10 '
+                                           'characters')
+
+
+def test_cannot_create_housenumber_with_laposte_too_long(session):
+    street = GroupFactory()
+    validator = models.HouseNumber.validator(parent=street, number='11',
+                                             laposte='12345AB3HHH')
+    assert validator.errors['laposte'] == ('`12345AB3HHH` should be maximum '
+                                           '10 characters')
 
 
 def test_can_create_housenumber_with_ancestors(session):
