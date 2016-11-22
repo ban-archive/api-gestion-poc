@@ -64,7 +64,8 @@ def test_no_label_is_aborted():
     assert mun.version == 1
 
 
-def test_redirect(session):
+def test_redirect(session, monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
     merge(mun1.insee, sources=[mun2.insee], name='Toto', label='TOTO')
@@ -73,7 +74,8 @@ def test_redirect(session):
         mun1.id]
 
 
-def test_modify_group_municipality(session):
+def test_modify_group_municipality(session, monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
     gr = factories.GroupFactory(municipality=mun2, name='GrToto')
@@ -82,7 +84,8 @@ def test_modify_group_municipality(session):
     assert gr.municipality == mun1
 
 
-def test_create_group_area(session):
+def test_create_group_area(session, monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
     merge(mun1.insee, sources=[mun2.insee], name='Toto', label='TOTO')
@@ -92,7 +95,8 @@ def test_create_group_area(session):
     assert gr.attributes == {'insee': mun2.insee}
 
 
-def test_modify_postcode_municipality(session):
+def test_modify_postcode_municipality(session, monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
     pc = factories.PostCodeFactory(municipality=mun2, name='PC2')
@@ -103,7 +107,8 @@ def test_modify_postcode_municipality(session):
     assert pc.attributes == {'ligne6': 'TOTO'}
 
 
-def test_modify_housenumber_ancestors(session):
+def test_modify_housenumber_ancestors(session, monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
     gr = factories.GroupFactory(municipality=mun2, name='GrToto')
@@ -116,7 +121,8 @@ def test_modify_housenumber_ancestors(session):
     assert hn.ancestors == gr_area
 
 
-def test_modify_destination_name(session):
+def test_modify_destination_name(session, monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
     merge(mun1.insee, sources=[mun2.insee], name='Toto', label='TOTO')
@@ -125,7 +131,8 @@ def test_modify_destination_name(session):
     assert mun.name == 'Toto'
 
 
-def test_delete_source(session):
+def test_delete_source(session, monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
     merge(mun1.insee, sources=[mun2.insee], name='Toto', label='TOTO')
@@ -134,7 +141,8 @@ def test_delete_source(session):
     assert mun is None
 
 
-def test_double_source_process_once(session):
+def test_double_source_process_once(session, monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
     merge(mun1.insee,

@@ -41,16 +41,24 @@ def merge(destination, sources=[], name='', label='', **kwargs):
             sources_inst.append(source)
     source_done = []
     areas = []
+    db = models.Municipality._meta.database
+    db.begin()
     for source in sources_inst:
         if source.insee not in source_done:
             source_done.append(source.insee)
             process_source(destination, source, areas, label)
     process_destination(destination, areas, name, label)
+    print(reporter)
+    if helpers.confirm('Do you feel confident with those changes ?'):
+        db.commit()
+    else:
+        db.rollback()
 
 
 def process_source(destination, source, areas, label):
     versioning.Redirect.add(destination, 'insee', source.insee)
     versioning.Redirect.add(destination, 'id', source.id)
+    reporter.notice('redirected to destination', source)
     process_postcode(destination, source, label)
     process_source_to_group(destination, source, areas, label)
     source.delete_instance()
@@ -62,6 +70,7 @@ def process_destination(destination, areas, name, label):
     destination.name = name
     destination.increment_version()
     destination.save()
+    reporter.notice('name modified', destination)
 
 
 def process_source_to_group(destination, source, areas, label):
@@ -69,6 +78,10 @@ def process_source_to_group(destination, source, areas, label):
         name=source.name,
         municipality=destination,
         version=1, kind=models.Group.AREA, attributes={'insee': source.insee})
+    if validator.errors:
+        reporter.error('Errors', validator)
+    else:
+        reporter.notice('Created', validator)
     gr_area = validator.save()
     areas.append(gr_area)
     for group in source.groups:
@@ -77,6 +90,7 @@ def process_source_to_group(destination, source, areas, label):
             housenumber.ancestors.add(gr_area)
             housenumber.increment_version()
             housenumber.save()
+            reporter.notice('Ancestor redirected', housenumber)
 
 
 def process_postcode(destination, source, label):
@@ -85,6 +99,7 @@ def process_postcode(destination, source, label):
         postcode.attributes = {'ligne6': label}
         postcode.increment_version()
         postcode.save()
+        reporter.notice('label and municipality modified', postcode)
 
 
 def move_group(destination, group, areas):
@@ -92,3 +107,4 @@ def move_group(destination, group, areas):
         group.municipality = destination
         group.increment_version()
         group.save()
+        reporter('municipality modified', group)
