@@ -101,6 +101,7 @@ class Client(FlaskClient):
                 kwargs['data'] = json.dumps(kwargs['data'])
         return super().open(*args, **kwargs)
 
+
 application.test_client_class = Client
 
 
@@ -148,3 +149,9 @@ def reporter():
     reporter_ = Reporter(2)
     context.set('reporter', reporter_)
     return reporter_
+
+
+@pytest.fixture
+def sql_spy(mocker):
+    from playhouse.postgres_ext import PostgresqlExtDatabase
+    return mocker.spy(PostgresqlExtDatabase, 'execute_sql')
