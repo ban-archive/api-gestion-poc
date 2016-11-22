@@ -53,9 +53,11 @@ def test_cannot_create_municipality_with_insee_too_long(session):
     assert 'insee' in validator.errors
 
 
-def test_cannot_create_municipality_with_bad_insee(session):
-    validator = models.Municipality.validator(name="Eu", insee="test")
-    assert 'insee' in validator.errors
+@pytest.mark.parametrize('insee', ['tests', 'A2123'])
+def test_cannot_create_municipality_with_bad_insee(session, insee):
+    validator = models.Municipality.validator(name="Eu", insee=insee)
+    assert validator.errors['insee'] == ('Wrong format. Value should match '
+                                         '`(2[AB]|\d{2})\d{3}`')
 
 
 def test_cannot_create_municipality_with_siren_too_short(session):
@@ -221,8 +223,8 @@ def test_cannot_create_position_with_invalid_laposte(session):
                                           center=(1, 2),
                                           laposte='12345AB1DH')
     assert validator.errors['laposte'] == ('Wrong format. Value should match '
-                                           '`[\dAB]{2}\d{3}[234679ABCEGHILMNPR'
-                                           'STUVXYZ]{5}`')
+                                           '`(2[AB]|\d{2})\d{3}[234679ABCEGHIL'
+                                           'MNPRSTUVXYZ]{5}`')
 
 
 def test_can_create_postcode(session):
@@ -426,8 +428,8 @@ def test_cannot_create_housenumber_with_invalid_laposte(session):
     validator = models.HouseNumber.validator(parent=street, number='11',
                                              laposte='12345AB5HH')
     assert validator.errors['laposte'] == ('Wrong format. Value should match '
-                                           '`[\dAB]{2}\d{3}[234679ABCEGHILMNPR'
-                                           'STUVXYZ]{5}`')
+                                           '`(2[AB]|\d{2})\d{3}[234679ABCEGHILM'
+                                           'NPRSTUVXYZ]{5}`')
 
 
 def test_cannot_create_housenumber_with_laposte_too_short(session):
