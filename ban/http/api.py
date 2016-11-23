@@ -381,11 +381,6 @@ class VersionedModelEndpoint(ModelEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
-              name: identifier
-              in: path
-              type: string
-              required: true
-              description: {resource} identifier
             - name: ref
               in: path
               type: string
@@ -417,11 +412,6 @@ class VersionedModelEndpoint(ModelEndpoint):
 
         parameters:
             - $ref: '#/parameters/identifier'
-              name: identifier
-              in: path
-              type: string
-              required: true
-              description: {resource} identifier
             - name: ref
               in: path
               type: integer
@@ -544,11 +534,6 @@ class VersionedModelEndpoint(ModelEndpoint):
 
             parameters:
                 - $ref: '#/parameters/identifier'
-                  name: identifier
-                  in: path
-                  type: string
-                  required: true
-                  description: {resource} identifier
             responses:
                 200:
                     description: A list of redirects (identifier:value)
