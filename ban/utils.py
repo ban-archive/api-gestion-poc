@@ -58,15 +58,3 @@ def parse_mask(source):
                 parent[field] = {}
             parent = parent[field]
     return dest
-
-
-def cached_property(func):
-
-    @wraps(func)
-    def wrapped(inst):
-        key = '_cached_{}'.format(func.__name__)
-        if not hasattr(inst, key):
-            setattr(inst, key, func(inst))
-        return getattr(inst, key)
-
-    return property(wrapped)
