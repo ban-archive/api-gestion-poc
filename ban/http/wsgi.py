@@ -24,7 +24,7 @@ class App(Flask):
                 rv = [rv]
             else:
                 rv = list(rv)
-            rv[0] = dumps(rv[0])
+            rv[0] = dumps(rv[0], sort_keys=True)
             resp = make_response(tuple(rv))
             resp.mimetype = 'application/json'
             return resp
