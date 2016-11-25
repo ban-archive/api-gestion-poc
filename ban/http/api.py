@@ -419,7 +419,7 @@ class VersionedModelEndpoint(ModelEndpoint):
               description: version reference, either a date or an increment.
             - name: body
               in: body
-              type: string
+              type: object
               schema:
                 $ref: '#/definitions/{resource}'
               required: true
