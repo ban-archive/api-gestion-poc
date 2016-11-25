@@ -24,7 +24,14 @@ class App(Flask):
                 rv = [rv]
             else:
                 rv = list(rv)
-            rv[0] = dumps(rv[0])
+
+            sort_keys = False
+            for element in rv:
+                if 'sort_keys' in element:
+                    sort_keys = rv[rv.index(element)]['sort_keys']
+                    break
+            rv[0] = dumps(rv[0], sort_keys=sort_keys)
+
             resp = make_response(tuple(rv))
             resp.mimetype = 'application/json'
             return resp

@@ -656,8 +656,9 @@ class Diff(CollectionEndpoint):
 
 
 @app.route('/openapi', methods=['GET'])
+@app.jsonify
 def openapi():
-    return dumps(app._schema, sort_keys=True)
+    return (app._schema, {'sort_keys': True})
 
 
 app._schema.register_model(amodels.Session)
