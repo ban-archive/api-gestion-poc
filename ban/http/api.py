@@ -518,8 +518,6 @@ class VersionedModelEndpoint(ModelEndpoint):
                 $ref: '#/responses/401'
             404:
                 $ref: '#/responses/404'
-            422:
-                description: error while deleting the redirect.
         """
         instance = self.get_object(identifier)
         old_identifier, old_value = old.split(':')
@@ -688,10 +686,7 @@ class Diff(CollectionEndpoint):
                             items:
                                 $ref: '#/definitions/Diff'
             400:
-                description: Invalid value for increment
-                schema:
-                    type: object
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/400'
             401:
                 $ref: '#/responses/401'
          """
