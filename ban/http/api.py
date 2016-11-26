@@ -655,10 +655,10 @@ class Diff(CollectionEndpoint):
         return self.collection(qs.serialize())
 
 
-@app.jsonify
 @app.route('/openapi', methods=['GET'])
+@app.jsonify
 def openapi():
-    return dumps(app._schema)
+    return app._schema
 
 
 app._schema.register_model(amodels.Session)
