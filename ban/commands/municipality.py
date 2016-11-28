@@ -44,31 +44,12 @@ def merge(destination, sources=[], name='', label='', **kwargs):
     areas = []
 #    db = models.Municipality._meta.database
 #    db.begin()
+    process_postcode(destination, destination, label)
+    group_to_municipality(destination, destination, areas, label)
     for source in sources_inst:
         if source.insee not in source_done:
             source_done.append(source.insee)
             process_source(destination, source, areas, label)
-    process_destination(destination, areas, name, label)
-    print(reporter)
-#    if helpers.confirm('Do you feel confident with those changes ?'):
-#        db.commit()
-#    else:
-#        db.rollback()
-#        reporter.clear()
-
-
-def process_source(destination, source, areas, label):
-    versioning.Redirect.add(destination, 'insee', source.insee)
-    versioning.Redirect.add(destination, 'id', source.id)
-    reporter.notice('redirected to destination', source)
-    process_postcode(destination, source, label)
-    group_to_municipality(destination, source, areas, label)
-    source.delete_instance()
-
-
-def process_destination(destination, areas, name, label):
-    process_postcode(destination, destination, label)
-    group_to_municipality(destination, destination, areas, label)
     validator = models.Municipality.validator(
         instance=destination,
         name=name,
@@ -79,6 +60,21 @@ def process_destination(destination, areas, name, label):
     else:
         validator.save()
         reporter.notice('name modified', destination)
+    print(reporter)
+#    if helpers.confirm('Do you feel confident with those changes ?'):
+#        db.commit()
+#    else:
+#        db.rollback()
+#        reporter.clear('Action cancelled')
+
+
+def process_source(destination, source, areas, label):
+    versioning.Redirect.add(destination, 'insee', source.insee)
+    versioning.Redirect.add(destination, 'id', source.id)
+    reporter.notice('redirected to destination', source)
+    process_postcode(destination, source, label)
+    group_to_municipality(destination, source, areas, label)
+    source.delete_instance()
 
 
 def group_to_municipality(destination, source, areas, label):
@@ -112,12 +108,22 @@ def group_to_municipality(destination, source, areas, label):
 
 def process_postcode(destination, source, label):
     for postcode in source.postcodes:
-        validator = models.PostCode.validator(
-            instance=postcode,
-            municipality=destination,
-            update=True,
-            complement=label,
-            version=postcode.version+1)
+        if postcode.complement is None:
+            validator = models.PostCode.validator(
+                instance=postcode,
+                municipality=destination,
+                update=True,
+                complement=postcode.name,
+                name=label,
+                version=postcode.version+1)
+        else:
+            validator = models.PostCode.validator(
+                instance=postcode,
+                municipality=destination,
+                update=True,
+                name=label,
+                version=postcode.version+1
+                )
         if validator.errors:
             reporter.error('Errors', validator)
         else:
