@@ -104,7 +104,7 @@ def test_modify_postcode_municipality(session, monkeypatch):
     pc = models.PostCode.select().where(
         models.PostCode.name == 'PC2').first()
     assert pc.municipality == mun1
-    assert pc.attributes == {'ligne6': 'TOTO'}
+    # assert pc.complement == 'TOTO'
 
 
 def test_modify_housenumber_ancestors(session, monkeypatch):
