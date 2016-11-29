@@ -2,6 +2,8 @@ from flask import request
 from flex.core import load, validate, validate_api_call
 from flex.http import Request, Response
 import pytest
+import json
+
 
 from .utils import authorize
 from .. import factories
@@ -109,3 +111,16 @@ def test_get_position_collection(get, schema):
     factories.PositionFactory()
     resp = get('/position')
     validate_call(resp, schema)
+
+
+@authorize
+def test_get_openapi_sorted(get, schema):
+    openapi = get('/openapi')
+    assert openapi.content_type == 'application/json'
+
+    source = openapi.data.decode("utf-8")
+    check = load(get('/openapi').json)
+    sorted_true = json.dumps(check, sort_keys=True)
+    sorted_false = json.dumps(check, sort_keys=False)
+    assert source == sorted_true
+    assert source != sorted_false
