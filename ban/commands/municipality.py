@@ -42,8 +42,8 @@ def merge(destination, sources=[], name='', label='', **kwargs):
             sources_inst.append(source)
     source_done = []
     areas = []
-#    db = models.Municipality._meta.database
-#    db.begin()
+    db = models.Municipality._meta.database
+    with db.atomic()
     process_postcode(destination, destination, label)
     group_to_municipality(destination, destination, areas, label)
     for source in sources_inst:
@@ -61,11 +61,10 @@ def merge(destination, sources=[], name='', label='', **kwargs):
         validator.save()
         reporter.notice('name modified', destination)
     print(reporter)
-#    if helpers.confirm('Do you feel confident with those changes ?'):
-#        db.commit()
-#    else:
-#        db.rollback()
-#        reporter.clear('Action cancelled')
+    if helpers.confirm('Do you feel confident with those changes ?') is False:
+
+        db.rollback()
+        reporter.clear('Action cancelled')
 
 
 def process_source(destination, source, areas, label):
