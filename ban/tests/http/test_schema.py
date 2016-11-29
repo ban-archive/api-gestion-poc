@@ -1,12 +1,12 @@
+import json
+
+import pytest
 from flask import request
 from flex.core import load, validate, validate_api_call
 from flex.http import Request, Response
-import pytest
-import json
 
-
-from .utils import authorize
 from .. import factories
+from .utils import authorize
 
 
 def normalize_request():
