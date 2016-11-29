@@ -95,16 +95,31 @@ def test_create_group_area(session, monkeypatch):
     assert gr.attributes == {'insee': mun2.insee}
 
 
-def test_modify_postcode_municipality(session, monkeypatch):
+def test_modify_postcode_without_complement(session, monkeypatch):
     monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
     mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
     mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
-    pc = factories.PostCodeFactory(municipality=mun2, name='PC2')
+    pc = factories.PostCodeFactory(municipality=mun2, name='PC2', code='33002')
     merge(mun1.insee, sources=[mun2.insee], name='Toto', label='TOTO')
     pc = models.PostCode.select().where(
-        models.PostCode.name == 'PC2').first()
+        models.PostCode.code == '33002').first()
     assert pc.municipality == mun1
-    # assert pc.complement == 'TOTO'
+    assert pc.complement == 'PC2'
+    assert pc.name == 'TOTO'
+
+
+def test_modify_postcode_with_complement(session, monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.confirm', lambda *x, **wk: True)
+    mun1 = factories.MunicipalityFactory(insee='33001', name='Mun1')
+    mun2 = factories.MunicipalityFactory(insee='33002', name='Mun2')
+    pc = factories.PostCodeFactory(
+        municipality=mun2, name='PC2', code='33002', complement='Comp2')
+    merge(mun1.insee, sources=[mun2.insee], name='Toto', label='TOTO')
+    pc = models.PostCode.select().where(
+        models.PostCode.code == '33002').first()
+    assert pc.municipality == mun1
+    assert pc.complement == 'Comp2'
+    assert pc.name == 'TOTO'
 
 
 def test_modify_housenumber_ancestors(session, monkeypatch):

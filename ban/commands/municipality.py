@@ -10,11 +10,14 @@ def merge(destination, sources=[], name='', label='', **kwargs):
     """
     Municipality merge command.
     Steps:
-    - for each Municipality to be removed:
-    - create a new Group with its name
-    - attach all HouseNumbers of this Municipality to this new Group
-    - attach sources Groups and sources PostCodes to destination
-    - Remove the Municipality
+        - for each Municipality to be removed:
+            - redirect the Municipality by insee and id
+            - create a new Group with its name
+            - attach all HouseNumbers of this Municipality to this new Group
+            - attach sources Groups and sources PostCodes to destination
+            - for each PostCode of the Municipality:
+                - change the name and the complement (if the complement is null)
+            - remove the Municipality
     """
     if destination in sources:
         helpers.abort('Destination in sources')
@@ -47,6 +50,7 @@ def merge(destination, sources=[], name='', label='', **kwargs):
         process_postcode(destination, destination, label)
         group_to_municipality(destination, destination, areas, label)
         for source in sources_inst:
+            # Make sure that the source has not be treated yet
             if source.insee not in source_done:
                 source_done.append(source.insee)
                 process_source(destination, source, areas, label)
@@ -59,7 +63,7 @@ def merge(destination, sources=[], name='', label='', **kwargs):
             reporter.error('Errors', validator)
         else:
             validator.save()
-            reporter.notice('name modified', destination)
+            reporter.notice('Mame modified', destination)
         print(reporter)
         if helpers.confirm('Are you confident with those changes ?') is False:
             db.rollback()
@@ -89,6 +93,7 @@ def group_to_municipality(destination, source, areas, label):
         gr_area = validator.save()
         areas.append(gr_area)
         for group in source.groups:
+            # Check the Group is not one created by the validator above
             if group not in areas:
                 move_group(destination, group)
                 for housenumber in group.housenumber_set:
@@ -126,7 +131,7 @@ def process_postcode(destination, source, label):
             reporter.error('Errors', validator)
         else:
             validator.save()
-            reporter.notice('label and municipality modified', postcode)
+            reporter.notice('Label and municipality modified', postcode)
 
 
 def move_group(destination, group):
@@ -139,4 +144,4 @@ def move_group(destination, group):
         reporter.error('Errors', validator)
     else:
         validator.save()
-        reporter.notice('municipality modified', group)
+        reporter.notice('Municipality modified', group)
