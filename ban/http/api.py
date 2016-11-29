@@ -502,17 +502,6 @@ class VersionedModelEndpoint(ModelEndpoint):
         responses:
             204:
                 description: redirect was successfully deleted.
-                schema:
-                    type: object
-                    properties:
-                        collection:
-                            type: array
-                            items:
-                                $ref: '#/definitions/Redirect'
-                        total:
-                            name: total
-                            type: integer
-                            description: total resources available
             401:
                 $ref: '#/responses/401'
             404:
