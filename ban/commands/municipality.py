@@ -43,28 +43,27 @@ def merge(destination, sources=[], name='', label='', **kwargs):
     source_done = []
     areas = []
     db = models.Municipality._meta.database
-    with db.atomic()
-    process_postcode(destination, destination, label)
-    group_to_municipality(destination, destination, areas, label)
-    for source in sources_inst:
-        if source.insee not in source_done:
-            source_done.append(source.insee)
-            process_source(destination, source, areas, label)
-    validator = models.Municipality.validator(
-        instance=destination,
-        name=name,
-        version=destination.version+1,
-        update=True)
-    if validator.errors:
-        reporter.error('Errors', validator)
-    else:
-        validator.save()
-        reporter.notice('name modified', destination)
-    print(reporter)
-    if helpers.confirm('Do you feel confident with those changes ?') is False:
-
-        db.rollback()
-        reporter.clear('Action cancelled')
+    with db.atomic():
+        process_postcode(destination, destination, label)
+        group_to_municipality(destination, destination, areas, label)
+        for source in sources_inst:
+            if source.insee not in source_done:
+                source_done.append(source.insee)
+                process_source(destination, source, areas, label)
+        validator = models.Municipality.validator(
+            instance=destination,
+            name=name,
+            version=destination.version+1,
+            update=True)
+        if validator.errors:
+            reporter.error('Errors', validator)
+        else:
+            validator.save()
+            reporter.notice('name modified', destination)
+        print(reporter)
+        if helpers.confirm('Are you confident with those changes ?') is False:
+            db.rollback()
+            reporter.clear('Action cancelled')
 
 
 def process_source(destination, source, areas, label):
