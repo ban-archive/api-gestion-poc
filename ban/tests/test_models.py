@@ -349,6 +349,18 @@ def test_housenumber_as_relation():
     }
 
 
+def test_housenumber_municipality_is_cached(mocker, sql_spy):
+    HouseNumberFactory()
+    # Reload the instance to clear property cache from Diff creation.
+    housenumber = models.HouseNumber.first()
+    expected = housenumber.parent.municipality
+    sql_spy.reset_mock()
+    assert housenumber.municipality == expected
+    assert sql_spy.call_count == 1
+    assert housenumber.municipality == expected
+    assert sql_spy.call_count == 1
+
+
 def test_position_children():
     housenumber = HouseNumberFactory()
     parent = PositionFactory(housenumber=housenumber)
@@ -386,3 +398,16 @@ def test_position_center_coerce(given, expected):
         assert center.coords == expected
     else:
         assert not center
+
+
+def test_position_municipality_is_cached(mocker, sql_spy):
+    PositionFactory()
+    # Load the model from scratch, otherwise Diff creation has already
+    # populated the "municipality" property
+    pos = models.Position.first()
+    expected = pos.housenumber.parent.municipality
+    sql_spy.reset_mock()
+    assert pos.municipality == expected
+    assert sql_spy.call_count == 1
+    assert pos.municipality == expected
+    assert sql_spy.call_count == 1

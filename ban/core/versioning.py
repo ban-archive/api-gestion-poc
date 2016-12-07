@@ -76,7 +76,8 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             old = self.load_version(self.version - 1)
             old.close_period(new.period.lower)
         if Diff.ACTIVE:
-            Diff.create(old=old, new=new, created_at=self.modified_at)
+            Diff.create(old=old, new=new, created_at=self.modified_at,
+                        insee=self.municipality.insee)
 
     @property
     def versions(self):
@@ -214,6 +215,9 @@ class Diff(db.Model):
 
     __openapi__ = """
         properties:
+            increment:
+                type: integer
+                description: incremental id of the diff
             resource:
                 type: string
                 description: name of the resource the diff is applied to
@@ -224,6 +228,10 @@ class Diff(db.Model):
                 type: string
                 format: date-time
                 description: the date and time the diff has been created at
+            insee:
+                type: string
+                description: INSEE code of the Municipality the resource
+                             is attached
             old:
                 type: object
                 description: the resource before the change
@@ -242,6 +250,7 @@ class Diff(db.Model):
     old = db.ForeignKeyField(Version, null=True)
     # new is empty after delete.
     new = db.ForeignKeyField(Version, null=True)
+    insee = db.CharField(length=5)
     diff = db.BinaryJSONField()
     created_at = db.DateTimeField()
 
@@ -261,6 +270,7 @@ class Diff(db.Model):
         version = self.new or self.old
         return {
             'increment': self.pk,
+            'insee': self.insee,
             'old': self.old.data if self.old else None,
             'new': self.new.data if self.new else None,
             'diff': self.diff,
