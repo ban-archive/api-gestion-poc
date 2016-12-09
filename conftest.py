@@ -15,10 +15,8 @@ from ban.tests.factories import SessionFactory, TokenFactory, UserFactory
 
 
 def pytest_configure(config):
-    assert db.test.database.startswith('test_')
-    for model in models:
-        model._meta.database = db.test
-    db.test.connect()
+    db.database.prefix = 'test_'
+    db.database.connect()
     createdb(fail_silently=True)
     verbose = config.getoption('verbose')
     if verbose:
@@ -27,11 +25,12 @@ def pytest_configure(config):
 
 
 def pytest_unconfigure(config):
-    db.test.drop_tables(models)
-    db.test.close()
+    db.database.drop_tables(models)
+    db.database.close()
 
 
 def pytest_runtest_setup(item):
+    assert db.database.database.startswith('test_')
     truncatedb(force=True)
     context.set('session', None)
 
