@@ -9,6 +9,7 @@ from werkzeug.routing import BaseConverter, ValidationError
 
 from ban.core import context
 from ban.core.encoder import dumps
+from ban.db import database
 
 from .schema import Schema
 
@@ -101,3 +102,14 @@ def log_headers(resp):
         if session.user:
             resp.headers.add('Session-User', session.user.id)
     return resp
+
+
+@app.before_request
+def connect_db():
+    database.connect()
+
+
+@app.teardown_request
+def close_db(exc):
+    if not database.is_closed():
+        database.close()
