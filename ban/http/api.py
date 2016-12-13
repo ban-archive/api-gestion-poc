@@ -417,10 +417,9 @@ class VersionedModelEndpoint(ModelEndpoint):
               type: integer
               required: true
               description: version reference, either a date or an increment.
-            - name: body
-              in: body
-              schema:
-                $ref: '#/definitions/{resource}'
+            - name: status
+              in: query
+              type: string
               required: true
               description:
                 A status boolean key (= true to flag, false to unflag).
