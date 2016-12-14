@@ -26,7 +26,7 @@ class User(ResourceModel):
     is_staff = db.BooleanField(default=False, index=True)
 
     class Meta:
-        database = db.default
+        database = db.database
 
     def __str__(self):
         return self.username

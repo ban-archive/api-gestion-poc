@@ -1,6 +1,6 @@
 import peewee
 
-from .connections import default
+from .connections import database
 
 
 class SerializerQueryResultWrapper(peewee.ModelQueryResultWrapper):
@@ -51,7 +51,7 @@ class Model(peewee.Model):
     pk = peewee.PrimaryKeyField()
 
     class Meta:
-        database = default
+        database = database
         manager = SelectQuery
 
     # TODO find a way not to override the peewee.Model select classmethod.
