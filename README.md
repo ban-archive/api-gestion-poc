@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/BaseAdresseNationale/ban.svg?branch=master)](https://travis-ci.org/BaseAdresseNationale/ban) [![Coverage Status](https://coveralls.io/repos/BaseAdresseNationale/ban/badge.svg?branch=master&service=github)](https://coveralls.io/github/BaseAdresseNationale/ban?branch=master) [![Requirements Status](https://requires.io/github/BaseAdresseNationale/ban/requirements.svg?branch=master)](https://requires.io/github/BaseAdresseNationale/ban/requirements/?branch=master)
-# BAN
+# BAN
 
 This is a POC of API for managing the future "Base adresses nationale".
 
