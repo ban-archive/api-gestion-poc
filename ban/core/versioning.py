@@ -1,12 +1,10 @@
 from datetime import datetime
-import json
 
 import decorator
 import peewee
 
 from ban import db
 from ban.auth.models import Client, Session
-from ban.core.encoder import dumps
 from ban.utils import make_diff, utcnow
 
 from . import context
@@ -39,7 +37,7 @@ class BaseVersioned(peewee.BaseModel):
 
     def __new__(mcs, name, bases, attrs, **kwargs):
         cls = super().__new__(mcs, name, bases, attrs, **kwargs)
-        BaseVersioned.registry[name] = cls
+        BaseVersioned.registry[name.lower()] = cls
         return cls
 
 
@@ -67,7 +65,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
 
     def store_version(self):
         new = Version.create(
-            model_name=self.__class__.__name__,
+            model_name=self.resource,
             model_pk=self.pk,
             sequential=self.version,
             data=self.as_version,
@@ -78,12 +76,13 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             old = self.load_version(self.version - 1)
             old.close_period(new.period.lower)
         if Diff.ACTIVE:
-            Diff.create(old=old, new=new, created_at=self.modified_at)
+            Diff.create(old=old, new=new, created_at=self.modified_at,
+                        insee=self.municipality.insee)
 
     @property
     def versions(self):
         return Version.select().where(
-            Version.model_name == self.__class__.__name__,
+            Version.model_name == self.resource,
             Version.model_pk == self.pk).order_by(Version.sequential)
 
     def load_version(self, ref=None):
@@ -141,13 +140,10 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             self.store_version()
             self.lock_version()
 
-
-class SelectQuery(db.SelectQuery):
-
-    @peewee.returns_clone
-    def serialize(self):
-        self._serializer = lambda inst: inst.serialize()
-        super().serialize()
+    def delete_instance(self, *args, **kwargs):
+        with self._meta.database.atomic():
+            Redirect.clear(self)
+            return super().delete_instance(*args, **kwargs)
 
 
 class Version(db.Model):
@@ -170,7 +166,6 @@ class Version(db.Model):
     period = db.DateRangeField()
 
     class Meta:
-        manager = SelectQuery
         indexes = (
             (('model_name', 'model_pk', 'sequential'), True),
         )
@@ -220,6 +215,9 @@ class Diff(db.Model):
 
     __openapi__ = """
         properties:
+            increment:
+                type: integer
+                description: incremental id of the diff
             resource:
                 type: string
                 description: name of the resource the diff is applied to
@@ -230,6 +228,10 @@ class Diff(db.Model):
                 type: string
                 format: date-time
                 description: the date and time the diff has been created at
+            insee:
+                type: string
+                description: INSEE code of the Municipality the resource
+                             is attached
             old:
                 type: object
                 description: the resource before the change
@@ -248,12 +250,12 @@ class Diff(db.Model):
     old = db.ForeignKeyField(Version, null=True)
     # new is empty after delete.
     new = db.ForeignKeyField(Version, null=True)
+    insee = db.CharField(length=5)
     diff = db.BinaryJSONField()
     created_at = db.DateTimeField()
 
     class Meta:
         validate_backrefs = False
-        manager = SelectQuery
         order_by = ('pk', )
 
     def save(self, *args, **kwargs):
@@ -262,31 +264,78 @@ class Diff(db.Model):
             new = self.new.data if self.new else {}
             self.diff = make_diff(old, new)
         super().save(*args, **kwargs)
-        IdentifierRedirect.from_diff(self)
+        Redirect.from_diff(self)
 
     def serialize(self, *args):
         version = self.new or self.old
         return {
             'increment': self.pk,
+            'insee': self.insee,
             'old': self.old.data if self.old else None,
             'new': self.new.data if self.new else None,
             'diff': self.diff,
             'resource': version.model_name.lower(),
-            'resource_pk': version.model_pk,
+            'resource_id': version.data['id'],
             'created_at': self.created_at
         }
 
 
-class IdentifierRedirect(db.Model):
+class Redirect(db.Model):
+
+    __openapi__ = """
+        properties:
+            identifier:
+                type: string
+                description:
+                    key/value pair for identifier.
+                        . key = identifier name. e.g., 'id'.
+                        . value = identifier value.
+                        . key and value are separated by a ':'
+        """
+
     model_name = db.CharField(max_length=64)
+    model_id = db.CharField(max_length=255)
     identifier = db.CharField(max_length=64)
-    old = db.CharField(max_length=255)
-    new = db.CharField(max_length=255)
+    value = db.CharField(max_length=255)
+
+    class Meta:
+        primary_key = peewee.CompositeKey('model_name', 'identifier', 'value',
+                                          'model_id')
+
+    @classmethod
+    def add(cls, instance, identifier, value):
+        if isinstance(instance, tuple):
+            # Optim so we don't need to request db when creating a redirect
+            # from a diff.
+            model_name, model_id = instance
+        else:
+            model_name = instance.resource
+            model_id = instance.id
+            if identifier not in instance.__class__.identifiers + ['id', 'pk']:
+                raise ValueError('Invalid identifier: {}'.format(identifier))
+            if getattr(instance, identifier) == value:
+                raise ValueError('Redirect cannot point to itself')
+        cls.get_or_create(model_name=model_name,
+                          identifier=identifier,
+                          value=str(value), model_id=model_id)
+        cls.propagate(model_name, identifier, value, model_id)
+
+    @classmethod
+    def remove(cls, instance, identifier, value):
+        cls.delete().where(cls.model_name == instance.resource,
+                           cls.identifier == identifier,
+                           cls.value == str(value),
+                           cls.model_id == instance.id).execute()
+
+    @classmethod
+    def clear(cls, instance):
+        cls.delete().where(cls.model_name == instance.resource,
+                           cls.model_id == instance.id).execute()
 
     @classmethod
     def from_diff(cls, diff):
         if not diff.new or not diff.old:
-            # Only update makes sense for us, no creation nor deletion.
+            # Only update makes sense for us, not creation nor deletion.
             return
         model = diff.new.model
         identifiers = [i for i in model.identifiers if i in diff.diff]
@@ -295,23 +344,30 @@ class IdentifierRedirect(db.Model):
             new = diff.diff[identifier]['new']
             if not old or not new:
                 continue
-            cls.get_or_create(model_name=diff.new.model_name,
-                              identifier=identifier, old=old, new=new)
-            cls.refresh(model, identifier, old, new)
+            cls.add((model.__name__.lower(), diff.new.data['id']),
+                    identifier, old)
 
     @classmethod
-    def follow(cls, model, identifier, old):
-        row = cls.select().where(cls.model_name == model.__name__,
-                                 cls.identifier == identifier,
-                                 cls.old == old).first()
-        return row.new if row else None
+    def follow(cls, model_name, identifier, value):
+        rows = cls.select(cls.model_id).where(
+            cls.model_name == model_name.lower(),
+            cls.identifier == identifier,
+            cls.value == str(value))
+        return [row.model_id for row in rows]
 
     @classmethod
-    def refresh(cls, model, identifier, old, new):
-        """An identifier was a target and it becomes itself a target."""
-        cls.update(new=new).where(cls.new == old,
-                                  cls.model_name == model.__name__,
-                                  cls.identifier == identifier).execute()
+    def propagate(cls, model_name, identifier, value, model_id):
+        """An identifier was a target and it becomes itself a redirect."""
+        model = BaseVersioned.registry.get(model_name)
+        if model:
+            old = model.first(getattr(model, identifier) == value)
+            if old:
+                cls.update(model_id=model_id).where(
+                    cls.model_id == old.id,
+                    cls.model_name == model_name).execute()
+
+    def serialize(self, *args):
+        return '{}:{}'.format(self.identifier, self.value)
 
 
 class Flag(db.Model):
@@ -331,9 +387,6 @@ class Flag(db.Model):
     client = db.ForeignKeyField(Client)
     session = db.ForeignKeyField(Session)
     created_at = db.DateTimeField()
-
-    class Meta:
-        manager = SelectQuery
 
     def save(self, *args, **kwargs):
         if not self.created_at:

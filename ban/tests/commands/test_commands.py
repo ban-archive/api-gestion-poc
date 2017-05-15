@@ -1,29 +1,15 @@
 import json
+from unittest.mock import Mock
 from pathlib import Path
 
 from ban.auth import models as amodels
-from ban.commands.auth import createuser, listusers, createclient, listclients
+from ban.commands.auth import (createclient, createuser, dummytoken,
+                               listclients, listusers)
 from ban.commands.db import truncate
 from ban.commands.export import resources
-from ban.commands.importer import municipalities
 from ban.core import models
 from ban.core.encoder import dumps
-from ban.core.versioning import Diff
 from ban.tests import factories
-
-
-def test_import_municipalities(staff, config):
-    path = Path(__file__).parent / 'data/municipalities.csv'
-    municipalities(path)
-    assert len(models.Municipality.select()) == 4
-    assert not len(Diff.select())
-
-
-def test_import_municipalities_can_be_filtered_by_departement(staff, config):
-    path = Path(__file__).parent / 'data/municipalities.csv'
-    municipalities(path, departement=33)
-    assert len(models.Municipality.select()) == 1
-    assert not len(Diff.select())
 
 
 def test_create_user_is_not_staff_by_default(monkeypatch):
@@ -47,6 +33,13 @@ def test_create_user_should_accept_is_staff_kwarg(monkeypatch):
 def test_listusers(capsys):
     user = factories.UserFactory()
     listusers()
+    out, err = capsys.readouterr()
+    assert user.username in out
+
+
+def test_listusers_with_invoke(capsys):
+    user = factories.UserFactory()
+    listusers.invoke([])
     out, err = capsys.readouterr()
     assert user.username in out
 
@@ -115,6 +108,8 @@ def test_export_resources():
     street = factories.GroupFactory(municipality=mun)
     hn = factories.HouseNumberFactory(parent=street)
     factories.PositionFactory(housenumber=hn)
+    deleted = factories.PositionFactory(housenumber=hn)
+    deleted.mark_deleted()
     path = Path(__file__).parent / 'data/export.sjson'
     resources(path)
 
@@ -127,3 +122,24 @@ def test_export_resources():
         # Plus, JSON transform internals tuples to lists.
         assert json.loads(lines[2]) == json.loads(dumps(hn.as_resource))
     path.unlink()
+
+
+def test_dummytoken():
+    factories.UserFactory(is_staff=True)
+    token = 'tokenname'
+    args = Mock(spec='token')
+    args.token = token
+    dummytoken.invoke(args)
+    assert amodels.Token.select().where(amodels.Token.access_token == token)
+
+
+def test_report_to(tmpdir, config):
+    report_to = tmpdir.join('report')
+    config.REPORT_TO = str(report_to)
+    factories.UserFactory(is_staff=True)
+    token = 'tokenname'
+    args = Mock(spec='token')
+    args.token = token
+    dummytoken.invoke(args)
+    with report_to.open() as f:
+        assert 'Created token' in f.read()

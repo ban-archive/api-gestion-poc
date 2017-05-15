@@ -15,10 +15,8 @@ from ban.tests.factories import SessionFactory, TokenFactory, UserFactory
 
 
 def pytest_configure(config):
-    assert db.test.database.startswith('test_')
-    for model in models:
-        model._meta.database = db.test
-    db.test.connect()
+    db.database.prefix = 'test_'
+    db.database.connect()
     createdb(fail_silently=True)
     verbose = config.getoption('verbose')
     if verbose:
@@ -27,11 +25,12 @@ def pytest_configure(config):
 
 
 def pytest_unconfigure(config):
-    db.test.drop_tables(models)
-    db.test.close()
+    db.database.drop_tables(models)
+    db.database.close()
 
 
 def pytest_runtest_setup(item):
+    assert db.database.database.startswith('test_')
     truncatedb(force=True)
     context.set('session', None)
 
@@ -48,7 +47,7 @@ def staff():
 
 @pytest.fixture()
 def session():
-    session = SessionFactory()
+    session = SessionFactory(user__is_staff=True)
     context.set('session', session)
     return session
 
@@ -101,6 +100,7 @@ class Client(FlaskClient):
                 kwargs['data'] = json.dumps(kwargs['data'])
         return super().open(*args, **kwargs)
 
+
 application.test_client_class = Client
 
 
@@ -139,7 +139,7 @@ class MonkeyPatchWrapper(object):
 def config(request, monkeypatch):
     from ban.core import config as ban_config
     # Make sure config cache is empty.
-    ban_config.cache.clear()
+    ban_config.clear()
     return MonkeyPatchWrapper(monkeypatch, ban_config)
 
 
@@ -148,3 +148,9 @@ def reporter():
     reporter_ = Reporter(2)
     context.set('reporter', reporter_)
     return reporter_
+
+
+@pytest.fixture
+def sql_spy(mocker):
+    from playhouse.postgres_ext import PostgresqlExtDatabase
+    return mocker.spy(PostgresqlExtDatabase, 'execute_sql')

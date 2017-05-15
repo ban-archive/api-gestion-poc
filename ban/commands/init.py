@@ -131,10 +131,13 @@ def process_postcode(row):
     attributes = {'source': row.pop('source')}
     name = row.get('name')
     code = row.get('postcode')
+    complement = row.get('complement')
     data = dict(name=name, code=code, municipality=municipality,
-                version=1, attributes=attributes)
+                version=1, attributes=attributes, complement=complement)
     instance = PostCode.select().join(Municipality).where(
-        PostCode.code == code, Municipality.insee == insee).first()
+        PostCode.complement == complement,
+        PostCode.code == code,
+        Municipality.insee == insee).first()
     if instance:
         return reporter.notice('PostCode already exists', code)
     validator = PostCode.validator(**data)

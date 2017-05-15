@@ -6,10 +6,10 @@ from flask import Response
 from ban.core.encoder import dumps
 
 
-def abort(code, **kwargs):
+def abort(code, headers=None, **kwargs):
     description = dumps(kwargs)
     response = Response(status=code, mimetype='application/json',
-                        response=description)
+                        response=description, headers=headers)
     raise HTTPException(description=description, response=response)
 
 
@@ -36,4 +36,7 @@ RESERVED = ":/?#[]@!$&'()*+,;="
 
 def link(headers, target, rel):
     headers.setdefault('Link', '')
-    headers['Link'] += ', <' + quote(target, safe=RESERVED) + '>; rel=' + rel
+    link = '<' + quote(target, safe=RESERVED) + '>; rel=' + rel
+    if headers['Link']:
+        link = ', ' + link
+    headers['Link'] += link

@@ -34,7 +34,8 @@ def test_get_housenumber(get):
         'laposte': None,
         'ordinal': 'bis',
         'positions': [],
-        'postcode': None
+        'postcode': None,
+        'status': 'active',
     }
 
 
@@ -124,7 +125,7 @@ def test_get_housenumber_with_districts(get):
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
     housenumber = HouseNumberFactory(ancestors=[district],
-                                     municipality=municipality)
+                                     parent__municipality=municipality)
     resp = get('/housenumber/{}'.format(housenumber.id))
     assert resp.status_code == 200
     assert 'ancestors' in resp.json
@@ -302,6 +303,15 @@ def test_create_housenumber_with_postcode_id(client):
 
 
 @authorize
+def test_empty_body_should_not_crash(client):
+    housenumber = HouseNumberFactory(number="22", ordinal="B")
+    assert models.HouseNumber.select().count() == 1
+    uri = '/housenumber/{}'.format(housenumber.id)
+    resp = client.put(uri, data=None)
+    assert resp.status_code == 422
+
+
+@authorize
 def test_replace_housenumber(client):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     assert models.HouseNumber.select().count() == 1
@@ -334,6 +344,7 @@ def test_replace_housenumber_with_missing_field_fails(client):
     }
     resp = client.put(uri, data=data)
     assert resp.status_code == 422
+    assert resp.json['error'] == 'Invalid data'
     assert 'errors' in resp.json
     assert models.HouseNumber.select().count() == 1
 
@@ -377,6 +388,8 @@ def test_delete_housenumber(client):
     assert resp.status_code == 200
     assert resp.json['resource_id'] == housenumber.id
     assert not models.HouseNumber.select().count()
+    assert models.HouseNumber.raw_select().where(
+                    models.HouseNumber.pk == housenumber.pk).get().deleted_at
 
 
 def test_cannot_delete_housenumber_if_not_authorized(client):
@@ -417,3 +430,36 @@ def test_housenumber_select_use_default_orderby(get):
     assert resp.json['collection'][3]['ordinal'] == 'bis'
     assert resp.json['collection'][4]['number'] == '2'
     assert resp.json['collection'][4]['ordinal'] == 'ter'
+
+
+@authorize
+def test_cannot_duplicate_number_and_ordinal_for_same_parent(client):
+    assert not models.HouseNumber.select().count()
+    housenumber = HouseNumberFactory(number='4', ordinal='bis')
+    data = {
+        "number": "4",
+        "ordinal": "bis",
+        "parent": housenumber.parent.id,
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 422
+    assert models.HouseNumber.select().count() == 1
+    assert 'number' in resp.json['errors']
+    assert 'ordinal' in resp.json['errors']
+    assert 'parent' in resp.json['errors']
+
+
+@authorize
+def test_cannot_duplicate_number_with_empty_ordinal_for_same_parent(client):
+    assert not models.HouseNumber.select().count()
+    housenumber = HouseNumberFactory(number='4', ordinal=None)
+    data = {
+        "number": "4",
+        "parent": housenumber.parent.id,
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 422
+    assert models.HouseNumber.select().count() == 1
+    assert 'number' in resp.json['errors']
+    assert 'ordinal' in resp.json['errors']
+    assert 'parent' in resp.json['errors']

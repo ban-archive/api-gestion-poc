@@ -2,6 +2,7 @@ import peewee
 
 from ban import db
 from ban.utils import make_diff
+from .exceptions import RedirectError, MultipleRedirectsError, ValidationError
 
 
 class ResourceValidator:
@@ -33,6 +34,8 @@ class ResourceValidator:
                 self.error(name, str(e))
                 continue
 
+        self.validate_unique_indexes()
+
         if hasattr(self.model, 'validate'):
             for key, message in self.model.validate(self, self.data,
                                                     instance).items():
@@ -41,16 +44,23 @@ class ResourceValidator:
     def validate_field(self, field, value):
         try:
             value = field.coerce(value)
+        except (RedirectError, MultipleRedirectsError) as e:
+            raise ValueError(e)
+        except ValidationError:
+            # Those are error messages created by us, we want them instead of
+            # the default coerce one.
+            raise
         except (ValueError, TypeError):
-            raise ValueError('Unable to coerce value "{}"'.format(value))
+            raise ValueError('Unable to coerce value `{}`'.format(value))
         except peewee.DoesNotExist:
-            raise ValueError('No matching resource for "{}"'.format(value))
+            raise ValueError('No matching resource for `{}`'.format(value))
 
         if value and not isinstance(value, field.__data_type__):
-            raise ValueError('"{value}" is not of type "{type}".'.format(
+            raise ValueError('`{value}` is not of type `{type}`.'.format(
                 value=value, type=field.__data_type__
             ))
-        checks = ['null', 'choices', 'min_length', 'max_length', 'unique']
+        checks = ['null', 'choices', 'min_length', 'max_length', 'regex',
+                  'unique']
         for check in checks:
             if getattr(field, check, None) is not None:
                 getattr(self, 'validate_{}'.format(check))(field, value)
@@ -66,20 +76,25 @@ class ResourceValidator:
     def validate_choices(self, field, value):
         choices = [choice[0] for choice in field.choices]
         if value and value not in choices:
-            raise ValueError('"{}" should be one of the following choices: {}'
+            raise ValueError('`{}` should be one of the following choices: {}'
                              .format(value, ','.join(choices)))
 
     def validate_min_length(self, field, value):
         if value and len(value) < field.min_length:
-            raise ValueError('"{}" should be minimum {} characters'.format(
+            raise ValueError('`{}` should be minimum {} characters'.format(
                 value, field.min_length
             ))
 
     def validate_max_length(self, field, value):
         if value and len(value) > field.max_length:
-            raise ValueError('"{}" should be maximum {} characters'.format(
+            raise ValueError('`{}` should be maximum {} characters'.format(
                 value, field.max_length
             ))
+
+    def validate_regex(self, field, value):
+        if value and not bool(field.regex.fullmatch(value)):
+            raise ValueError('Wrong format. Value should '
+                             'match `{}`'.format(field.regex.pattern))
 
     def validate_unique(self, field, value):
         if not value or not field.unique:
@@ -88,7 +103,23 @@ class ResourceValidator:
         if self.instance:
             qs = qs.where(self.model.pk != self.instance.pk)
         if qs.exists():
-            raise ValueError('"{}" already exists'.format(value))
+            raise ValueError('`{}` already exists'.format(value))
+
+    def validate_unique_indexes(self):
+        for names, unique in self.model._meta.indexes:
+            if not unique:
+                continue
+            where = []
+            for name in names:
+                field = getattr(self.model, name)
+                where.append(field == self.data.get(name))
+            qs = self.model.select().where(*where)
+            if self.instance:
+                qs = qs.where(self.model.pk != self.instance.pk)
+            if qs.exists():
+                msg = 'Duplicate entries: {}'.format(', '.join(names))
+                for name in names:
+                    self.error(name, msg)
 
     def patch(self):
         for key, value in self.data.items():

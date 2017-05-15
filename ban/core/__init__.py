@@ -1,19 +1,18 @@
 import os
 
 
-class Config:
+class Config(dict):
     """Minimal config helper.
     Fallback on os.environ if no value is set.
     """
 
-    cache = {}
     defaults = {
         'DB_NAME': 'ban'
     }
 
     def __getattr__(self, name):
         try:
-            return self.cache[name]
+            return self[name]
         except KeyError:
             try:
                 fallback = os.environ[name]
@@ -23,11 +22,14 @@ class Config:
                 except KeyError:
                     raise AttributeError('{} not set'.format(name))
             # We have a value, set it for next call.
-            self.cache[name] = fallback
+            self[name] = fallback
             return fallback
 
     def __setattr__(self, name, value):
-        self.cache[name] = value
+        self[name] = value
+
+    def __delattr__(self, name):
+        del self[name]
 
     def get(self, name, default=None):
         return getattr(self, name, default)

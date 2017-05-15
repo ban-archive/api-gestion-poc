@@ -1,6 +1,6 @@
 import peewee
 
-from .connections import default
+from .connections import database
 
 
 class SerializerQueryResultWrapper(peewee.ModelQueryResultWrapper):
@@ -20,7 +20,9 @@ class SelectQuery(peewee.SelectQuery):
             wrapper._serializer = self._serializer
         return wrapper
 
-    def serialize(self, *args, **kwargs):
+    @peewee.returns_clone
+    def serialize(self, mask=None):
+        self._serializer = lambda inst: inst.serialize(mask)
         self._result_wrapper = SerializerQueryResultWrapper
 
     def _get_result_wrapper(self):
@@ -49,7 +51,7 @@ class Model(peewee.Model):
     pk = peewee.PrimaryKeyField()
 
     class Meta:
-        database = default
+        database = database
         manager = SelectQuery
 
     # TODO find a way not to override the peewee.Model select classmethod.

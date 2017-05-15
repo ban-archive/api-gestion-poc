@@ -1,6 +1,7 @@
 import argparse
 import inspect
 import os
+from pathlib import Path
 from itertools import zip_longest
 
 from ban.core import config, context
@@ -27,6 +28,7 @@ class Command:
         'workers': os.cpu_count(),
         'batch_executor': 'thread',
         'verbose': {'action': 'count', 'default': None},
+        'report_to': None,
     }
 
     def __init__(self, command):
@@ -35,26 +37,26 @@ class Command:
         self.init_parser()
         self.set_globals()
         self._reports = {}
-        self._on_parse_args = []
-        self._on_before_call = []
-        self._on_after_call = []
 
     def __call__(self, *args, **kwargs):
         """Run command."""
         reporter = Reporter(config.get('VERBOSE'))
         context.set('reporter', reporter)
-        for func in self._on_before_call:
-            func(self, args, kwargs)
         try:
             self.command(*args, **kwargs)
         except KeyboardInterrupt:
             pass
-        else:
-            for func in self._on_after_call:
-                func(self, args, kwargs)
         finally:
             # Display reports, if any.
             print(reporter)
+            filepath = config.get('REPORT_TO')
+            if filepath:
+                try:
+                    with Path(filepath).open('w') as f:
+                        f.write(str(reporter))
+                except (OSError, IOError) as e:
+                    print('Unable to write report to', filepath)
+                    print(e)
 
     def invoke(self, parsed):
         """Run command from command line args."""
@@ -68,19 +70,8 @@ class Command:
                 args.append(value)
             else:
                 kwargs[name] = value
-        for func in self._on_parse_args:
-            func(self, parsed, kwargs)
         self.parse_globals(parsed, **kwargs)
         self(*args, **kwargs)
-
-    def on_parse_args(self, func):
-        self._on_parse_args.append(func)
-
-    def on_before_call(self, func):
-        self._on_before_call.append(func)
-
-    def on_after_call(self, func):
-        self._on_after_call.append(func)
 
     def set_globals(self):
         for name, kwargs in self._globals.items():

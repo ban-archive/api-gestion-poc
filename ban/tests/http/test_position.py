@@ -353,6 +353,8 @@ def test_delete_position(client, url):
     assert resp.status_code == 200
     assert resp.json['resource_id'] == position.id
     assert not models.Position.select().count()
+    assert models.Position.raw_select().where(
+                        models.Position.pk == position.pk).get().deleted_at
 
 
 def test_cannot_delete_position_if_not_authorized(client, url):
@@ -458,3 +460,19 @@ def test_get_position_collection_ignore_unkown_params(get, url):
     assert resp.status_code == 200
     assert resp.json['total'] == 1
     assert resp.json['collection'][0]['kind'] == 'entrance'
+
+
+@authorize
+def test_can_get_position_from_ign_id(get, url):
+    PositionFactory(center=(1, 1), ign='123456789')
+    resp = get('/position/ign:123456789')
+    assert resp.status_code == 200
+    assert resp.json['ign'] == '123456789'
+
+
+@authorize
+def test_can_get_position_from_laposte_id(get, url):
+    PositionFactory(center=(1, 1), laposte='123456789')
+    resp = get('/position/laposte:123456789')
+    assert resp.status_code == 200
+    assert resp.json['laposte'] == '123456789'

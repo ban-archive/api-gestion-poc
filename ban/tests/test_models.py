@@ -155,7 +155,7 @@ def test_group_as_relation():
         'attributes': None,
         'laposte': None,
         'addressing': None,
-        'version': 1
+        'version': 1,
     }
 
 
@@ -325,6 +325,7 @@ def test_housenumber_as_resource():
         'created_at': housenumber.created_at.isoformat(),
         'modified_by': housenumber.modified_by.serialize(),
         'modified_at': housenumber.modified_at.isoformat(),
+        'status': 'active',
     }
 
 
@@ -346,6 +347,18 @@ def test_housenumber_as_relation():
         'resource': 'housenumber',
         'version': 1,
     }
+
+
+def test_housenumber_municipality_is_cached(mocker, sql_spy):
+    HouseNumberFactory()
+    # Reload the instance to clear property cache from Diff creation.
+    housenumber = models.HouseNumber.first()
+    expected = housenumber.parent.municipality
+    sql_spy.reset_mock()
+    assert housenumber.municipality == expected
+    assert sql_spy.call_count == 1
+    assert housenumber.municipality == expected
+    assert sql_spy.call_count == 1
 
 
 def test_position_children():
@@ -387,10 +400,14 @@ def test_position_center_coerce(given, expected):
         assert not center
 
 
-def test_cannot_create_position_with_same_housenumber_and_source():
-    hn1 = HouseNumberFactory()
-    PositionFactory(housenumber=hn1, source="XXX")
-    assert models.Position.select().count() == 1
-    with pytest.raises(peewee.IntegrityError):
-        PositionFactory(housenumber=hn1, source="XXX")
-    assert models.Position.select().count() == 1
+def test_position_municipality_is_cached(mocker, sql_spy):
+    PositionFactory()
+    # Load the model from scratch, otherwise Diff creation has already
+    # populated the "municipality" property
+    pos = models.Position.first()
+    expected = pos.housenumber.parent.municipality
+    sql_spy.reset_mock()
+    assert pos.municipality == expected
+    assert sql_spy.call_count == 1
+    assert pos.municipality == expected
+    assert sql_spy.call_count == 1

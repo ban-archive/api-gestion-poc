@@ -1,6 +1,35 @@
-from ban.commands.init import process_row
+import json
+
+from ban.commands.init import process_row, init
 from ban.core import models
 from ban.tests import factories
+
+
+def test_init_should_accept_files_as_arguments(tmpdir, session):
+    f1 = tmpdir.join("f1.sjson")
+    f1.write(json.dumps({"type": "municipality", "source": "INSEE/COG (2015)",
+                         "insee": "22059", "name": "Le Fœil"}))
+    f2 = tmpdir.join("f2.sjson")
+    f2.write(json.dumps({"type": "municipality", "source": "INSEE/COG (2015)",
+                         "insee": "22058", "name": "Le Feu"}))
+    init(str(f1), str(f2))
+    assert models.Municipality.select().count() == 2
+
+
+def test_init_should_accept_limit_argument(tmpdir, session):
+    f = tmpdir.join("f1.sjson")
+    f.write(json.dumps({"type": "municipality", "source": "INSEE/COG (2015)",
+                        "insee": "22059", "name": "Le Fœil"}))
+    f.write(json.dumps({"type": "municipality", "source": "INSEE/COG (2015)",
+                        "insee": "22058", "name": "Le Feu"}))
+    init(str(f), limit=1)
+    assert models.Municipality.select().count() == 1
+
+
+def test_does_not_file_for_unknown_type(session):
+    data = {"type": "unknown", "source": "INSEE/COG (2015)",
+            "insee": "22059", "name": "Le Fœil"}
+    process_row(data)
 
 
 # File: 01_municipalities.json

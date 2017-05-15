@@ -24,7 +24,9 @@ def test_municipality_version():
         'alias': ['Rijsel'],
         'created_by': municipality.created_by.serialize(),
         'modified_at': municipality.modified_at.isoformat(),
-        'version': 1}
+        'version': 1,
+        'status': 'active',
+    }
 
 
 def test_municipality_is_versioned():
@@ -105,7 +107,9 @@ def test_group_version():
         'alias': ['Rue du Prince Louison'],
         'created_by': group.created_by.serialize(),
         'modified_at': group.modified_at.isoformat(),
-        'version': 1}
+        'version': 1,
+        'status': 'active',
+    }
 
 
 def test_housenumber_is_versioned():
@@ -147,7 +151,9 @@ def test_housenumber_as_version():
         'parent': street.id,
         'modified_by': hn.modified_by.serialize(),
         'positions': [],
-        'attributes': None}
+        'attributes': None,
+        'status': 'active',
+    }
 
 
 def test_position_is_versioned():
@@ -187,4 +193,7 @@ def test_position_as_version():
         'version': 1,
         'center': {'coordinates': (-1.1111, 48.8888), 'type': 'Point'},
         'comment': None,
-        'id': position.id}
+        'laposte': None,
+        'id': position.id,
+        'status': 'active',
+    }

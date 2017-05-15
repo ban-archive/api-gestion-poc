@@ -44,6 +44,7 @@ def test_serialize_with_wildcard():
         'laposte': None,
         'addressing': None,
         'version': 1,
+        'status': 'active',
         'modified_at': group.modified_at.isoformat(),
         'created_at': group.created_at.isoformat(),
         'created_by': {
@@ -76,6 +77,7 @@ def test_serialize_with_wildcard_in_relation():
             'laposte': None,
             'addressing': None,
             'version': 1,
+            'status': 'active',
             'modified_at': group.modified_at.isoformat(),
             'created_at': group.created_at.isoformat(),
             'created_by': {
@@ -120,6 +122,7 @@ def test_serialize_with_double_wildcard():
         'ign': None,
         'attributes': None,
         'positions': [],
+        'status': 'active',
         'parent': {
             'name': 'Rue de la Banatouille',
             'id': group.id,
@@ -133,6 +136,7 @@ def test_serialize_with_double_wildcard():
             'laposte': None,
             'addressing': None,
             'version': 1,
+            'status': 'active',
             'modified_at': group.modified_at.isoformat(),
             'created_at': group.created_at.isoformat(),
             'created_by': {

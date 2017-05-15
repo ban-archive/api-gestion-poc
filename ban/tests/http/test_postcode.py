@@ -6,11 +6,24 @@ from .utils import authorize
 
 @authorize
 def test_get_postcode(get):
-    postcode = PostCodeFactory(code="09350")
+    postcode = PostCodeFactory(code="09350", name="EPINAY SUR SEINE")
     resp = get('/postcode/{}'.format(postcode.id))
     assert resp.status_code == 200
-    assert resp.json['id']
-    assert resp.json['code'] == '09350'
+    assert resp.json == {
+        'id': postcode.id,
+        'name': 'EPINAY SUR SEINE',
+        'code': '09350',
+        'alias': None,
+        'modified_at': postcode.modified_at.isoformat(),
+        'created_at': postcode.created_at.isoformat(),
+        'modified_by': postcode.modified_by.serialize(),
+        'created_by': postcode.created_by.serialize(),
+        'attributes': None,
+        'status': 'active',
+        'version': 1,
+        'complement': None,
+        'municipality': postcode.municipality.id,
+    }
 
 
 @authorize
@@ -32,6 +45,53 @@ def test_create_postcode(client):
     assert models.PostCode.select().count() == 1
     uri = 'http://localhost/postcode/{}'.format(resp.json['id'])
     assert resp.headers['Location'] == uri
+
+
+@authorize
+def test_can_update_postcode_complement(client):
+    postcode = PostCodeFactory()
+    data = {
+        "complement": "SAINT SAINT",
+        "version": 2
+    }
+    resp = client.post('/postcode/{}'.format(postcode.id), data)
+    assert resp.status_code == 200
+    assert resp.json['complement'] == "SAINT SAINT"
+
+
+@authorize
+def test_can_create_postcode_with_same_code_but_different_complement(client):
+    assert not models.PostCode.select().count()
+    postcode = PostCodeFactory(code='12345', name='VILLE',
+                               complement="QUARTIER")
+    data = {
+        "code": "12345",
+        "name": "VILLE",
+        "complement": "AUTRE QUARTIER",
+        "municipality": postcode.municipality.id,
+    }
+    resp = client.post('/postcode', data)
+    assert resp.status_code == 201
+    assert models.PostCode.select().count() == 2
+
+
+@authorize
+def test_cannot_duplicate_code_complement_and_municipality(client):
+    assert not models.PostCode.select().count()
+    postcode = PostCodeFactory(code='12345', name='VILLE',
+                               complement="QUARTIER")
+    data = {
+        "code": "12345",
+        "name": "VILLE",
+        "complement": "QUARTIER",
+        "municipality": postcode.municipality.id,
+    }
+    resp = client.post('/postcode', data)
+    assert resp.status_code == 422
+    assert models.PostCode.select().count() == 1
+    assert 'code' in resp.json['errors']
+    assert 'complement' in resp.json['errors']
+    assert 'municipality' in resp.json['errors']
 
 
 @authorize

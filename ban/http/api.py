@@ -6,11 +6,13 @@ from flask import request, url_for
 
 from ban.auth import models as amodels
 from ban.commands.bal import bal
-from ban.core import models, versioning, context
+from ban.core import context, models, versioning
 from ban.core.encoder import dumps
-from ban.utils import parse_mask
+from ban.core.exceptions import (IsDeletedError, MultipleRedirectsError,
+                                 RedirectError, ResourceLinkedError)
 from ban.http.auth import auth
 from ban.http.wsgi import app
+from ban.utils import parse_mask
 
 from .utils import abort, get_bbox, link
 
@@ -62,19 +64,34 @@ class ModelEndpoint(CollectionEndpoint):
     order_by = None
 
     def get_object(self, identifier):
+        endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         try:
             instance = self.model.coerce(identifier)
         except self.model.DoesNotExist:
-            # TODO Flask changes the 404 message, which we don't want.
-            abort(404, message='Instance for "{}" does not exist.'
+            abort(404, error='Resource with identifier `{}` does not exist.'
                   .format(identifier))
+        except RedirectError as e:
+            headers = {'Location': url_for(endpoint, identifier=e.redirect)}
+            abort(302, headers=headers)
+        except MultipleRedirectsError as e:
+            headers = {}
+            choices = []
+            for redirect in e.redirects:
+                uri = url_for(endpoint, identifier=redirect)
+                link(headers, uri, 'alternate')
+                choices.append(uri)
+            abort(300, headers=headers, choices=choices)
+        except IsDeletedError as err:
+            if request.method not in ['GET', 'PUT']:
+                abort(410, error='Resource `{}` is deleted'.format(identifier))
+            instance = err.instance
         return instance
 
     def save_object(self, instance=None, update=False):
         validator = self.model.validator(update=update, instance=instance,
-                                         **request.json)
+                                         **request.json or {})
         if validator.errors:
-            abort(422, errors=validator.errors)
+            abort(422, error='Invalid data', errors=validator.errors)
         try:
             instance = validator.save()
         except models.Model.ForcedVersionError as e:
@@ -94,7 +111,7 @@ class ModelEndpoint(CollectionEndpoint):
                 try:
                     values = list(map(field.coerce, values))
                 except ValueError:
-                    abort('400', 'Invalid value for filter {}'.format(key))
+                    abort(400, error='Invalid value for filter {}'.format(key))
                 except peewee.DoesNotExist:
                     # Return an empty collection as the fk is not found.
                     return None
@@ -132,6 +149,8 @@ class ModelEndpoint(CollectionEndpoint):
                         name: total
                         type: integer
                         description: total resources available
+            401:
+                $ref: '#/responses/401'
         """
         qs = self.get_queryset()
         if qs is None:
@@ -158,10 +177,17 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Get {resource} instance.
                 schema:
                     $ref: '#/definitions/{resource}'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
+            410:
+                $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
+        status = 410 if instance.deleted_at else 200
         try:
-            return instance.serialize(self.get_mask())
+            return instance.serialize(self.get_mask()), status
         except ValueError as e:
             abort(400, error=str(e))
 
@@ -169,23 +195,36 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['POST'])
     def post_resource(self, identifier):
-        """Patch {resource} with 'identifier'.
+        """Post {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be updated to the BAN.
         responses:
             200:
-                description: Instance has been updated successfully.
+                description: Instance has been successfully updated.
                 schema:
                     $ref: '#/definitions/{resource}'
-            419:
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
+            409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
@@ -195,21 +234,33 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('', methods=['POST'])
     def post(self):
-        """Create {resource}
+        """Create {resource}.
 
+        parameters:
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be added to the BAN.
         responses:
             201:
-                description: Instance has been created successfully.
+                description: Instance has been successfully created.
                 schema:
                     $ref: '#/definitions/{resource}'
-            419:
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.save_object()
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
@@ -220,23 +271,36 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
-        """Patch {resource}
+        """Patch {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that need to be patched to the BAN.
         responses:
             200:
                 description: Instance has been updated successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
-            419:
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
+            409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True)
@@ -246,25 +310,43 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
     def put(self, identifier):
-        """Replace {resource}.
+        """Replace or restore {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
+            - name: body
+              in: body
+              schema:
+                $ref: '#/definitions/{resource}'
+              required: true
+              description:
+                {resource} object that needs to be replaced to the BAN
         responses:
             200:
-                description: Instance has been replaced successfully.
+                description: Instance has been successfully replaced.
                 schema:
                     $ref: '#/definitions/{resource}'
-            419:
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
+            409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                $ref: '#/responses/410'
             422:
-                description: Invalid data.
-                schema:
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/422'
         """
         instance = self.get_object(identifier)
+        if instance.deleted_at:
+            # We want to create only one new version for a restore. Change the
+            # property here, but let the save_object do the actual save
+            # if the data is valid.
+            instance.deleted_at = None
         instance = self.save_object(instance)
         return instance.as_resource
 
@@ -272,7 +354,7 @@ class ModelEndpoint(CollectionEndpoint):
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['DELETE'])
     def delete(self, identifier):
-        """Delete {resource}.
+        """Delete {resource} with 'identifier'.
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -281,21 +363,26 @@ class ModelEndpoint(CollectionEndpoint):
                 description: Instance has been deleted successfully.
                 schema:
                     $ref: '#/definitions/{resource}'
-            419:
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
+            409:
                 description: Conflict.
                 schema:
                     $ref: '#/definitions/{resource}'
+            410:
+                $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
         try:
-            instance.delete_instance()
-        except peewee.IntegrityError:
-            # This model was still pointed by a FK.
-            abort(409)
+            instance.mark_deleted()
+        except ResourceLinkedError as e:
+            abort(409, error=str(e))
         return {'resource_id': identifier}
 
 
-class VersionedModelEnpoint(ModelEndpoint):
+class VersionedModelEndpoint(ModelEndpoint):
     @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>/versions', methods=['GET'])
@@ -338,7 +425,7 @@ class VersionedModelEnpoint(ModelEndpoint):
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
         if not version:
-            abort(404)
+            abort(404, error='Version reference `{}` not found'.format(ref))
         return version.serialize()
 
     @auth.require_oauth()
@@ -361,25 +448,74 @@ class VersionedModelEnpoint(ModelEndpoint):
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
         if not version:
-            abort(404)
+            abort(404, error='Version reference `{}` not found'.format(ref))
         status = request.json.get('status')
         if status is True:
             version.flag()
         elif status is False:
             version.unflag()
         else:
-            abort(400, message='Body should contain a "status" boolean key')
+            abort(400, error='Body should contain a `status` boolean key')
+
+    @auth.require_oauth()
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
+    def put_delete_redirects(self, identifier, old):
+        """Create a new redirect to this resource.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: old
+              in: path
+              type: string
+              required: true
+              description: old identifier.
+        responses:
+            204:
+                description: redirect was successful.
+            201:
+                description: redirect was created.
+            422:
+                description: error while creating the redirect.
+        """
+        instance = self.get_object(identifier)
+        old_identifier, old_value = old.split(':')
+        if request.method == 'PUT':
+            try:
+                versioning.Redirect.add(instance, old_identifier, old_value)
+            except ValueError as e:
+                abort(422, error=str(e))
+            return '', 201
+        elif request.method == 'DELETE':
+            versioning.Redirect.remove(instance, old_identifier, old_value)
+            return '', 204
+
+    @auth.require_oauth()
+    @app.jsonify
+    @app.endpoint('/<identifier>/redirects', methods=['GET'])
+    def get_redirects(self, identifier):
+        """Get a collection of Redirect pointing to this resource.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: A list of redirects.
+        """
+        instance = self.get_object(identifier)
+        cls = versioning.Redirect
+        qs = cls.select().where(cls.model_id == instance.id)
+        return self.collection(qs.serialize())
 
 
 @app.resource
-class Municipality(VersionedModelEnpoint):
+class Municipality(VersionedModelEndpoint):
     endpoint = '/municipality'
     model = models.Municipality
     order_by = [model.insee]
 
 
 @app.resource
-class PostCode(VersionedModelEnpoint):
+class PostCode(VersionedModelEndpoint):
     endpoint = '/postcode'
     model = models.PostCode
     order_by = [model.code, model.municipality]
@@ -387,14 +523,14 @@ class PostCode(VersionedModelEnpoint):
 
 
 @app.resource
-class Group(VersionedModelEnpoint):
+class Group(VersionedModelEndpoint):
     endpoint = '/group'
     model = models.Group
     filters = ['municipality']
 
 
 @app.resource
-class HouseNumber(VersionedModelEnpoint):
+class HouseNumber(VersionedModelEndpoint):
     endpoint = '/housenumber'
     model = models.HouseNumber
     filters = ['parent', 'postcode', 'ancestors', 'group']
@@ -417,7 +553,7 @@ class HouseNumber(VersionedModelEnpoint):
                 qs = (parent_qs | qs)
             # We evaluate the qs ourselves here, because it's a CompoundSelect
             # that does not know about our SelectQuery custom methods (like
-            # `as_resource_list`), and CompoundSelect is hardcoded in peewee
+            # `serialize`), and CompoundSelect is hardcoded in peewee
             # SelectQuery, and we'd need to copy-paste code to be able to use
             # a custom CompoundQuery class instead.
             mask = self.get_collection_mask()
@@ -438,7 +574,7 @@ class HouseNumber(VersionedModelEnpoint):
 
 
 @app.resource
-class Position(VersionedModelEnpoint):
+class Position(VersionedModelEndpoint):
     endpoint = '/position'
     model = models.Position
     filters = ['kind', 'housenumber']
@@ -468,7 +604,7 @@ def bal_post():
 
 
 @app.resource
-class DiffEndpoint(CollectionEndpoint):
+class Diff(CollectionEndpoint):
     endpoint = '/diff'
     model = versioning.Diff
 
@@ -479,22 +615,39 @@ class DiffEndpoint(CollectionEndpoint):
         """Get database diffs.
 
         parameters:
-        - name: increment
-          in: query
-          description: The minimal increment value to retrieve
-          type: integer
-          required: false
+            - name: increment
+              in: query
+              type: integer
+              required: false
+              description: The minimal increment value to retrieve
         responses:
-          200:
-            description: A list of diff objects
-            schema:
-              $ref: '#/definitions/Diff'
+            200:
+                description: A list of diff objects
+                schema:
+                    type: object
+                    properties:
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+                        collection:
+                            name: collection
+                            type: array
+                            items:
+                                $ref: '#/definitions/Diff'
+            400:
+                description: Invalid value for increment
+                schema:
+                    type: object
+                    $ref: '#/definitions/Error'
+            401:
+                $ref: '#/responses/401'
          """
         qs = versioning.Diff.select()
         try:
             increment = int(request.args.get('increment'))
         except ValueError:
-            abort(400, 'Invalid value for increment')
+            abort(400, error='Invalid value for increment')
         except TypeError:
             pass
         else:
@@ -503,11 +656,13 @@ class DiffEndpoint(CollectionEndpoint):
 
 
 @app.route('/openapi', methods=['GET'])
+@app.jsonify
 def openapi():
-    return dumps(app._schema)
+    return app._schema
 
 
 app._schema.register_model(amodels.Session)
 app._schema.register_model(versioning.Diff)
 app._schema.register_model(versioning.Version)
 app._schema.register_model(versioning.Flag)
+app._schema.register_model(versioning.Redirect)

@@ -1,20 +1,15 @@
-from datetime import datetime
 import uuid
+from datetime import datetime
 
 import peewee
 from postgis import Point
 
 from ban import db
+from ban.utils import utcnow
 
+from .exceptions import (IsDeletedError, MultipleRedirectsError, RedirectError,
+                         ResourceLinkedError)
 from .validators import ResourceValidator
-
-
-class SelectQuery(db.SelectQuery):
-
-    @peewee.returns_clone
-    def serialize(self, mask=None):
-        self._serializer = lambda inst: inst.serialize(mask)
-        super().serialize()
 
 
 class BaseResource(peewee.BaseModel):
@@ -57,16 +52,16 @@ class BaseResource(peewee.BaseModel):
 
 
 class ResourceModel(db.Model, metaclass=BaseResource):
-    resource_fields = ['id']
+    resource_fields = ['id', 'status']
     identifiers = []
-    readonly_fields = ['id', 'pk']
-    exclude_for_collection = []
+    readonly_fields = ['id', 'pk', 'status', 'deleted_at']
+    exclude_for_collection = ['status']
     exclude_for_version = []
 
     id = db.CharField(max_length=50, unique=True, null=False)
+    deleted_at = db.DateTimeField(null=True)
 
     class Meta:
-        manager = SelectQuery
         validator = ResourceValidator
 
     @classmethod
@@ -134,24 +129,60 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         """Resources plus relations references and metadata."""
         return self.serialize({f: {} for f in self.versioned_fields})
 
+    @property
+    def status(self):
+        return 'deleted' if self.deleted_at else 'active'
+
+    @classmethod
+    def select(cls, *selection):
+        return super().select(*selection).where(cls.deleted_at.is_null())
+
+    @classmethod
+    def raw_select(cls, *selection):
+        return super().select(*selection)
+
+    def mark_deleted(self):
+        if self.deleted_at:
+            raise ValueError('Resource already marked as deleted')
+        self.ensure_no_reverse_relation()
+        self.deleted_at = utcnow()
+        self.increment_version()
+        self.save()
+
+    def ensure_no_reverse_relation(self):
+        for name, field in self._meta.reverse_rel.items():
+            if getattr(self, name).count():
+                raise ResourceLinkedError(
+                    'Resource still linked by `{}`'.format(name))
+
     @classmethod
     def coerce(cls, id, identifier=None):
-        if not identifier:
-            identifier = 'id'  # BAN id by default.
-            if isinstance(id, str):
-                *extra, id = id.split(':')
-                if extra:
-                    identifier = extra[0]
-                if identifier not in cls.identifiers + ['id', 'pk']:
-                    raise cls.DoesNotExist("Invalid identifier {}".format(
+        if isinstance(id, db.Model):
+            instance = id
+        else:
+            if not identifier:
+                identifier = 'id'  # BAN id by default.
+                if isinstance(id, str):
+                    *extra, id = id.split(':')
+                    if extra:
+                        identifier = extra[0]
+                    if identifier not in cls.identifiers + ['id', 'pk']:
+                        raise cls.DoesNotExist("Invalid identifier {}".format(
                                                                 identifier))
-        try:
-            return cls.get(getattr(cls, identifier) == id)
-        except cls.DoesNotExist:
-            # Is it an old identifier?
-            from .versioning import IdentifierRedirect
-            new = IdentifierRedirect.follow(cls, identifier, id)
-            if new:
-                return cls.get(getattr(cls, identifier) == new)
-            else:
+                elif isinstance(id, int):
+                    identifier = 'pk'
+            try:
+                instance = cls.raw_select().where(
+                    getattr(cls, identifier) == id).get()
+            except cls.DoesNotExist:
+                # Is it an old identifier?
+                from .versioning import Redirect
+                redirects = Redirect.follow(cls.__name__, identifier, id)
+                if redirects:
+                    if len(redirects) > 1:
+                        raise MultipleRedirectsError(identifier, id, redirects)
+                    raise RedirectError(identifier, id, redirects[0])
                 raise
+        if instance.deleted_at:
+            raise IsDeletedError(instance)
+        return instance

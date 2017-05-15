@@ -2,6 +2,7 @@ import re
 
 import peewee
 from unidecode import unidecode
+from werkzeug.utils import cached_property
 
 from ban import db
 from ban.utils import compute_cia
@@ -44,23 +45,29 @@ class NamedModel(Model):
 
 
 class Municipality(NamedModel):
+    INSEE_FORMAT = '(2[AB]|\d{2})\d{3}'
     identifiers = ['siren', 'insee']
     resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
     exclude_for_version = ['postcodes']
 
-    insee = db.CharField(length=5, unique=True)
-    siren = db.CharField(max_length=9, unique=True, null=True)
+    insee = db.CharField(length=5, unique=True, format=INSEE_FORMAT)
+    siren = db.CharField(length=9, format='\d*', unique=True, null=True)
+
+    @property
+    def municipality(self):
+        return self
 
 
 class PostCode(NamedModel):
-    resource_fields = ['code', 'name', 'alias', 'municipality']
+    resource_fields = ['code', 'name', 'alias', 'complement', 'municipality']
 
-    code = db.PostCodeField(index=True)
+    complement = db.CharField(max_length=38, null=True)
+    code = db.CharField(index=True, format='\d*', length=5)
     municipality = db.ForeignKeyField(Municipality, related_name='postcodes')
 
     class Meta:
         indexes = (
-            (('code', 'municipality'), True),
+            (('code', 'complement', 'municipality'), True),
         )
 
     @property
@@ -96,7 +103,7 @@ class Group(NamedModel):
     kind = db.CharField(max_length=64, choices=KIND)
     addressing = db.CharField(max_length=16, choices=ADDRESSING, null=True)
     fantoir = db.FantoirField(null=True, unique=True)
-    laposte = db.CharField(max_length=10, null=True, unique=True)
+    laposte = db.CharField(max_length=8, null=True, unique=True, format='\d*')
     ign = db.CharField(max_length=24, null=True, unique=True)
     municipality = db.ForeignKeyField(Municipality, related_name='groups')
 
@@ -116,6 +123,9 @@ class Group(NamedModel):
 
 
 class HouseNumber(Model):
+    # INSEE + set of OCR-friendly characters (dropped confusing ones
+    # (like 0/O, 1/I…)) from La Poste.
+    CEA_FORMAT = Municipality.INSEE_FORMAT + '[234679ABCEGHILMNPRSTUVXYZ]{5}'
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'positions', 'ign', 'postcode']
@@ -125,7 +135,8 @@ class HouseNumber(Model):
     ordinal = db.CharField(max_length=16, null=True)
     parent = db.ForeignKeyField(Group)
     cia = db.CharField(max_length=100, null=True, unique=True)
-    laposte = db.CharField(max_length=10, null=True, unique=True)
+    laposte = db.CharField(length=10, null=True, unique=True,
+                           format=CEA_FORMAT)
     ign = db.CharField(max_length=24, null=True, unique=True)
     ancestors = db.ManyToManyField(Group, related_name='_housenumbers')
     postcode = db.ForeignKeyField(PostCode, null=True)
@@ -148,6 +159,11 @@ class HouseNumber(Model):
                            self.parent.get_fantoir(),
                            self.number, self.ordinal)
 
+    @cached_property
+    def municipality(self):
+        return Municipality.select().join(
+           Group, on=Municipality.pk == self.parent.municipality.pk).first()
+
 
 class Position(Model):
 
@@ -160,6 +176,7 @@ class Position(Model):
     SEGMENT = 'segment'
     UTILITY = 'utility'
     UNKNOWN = 'unknown'
+    AREA = 'area'
     KIND = (
         (POSTAL, _('postal delivery')),
         (ENTRANCE, _('entrance')),
@@ -169,6 +186,7 @@ class Position(Model):
         (PARCEL, _('parcel')),
         (SEGMENT, _('road segment')),
         (UTILITY, _('utility service')),
+        (AREA, _('area')),
         (UNKNOWN, _('unknown')),
     )
 
@@ -187,8 +205,9 @@ class Position(Model):
         (OTHER, _('other')),
     )
 
+    identifiers = ['laposte', 'ign']
     resource_fields = ['center', 'source', 'housenumber', 'kind', 'comment',
-                       'parent', 'positioning', 'name', 'ign']
+                       'parent', 'positioning', 'name', 'ign', 'laposte']
 
     name = db.CharField(max_length=200, null=True)
     center = db.PointField(verbose_name=_("center"), null=True, index=True)
@@ -198,12 +217,9 @@ class Position(Model):
     kind = db.CharField(max_length=64, choices=KIND)
     positioning = db.CharField(max_length=32, choices=POSITIONING)
     ign = db.CharField(max_length=24, null=True, unique=True)
+    laposte = db.CharField(length=10, null=True, unique=True,
+                           format=HouseNumber.CEA_FORMAT)
     comment = db.TextField(null=True)
-
-    class Meta:
-        indexes = (
-            (('housenumber', 'source'), True),
-        )
 
     @classmethod
     def validate(cls, validator, document, instance):
@@ -217,3 +233,9 @@ class Position(Model):
             errors['center'] = msg
             errors['name'] = msg
         return errors
+
+    @cached_property
+    def municipality(self):
+        return Municipality.select().join(
+               Group, on=Municipality.pk == Group.municipality).join(
+               HouseNumber, on=Group.pk == self.housenumber.parent.pk).first()

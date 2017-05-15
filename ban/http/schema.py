@@ -44,7 +44,45 @@ BASE = {
             'in': 'path',
             'type': 'string',
             'required': True,
+            'description': 'resource identifier'
         }
+    },
+    'responses': {
+        '400': {
+            'description': 'Bad Request.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
+        },
+        '401': {
+            'description': 'Unauthorized access.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
+        },
+        '404': {
+            'description': 'Resource does not exist.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
+        },
+        '410': {
+            'description': 'Resource is deleted.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
+        },
+        '422': {
+            'description': 'Invalid data.',
+            'schema': {
+                'type': 'object',
+                '$ref': '#/definitions/Error'
+            }
+        },
     }
 }
 
@@ -57,7 +95,7 @@ class Schema(dict):
 
     def get_responder_summary(self, responder, resource):
         return (responder.__doc__ or '').split('\n\n')[0].format(
-            resource=resource.__class__.__name__)
+            resource=resource.__name__)
 
     def get_responder_doc(self, func, resource):
         default = {
