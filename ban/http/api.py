@@ -128,9 +128,9 @@ class ModelEndpoint(CollectionEndpoint):
             fields = ','.join(self.model.collection_fields)
         return parse_mask(fields)
 
-    @auth.require_oauth()
+    @auth.require_oauth('pouet')
     @app.jsonify
-    @app.endpoint('', methods=['GET'])
+    @app.endpoint('', methods=['GET'], scopes=['lol'])
     def get_collection(self):
         """Get {resource} collection.
 
@@ -164,7 +164,6 @@ class ModelEndpoint(CollectionEndpoint):
         except ValueError as e:
             abort(400, error=str(e))
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['GET'])
     def get_resource(self, identifier):
@@ -191,7 +190,6 @@ class ModelEndpoint(CollectionEndpoint):
         except ValueError as e:
             abort(400, error=str(e))
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['POST'])
     def post_resource(self, identifier):
@@ -230,7 +228,6 @@ class ModelEndpoint(CollectionEndpoint):
         instance = self.save_object(instance, update=True)
         return instance.as_resource
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('', methods=['POST'])
     def post(self):
@@ -267,7 +264,6 @@ class ModelEndpoint(CollectionEndpoint):
         headers = {'Location': url_for(endpoint, identifier=instance.id)}
         return instance.as_resource, 201, headers
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
@@ -306,7 +302,6 @@ class ModelEndpoint(CollectionEndpoint):
         instance = self.save_object(instance, update=True)
         return instance.as_resource
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
     def put(self, identifier):
@@ -350,7 +345,6 @@ class ModelEndpoint(CollectionEndpoint):
         instance = self.save_object(instance)
         return instance.as_resource
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['DELETE'])
     def delete(self, identifier):
@@ -383,7 +377,6 @@ class ModelEndpoint(CollectionEndpoint):
 
 
 class VersionedModelEndpoint(ModelEndpoint):
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>/versions', methods=['GET'])
     def get_versions(self, identifier):
@@ -402,9 +395,8 @@ class VersionedModelEndpoint(ModelEndpoint):
         instance = self.get_object(identifier)
         return self.collection(instance.versions.serialize())
 
-    @auth.require_oauth()
     @app.jsonify
-    @app.endpoint('/<identifier>/versions/<datetime:ref>', methods=['GET'])
+    #@app.endpoint('/<identifier>/versions/<datetime:ref>', methods=['GET'])
     @app.endpoint('/<identifier>/versions/<int:ref>', methods=['GET'])
     def get_version(self, identifier, ref):
         """Get {resource} version corresponding to 'ref' number or datetime.
@@ -428,7 +420,6 @@ class VersionedModelEndpoint(ModelEndpoint):
             abort(404, error='Version reference `{}` not found'.format(ref))
         return version.serialize()
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
     def post_version(self, identifier, ref):
@@ -457,7 +448,6 @@ class VersionedModelEndpoint(ModelEndpoint):
         else:
             abort(400, error='Body should contain a `status` boolean key')
 
-    @auth.require_oauth()
     @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
     def put_delete_redirects(self, identifier, old):
         """Create a new redirect to this resource.
@@ -489,7 +479,6 @@ class VersionedModelEndpoint(ModelEndpoint):
             versioning.Redirect.remove(instance, old_identifier, old_value)
             return '', 204
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>/redirects', methods=['GET'])
     def get_redirects(self, identifier):
@@ -608,7 +597,6 @@ class Diff(CollectionEndpoint):
     endpoint = '/diff'
     model = versioning.Diff
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('', methods=['GET'])
     def get_collection(self):
