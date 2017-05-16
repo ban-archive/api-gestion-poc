@@ -129,7 +129,7 @@ class ModelEndpoint(CollectionEndpoint):
         return parse_mask(fields)
 
     @app.jsonify
-    @app.endpoint('', methods=['GET'], scopes=['write'])
+    @app.endpoint(methods=['GET'], scopes=['write'])
     def get_collection(self):
         """Get {resource} collection.
 
@@ -228,7 +228,7 @@ class ModelEndpoint(CollectionEndpoint):
         return instance.as_resource
 
     @app.jsonify
-    @app.endpoint('', methods=['POST'])
+    @app.endpoint(methods=['POST'])
     def post(self):
         """Create {resource}.
 
@@ -395,8 +395,8 @@ class VersionedModelEndpoint(ModelEndpoint):
         return self.collection(instance.versions.serialize())
 
     @app.jsonify
-    # @app.endpoint('/<identifier>/versions/<datetime:ref>', methods=['GET'])
-    @app.endpoint('/<identifier>/versions/<int:ref>', methods=['GET'])
+    @app.endpoint('/<identifier>/versions/<datetime:ref>',
+                  '/<identifier>/versions/<int:ref>', methods=['GET'])
     def get_version(self, identifier, ref):
         """Get {resource} version corresponding to 'ref' number or datetime.
 
