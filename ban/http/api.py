@@ -128,9 +128,8 @@ class ModelEndpoint(CollectionEndpoint):
             fields = ','.join(self.model.collection_fields)
         return parse_mask(fields)
 
-    @auth.require_oauth('pouet')
     @app.jsonify
-    @app.endpoint('', methods=['GET'], scopes=['lol'])
+    @app.endpoint('', methods=['GET'], scopes=['write'])
     def get_collection(self):
         """Get {resource} collection.
 
@@ -396,7 +395,7 @@ class VersionedModelEndpoint(ModelEndpoint):
         return self.collection(instance.versions.serialize())
 
     @app.jsonify
-    #@app.endpoint('/<identifier>/versions/<datetime:ref>', methods=['GET'])
+    # @app.endpoint('/<identifier>/versions/<datetime:ref>', methods=['GET'])
     @app.endpoint('/<identifier>/versions/<int:ref>', methods=['GET'])
     def get_version(self, identifier, ref):
         """Get {resource} version corresponding to 'ref' number or datetime.

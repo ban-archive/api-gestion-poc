@@ -54,18 +54,15 @@ class App(Flask):
         cls = func.__self__.__class__
         for endpoint in func._endpoints:
             path, kwargs = endpoint
-            _scopes = kwargs.pop('scopes', [])
             path = '{}{}'.format(cls.endpoint, path)
             endpoint = ('{}-{}'.format(cls.__name__, func.__name__)
                                .lower().replace('_', '-'))
+            scopes = ['{}_{}'.format(cls.__name__.lower(), s)
+                      for s in kwargs.pop('scopes', [])]
+            func = auth.require_oauth(*scopes)(func)
             self.add_url_rule(path, view_func=func, endpoint=endpoint,
                               strict_slashes=False, **kwargs)
             path = re.sub(r'<(\w+:)?(\w+)>', r'{\2}', path)
-            scopes = []
-            for scope in _scopes:
-                scopes.append('{}_{}'.format(cls.__name__.lower(), scope))
-            # func = auth.require_oauth(*scopes)(func)
-            print(scopes, func)
             self._schema.register_endpoint(path, func, kwargs['methods'], cls)
 
 
