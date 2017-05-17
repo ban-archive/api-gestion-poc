@@ -345,7 +345,7 @@ class ModelEndpoint(CollectionEndpoint):
         return instance.as_resource
 
     @app.jsonify
-    @app.endpoint('/<identifier>', methods=['DELETE'])
+    @app.endpoint('/<identifier>', methods=['DELETE'], scopes=['write'])
     def delete(self, identifier):
         """Delete {resource} with 'identifier'.
 

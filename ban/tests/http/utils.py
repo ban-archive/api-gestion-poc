@@ -3,11 +3,21 @@ from functools import wraps
 from ..factories import TokenFactory
 
 
-def authorize(func):
+def authorize(func, *scopes):
+
+    if isinstance(func, str):
+        def wrapper(f):
+            return authorize(f, func, *scopes)
+        return wrapper
+    if not scopes:
+        # Called without arguments
+        scopes = ['municipality_write', 'postocode_write', 'group_write',
+                  'housenumber_write', 'position_write']
+        return authorize(func, *scopes)
 
     @wraps(func)
     def inner(*args, **kwargs):
-        token_kwargs = {}
+        token_kwargs = {'scopes': scopes}
         if 'session' in kwargs:
             token_kwargs['session'] = kwargs['session']
         token = TokenFactory(**token_kwargs)

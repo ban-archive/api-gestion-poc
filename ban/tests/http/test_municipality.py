@@ -277,6 +277,14 @@ def test_cannot_delete_municipality_if_not_authorized(client):
     assert models.Municipality.get(models.Municipality.id == municipality.id)
 
 
+@authorize('foo_bar')
+def test_cannot_delete_municipality_without_write_access(client):
+    municipality = MunicipalityFactory()
+    resp = client.delete('/municipality/{}'.format(municipality.id))
+    assert resp.status_code == 401
+    assert models.Municipality.get(models.Municipality.id == municipality.id)
+
+
 @authorize
 def test_cannot_delete_municipality_if_linked_to_street(client):
     municipality = MunicipalityFactory()
