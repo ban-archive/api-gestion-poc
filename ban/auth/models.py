@@ -64,7 +64,7 @@ class Client(ResourceModel):
     grant_type = db.CharField(choices=GRANT_TYPES)
     is_confidential = db.BooleanField(default=False)
     flag_id = db.CharField(choices=FLAG_IDS, default=None, null=True)
-    scopes = db.ArrayField(db.CharField, null=True)
+    scopes = db.ArrayField(db.CharField, default=["view"])
 
     @property
     def default_redirect_uri(self):
@@ -158,7 +158,6 @@ class Token(db.Model):
         Checks if the access token is valid.
         :param scopes: An iterable containing the scopes to check or None
         """
-        import ipdb; ipdb.set_trace()
         return not self.is_expired() and self.allow_scopes(scopes)
 
     def is_expired(self):
@@ -172,7 +171,6 @@ class Token(db.Model):
         Check if the token allows the provided scopes
         :param scopes: An iterable containing the scopes to check
         """
-        import ipdb; ipdb.set_trace()
         if not scopes:
             return True
 

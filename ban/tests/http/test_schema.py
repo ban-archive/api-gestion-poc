@@ -53,7 +53,7 @@ def test_get_municipality(get, schema):
 @authorize
 def test_get_municipality_collection(get, schema):
     factories.MunicipalityFactory()
-    resp = get('/municipality')
+    resp = get('/municipality/')
     validate_call(resp, schema)
 
 
@@ -67,7 +67,7 @@ def test_get_postcode(get, schema):
 @authorize
 def test_get_postcode_collection(get, schema):
     factories.PostCodeFactory()
-    resp = get('/postcode')
+    resp = get('/postcode/')
     validate_call(resp, schema)
 
 
@@ -81,7 +81,7 @@ def test_get_group(get, schema):
 @authorize
 def test_get_group_collection(get, schema):
     factories.GroupFactory()
-    resp = get('/group')
+    resp = get('/group/')
     validate_call(resp, schema)
 
 
@@ -95,7 +95,7 @@ def test_get_housenumber(get, schema):
 @authorize
 def test_get_housenumber_collection(get, schema):
     factories.HouseNumberFactory()
-    resp = get('/housenumber')
+    resp = get('/housenumber/')
     validate_call(resp, schema)
 
 
@@ -109,7 +109,7 @@ def test_get_position(get, schema):
 @authorize
 def test_get_position_collection(get, schema):
     factories.PositionFactory()
-    resp = get('/position')
+    resp = get('/position/')
     validate_call(resp, schema)
 
 

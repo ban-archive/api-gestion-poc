@@ -44,7 +44,8 @@ def test_listusers_with_invoke(capsys):
     assert user.username in out
 
 
-def test_create_client_should_accept_username():
+def test_create_client_should_accept_username(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: 'pwd')
     user = factories.UserFactory()
     assert not amodels.Client.select().count()
     createclient(name='test client', user=user.username)
@@ -53,7 +54,8 @@ def test_create_client_should_accept_username():
     assert client.user == user
 
 
-def test_create_client_should_accept_email():
+def test_create_client_should_accept_email(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: 'pwd')
     user = factories.UserFactory()
     assert not amodels.Client.select().count()
     createclient(name='test client', user=user.email)

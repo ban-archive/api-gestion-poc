@@ -129,7 +129,7 @@ class ModelEndpoint(CollectionEndpoint):
         return parse_mask(fields)
 
     @app.jsonify
-    @app.endpoint(methods=['GET'], scopes=['write'])
+    @app.endpoint(methods=['GET'])
     def get_collection(self):
         """Get {resource} collection.
 
@@ -190,7 +190,7 @@ class ModelEndpoint(CollectionEndpoint):
             abort(400, error=str(e))
 
     @app.jsonify
-    @app.endpoint('/<identifier>', methods=['POST'])
+    @app.endpoint('/<identifier>', methods=['POST'], scopes=['write'])
     def post_resource(self, identifier):
         """Post {resource} with 'identifier'.
 
@@ -228,7 +228,7 @@ class ModelEndpoint(CollectionEndpoint):
         return instance.as_resource
 
     @app.jsonify
-    @app.endpoint(methods=['POST'])
+    @app.endpoint(methods=['POST'], scopes=['write'])
     def post(self):
         """Create {resource}.
 
@@ -264,7 +264,7 @@ class ModelEndpoint(CollectionEndpoint):
         return instance.as_resource, 201, headers
 
     @app.jsonify
-    @app.endpoint('/<identifier>', methods=['PATCH'])
+    @app.endpoint('/<identifier>', methods=['PATCH'], scopes=['write'])
     def patch(self, identifier):
         """Patch {resource} with 'identifier'.
 
@@ -302,7 +302,7 @@ class ModelEndpoint(CollectionEndpoint):
         return instance.as_resource
 
     @app.jsonify
-    @app.endpoint('/<identifier>', methods=['PUT'])
+    @app.endpoint('/<identifier>', methods=['PUT'], scopes=['write'])
     def put(self, identifier):
         """Replace or restore {resource} with 'identifier'.
 
@@ -420,7 +420,8 @@ class VersionedModelEndpoint(ModelEndpoint):
         return version.serialize()
 
     @app.jsonify
-    @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
+    @app.endpoint('/<identifier>/versions/<int:ref>/flag',
+                  methods=['POST'], scopes=['write'])
     def post_version(self, identifier, ref):
         """Flag a version.
 
@@ -447,7 +448,8 @@ class VersionedModelEndpoint(ModelEndpoint):
         else:
             abort(400, error='Body should contain a `status` boolean key')
 
-    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
+    @app.endpoint('/<identifier>/redirects/<old>',
+                  methods=['PUT', 'DELETE'], scopes=['write'])
     def put_delete_redirects(self, identifier, old):
         """Create a new redirect to this resource.
 
