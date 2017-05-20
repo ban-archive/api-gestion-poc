@@ -4,7 +4,7 @@ Flask==0.11.1
 Flask-Cors==3.0.2
 Flask-OAuthlib==0.9.3
 peewee==2.8.5
-progressist
+progressist==0.0.6
 psycopg-postgis
 psycopg2==2.6.2
 python-dateutil
