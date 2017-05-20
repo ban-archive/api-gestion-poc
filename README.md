@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/BaseAdresseNationale/ban.svg?branch=master)](https://travis-ci.org/BaseAdresseNationale/ban) [![Coverage Status](https://coveralls.io/repos/BaseAdresseNationale/ban/badge.svg?branch=master&service=github)](https://coveralls.io/github/BaseAdresseNationale/ban?branch=master) [![Requirements Status](https://requires.io/github/BaseAdresseNationale/ban/requirements.svg?branch=master)](https://requires.io/github/BaseAdresseNationale/ban/requirements/?branch=master)
+[![Build Status](https://travis-ci.org/BaseAdresseNationale/api-gestion.svg?branch=master)](https://travis-ci.org/BaseAdresseNationale/api-gestion) [![Coverage Status](https://coveralls.io/repos/BaseAdresseNationale/api-gestion/badge.svg?branch=master&service=github)](https://coveralls.io/github/BaseAdresseNationale/api-gestion?branch=master) [![Requirements Status](https://requires.io/github/BaseAdresseNationale/api-gestion/requirements.svg?branch=master)](https://requires.io/github/BaseAdresseNationale/api-gestion/requirements/?branch=master)
 # BAN
 
 This is a POC of API for managing the future "Base adresses nationale".
@@ -76,8 +76,8 @@ Add postgis and hstore extensions
 
 Clone repository
 
-    git clone https://github.com/BaseAdresseNationale/ban
-    cd ban/
+    git clone https://github.com/BaseAdresseNationale/api-gestion
+    cd api-gestion/
 
 Install ban locally:
 
