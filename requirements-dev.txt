@@ -1,5 +1,5 @@
 -r requirements.txt
-factory-boy==2.7.0
+factory-boy==2.8.1
 factory-boy-peewee==0.0.4
 flex==6.0.1
 pytest==3.0.5
