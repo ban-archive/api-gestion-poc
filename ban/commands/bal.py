@@ -2,6 +2,7 @@ import peewee
 
 from ban.commands import command, reporter
 from ban.core.models import HouseNumber, Group, Position
+from ban.db import database
 from ban.utils import compute_cia
 
 from . import helpers
@@ -19,10 +20,17 @@ def bal(path, limit=0, **kwargs):
     rows = list(helpers.load_csv(path, encoding='utf-8-sig'))
     if limit:
         rows = rows[:limit]
-    helpers.batch(process_row, rows, total=len(rows))
+    helpers.batch(process_rows, rows, total=len(rows))
 
 
 @helpers.session
+def process_rows(*rows):
+    with database.atomic():
+        for row in rows:
+            process_row(row)
+    return rows
+
+
 def process_row(row):
     id = row.get('uid_adresse', '').strip()
     name = row.get('voie_nom')

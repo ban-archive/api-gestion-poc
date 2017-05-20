@@ -5,6 +5,7 @@ import peewee
 from ban.commands import command, reporter
 from ban.core.models import (Group, HouseNumber, Municipality, Position,
                              PostCode)
+from ban.db import database
 from ban.utils import compute_cia
 
 from . import helpers
@@ -34,10 +35,17 @@ def init(*paths, limit=0, **kwargs):
             print('Computing file size')
             total = sum(1 for line in helpers.iter_file(path))
             print('Done computing file size')
-        helpers.batch(process_row, rows, chunksize=100, total=total)
+        helpers.batch(process_rows, rows, chunksize=100, total=total)
 
 
 @helpers.session
+def process_rows(*rows):
+    with database.atomic():
+        for row in rows:
+            process_row(row)
+    return rows
+
+
 def process_row(row):
     kind = row.pop('type')
     if kind == "municipality":
