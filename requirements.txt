@@ -6,7 +6,7 @@ Flask-OAuthlib==0.9.3
 peewee==2.8.5
 progressist==0.0.6
 psycopg-postgis
-psycopg2==2.6.2
+psycopg2==2.7.1
 python-dateutil
 PyYAML==3.12
 Unidecode==0.4.19
