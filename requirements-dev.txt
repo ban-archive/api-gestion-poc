@@ -4,4 +4,4 @@ factory-boy-peewee==0.0.4
 flex==6.9.0
 pytest==3.0.7
 pytest-flask==0.10.0
-pytest-mock==1.4.0
+pytest-mock==1.6.0
