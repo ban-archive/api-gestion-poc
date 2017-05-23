@@ -63,9 +63,8 @@ def createclient(name=None, user=None, scopes=[], **kwargs):
     if not user_inst:
         return reporter.error('User not found', user)
     if not scopes:
-        scopes = helpers.prompt('Scopes (separated by spaces)').split()
-        if not scopes:
-            scopes = 'view'
+        scopes = helpers.prompt('Scopes (separated by spaces)',
+                                default='view').split()
     validator = Client.validator(name=name, user=user_inst, scopes=scopes)
     if validator.errors:
         return reporter.error('Errored', validator.errors)

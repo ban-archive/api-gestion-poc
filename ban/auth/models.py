@@ -123,6 +123,7 @@ class Session(db.Model):
     client = db.ForeignKeyField(Client, null=True)
     ip = db.CharField(null=True)  # TODO IPField
     email = db.CharField(null=True)  # TODO EmailField
+    attributes = db.CharField(null=True)
 
     def serialize(self, *args):
         # Pretend to be a resource for created_by/modified_by values in
@@ -131,7 +132,8 @@ class Session(db.Model):
         return {
             'id': self.pk,
             'client': self.client.name if self.client else None,
-            'user': self.user.username if self.user else None
+            'user': self.user.username if self.user else None,
+            'attributes': self.attributes if self.attributes else None
         }
 
     def save(self, **kwargs):
@@ -193,7 +195,8 @@ class Token(db.Model):
         session_data = {
             "email": data.get('email'),
             "ip": data.get('ip'),
-            "client": client
+            "client": client,
+            "attributes": data.get('attributes')
         }
         session = Session.create(**session_data)  # get or create?
         data['session'] = session.pk
