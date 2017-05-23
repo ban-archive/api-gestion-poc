@@ -21,8 +21,7 @@ def test_session_can_be_created_with_a_user():
     assert session.serialize() == {
         'id': session.pk,
         'user': user.username,
-        'client': None,
-        'attributes': None
+        'client': None
     }
 
 
@@ -33,8 +32,7 @@ def test_session_can_be_created_with_a_client():
     assert session.serialize() == {
         'id': session.pk,
         'user': None,
-        'client': client.name,
-        'attributes': None
+        'client': client.name
     }
 
 

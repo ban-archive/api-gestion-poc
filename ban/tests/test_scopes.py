@@ -17,7 +17,7 @@ def test_create_client_with_scopes(monkeypatch):
 
 
 def test_create_client_without_scopes(monkeypatch):
-    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: 'view')
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: ' ')
     user = factories.UserFactory()
     createclient(name='test client', user=user.username)
     client = amodels.Client.first()
@@ -42,7 +42,7 @@ def test_create_token_with_scopes(client, monkeypatch):
 
 
 def test_create_token_without_scopes(client, monkeypatch):
-    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: 'view')
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: ' ')
     user = factories.UserFactory()
     createclient(name='test client', user=user.username)
     c = amodels.Client.first()

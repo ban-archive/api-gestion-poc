@@ -51,13 +51,11 @@ def test_serialize_with_wildcard():
             'client': group.created_by.client.name,
             'user': group.created_by.user.username,
             'id': group.created_by.pk,
-            'attributes': group.created_by.attributes,
         },
         'modified_by': {
             'client': group.modified_by.client.name,
             'user': group.modified_by.user.username,
             'id': group.modified_by.pk,
-            'attributes': group.modified_by.attributes,
         },
     }
 
@@ -86,13 +84,11 @@ def test_serialize_with_wildcard_in_relation():
                 'client': group.created_by.client.name,
                 'user': group.created_by.user.username,
                 'id': group.created_by.pk,
-                'attributes': group.created_by.attributes,
             },
             'modified_by': {
                 'client': group.modified_by.client.name,
                 'user': group.modified_by.user.username,
                 'id': group.modified_by.pk,
-                'attributes': group.modified_by.attributes,
             },
         }
     }
@@ -112,13 +108,11 @@ def test_serialize_with_double_wildcard():
             'client': housenumber.created_by.client.name,
             'user': housenumber.created_by.user.username,
             'id': housenumber.created_by.pk,
-            'attributes': housenumber.created_by.attributes,
         },
         'modified_by': {
             'client': housenumber.modified_by.client.name,
             'user': housenumber.modified_by.user.username,
             'id': housenumber.modified_by.pk,
-            'attributes': housenumber.modified_by.attributes,
         },
         'version': 1,
         'postcode': None,
@@ -149,13 +143,11 @@ def test_serialize_with_double_wildcard():
                 'client': group.created_by.client.name,
                 'user': group.created_by.user.username,
                 'id': group.created_by.pk,
-                'attributes': group.created_by.attributes,
             },
             'modified_by': {
                 'client': group.modified_by.client.name,
                 'user': group.modified_by.user.username,
                 'id': group.modified_by.pk,
-                'attributes': group.modified_by.attributes,
             },
         }
     }
