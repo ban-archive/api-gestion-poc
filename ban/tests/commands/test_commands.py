@@ -4,12 +4,13 @@ from pathlib import Path
 
 from ban.auth import models as amodels
 from ban.commands.auth import (createclient, createuser, dummytoken,
-                               listclients, listusers)
+                               listclients, listusers, invalidatetoken)
 from ban.commands.db import truncate
 from ban.commands.export import resources
 from ban.core import models
 from ban.core.encoder import dumps
 from ban.tests import factories
+from ban.utils import utcnow
 
 
 def test_create_user_is_not_staff_by_default(monkeypatch):
@@ -143,3 +144,34 @@ def test_report_to(tmpdir, config):
     dummytoken.invoke(args)
     with report_to.open() as f:
         assert 'Created token' in f.read()
+
+
+def test_invalidate_token_with_user(capsys):
+    user = factories.UserFactory()
+    session = factories.SessionFactory(user=user)
+    token = factories.TokenFactory(session=session)
+    invalidatetoken(user=user.email)
+
+    out, err = capsys.readouterr()
+    assert 'Invalidate 1 token' in out
+    updated_token = amodels.Token.first(amodels.Token.pk == token.pk)
+    assert updated_token.expires < utcnow()
+
+
+def test_invalidate_token_with_client(capsys):
+    client = factories.ClientFactory()
+    session = factories.SessionFactory(client=client)
+    valid_client = factories.ClientFactory()
+    valid_session = factories.SessionFactory(client=valid_client)
+    token = factories.TokenFactory(session=session)
+    valid_token = factories.TokenFactory(session=valid_session)
+    invalidatetoken(client=client.client_id)
+
+    out, err = capsys.readouterr()
+    assert 'Invalidate 1 token' in out
+    updated_token = amodels.Token.first(amodels.Token.pk == token.pk)
+    updated_valid_token = amodels.Token.first(
+        amodels.Token.pk == valid_token.pk
+    )
+    assert updated_token.expires < utcnow()
+    assert updated_valid_token.expires > utcnow()

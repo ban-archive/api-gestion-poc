@@ -1,6 +1,7 @@
-from ban.auth.models import Token, User, Client
+from ban.auth.models import Token, User, Client, Session
 from ban.commands import command, reporter
 from ban.core import context
+from ban.utils import utcnow
 
 from . import helpers
 
@@ -14,6 +15,40 @@ def dummytoken(token, **kwargs):
     Token.create(session=session.pk, access_token=token, expires_in=3600*24,
                  token_type='Bearer', scope='*')
     reporter.notice('Created token', token)
+
+
+@command
+def invalidatetoken(client=None, user=None, **kwargs):
+    """Invalidate a token.
+    Provide at least a client or a user
+
+    client   client_id or client_secret of an existing client
+    user     username or email of an existing user
+    """
+    if not client and not user:
+        helpers.abort(
+            """Provide at least a client (client_id or client_secret)
+             or a user (username or email)"""
+        )
+    if user:
+        user_inst = User.first((User.username == user) | (User.email == user))
+        if not user_inst:
+            return reporter.error('User not found', user)
+        where_clause = (Session.user_id == user_inst.pk)
+    else:
+        client_inst = Client.first(
+            (Client.client_id == client) | (Client.client_secret == client)
+        )
+        if not client_inst:
+            return reporter.error('Client not found', user)
+        where_clause = (Session.client_id == client_inst.pk)
+
+    tokens = Token.select().join(Session).where(
+        where_clause).where(Token.expires > utcnow())
+    for token in tokens:
+        token.expires = utcnow()
+        token.save()
+    reporter.notice('Invalidate {} tokens'.format(len(tokens)), tokens)
 
 
 @command
