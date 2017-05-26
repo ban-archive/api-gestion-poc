@@ -72,6 +72,23 @@ def test_create_client_should_not_crash_on_non_existing_user(capsys):
     assert 'User not found' in out
 
 
+def test_create_client_with_scopes(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt',
+                        lambda *x, **wk: 'municipality_write group_write')
+    user = factories.UserFactory()
+    createclient(name='test client', user=user.username)
+    client = amodels.Client.first()
+    assert client.scopes == ['municipality_write', 'group_write']
+
+
+def test_create_client_without_scopes(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: 'view')
+    user = factories.UserFactory()
+    createclient(name='test client', user=user.username)
+    client = amodels.Client.first()
+    assert client.scopes == ['view']
+
+
 def test_listclients(capsys):
     client = factories.ClientFactory()
     listclients()
