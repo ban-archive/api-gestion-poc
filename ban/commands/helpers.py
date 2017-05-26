@@ -1,11 +1,10 @@
 import csv
 from datetime import timedelta
 import getpass
-from itertools import repeat
 import os
 import pkgutil
 import sys
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from multiprocessing.pool import RUN, IMapUnorderedIterator, Pool
 from importlib import import_module
 from pathlib import Path
 
@@ -64,47 +63,48 @@ class Bar(ProgressBar):
                 '| ETA: {eta} | {elapsed}')
 
 
-def collect_report(func, *args, **kwargs):
+def collect_report(func, chunk):
     # This is a process reporter instance.
     reporter = context.get('reporter')
-    if not reporter:
-        # In thread mode, reporter is not shared with subthreads.
-        reporter = Reporter(config.get('VERBOSE'))
-        context.set('reporter', reporter)
-    func(*args, **kwargs)
+    results = func(*chunk)
     reports = reporter._reports.copy()
     reporter.clear()
-    return reports
+    return len(results), reports
+
+
+class ChunkedPool(Pool):
+
+    def imap_unordered(self, func, iterable, chunksize):
+        """Customized version of imap_unordered.
+        Directly send chunks to func, instead of iterating in each process and
+        sending one by one.
+        Original:
+        https://hg.python.org/cpython/file/tip/Lib/multiprocessing/pool.py#l271
+        Other tried options:
+        - map_async: makes a list(iterable), so it loads all the data for each
+          process into RAM
+        - apply_async: needs manual chunking
+        """
+        assert self._state == RUN
+        task_batches = Pool._get_tasks(func, iterable, chunksize)
+        result = IMapUnorderedIterator(self._cache)
+        tasks = ((result._job, i, collect_report, (func, chunk), {})
+                 for i, (_, chunk) in enumerate(task_batches))
+        self._taskqueue.put((tasks, result._set_length))
+        return result
 
 
 def batch(func, iterable, chunksize=1000, total=None, progress=True):
     # This is the main reporter instance.
     reporter = context.get('reporter')
-    pool = (ProcessPoolExecutor if config.get('BATCH_EXECUTOR') == 'process'
-            else ThreadPoolExecutor)
     bar = Bar(total=total, throttle=timedelta(seconds=1))
     workers = int(config.get('WORKERS', os.cpu_count()))
-    chunk = []
-    count = 0
 
-    def loop():
-        for reports in executor.map(collect_report, repeat(func), chunk):
+    with ChunkedPool(processes=workers) as pool:
+        for count, reports in pool.imap_unordered(func, iterable, chunksize):
             reporter.merge(reports)
-            if progress:
-                bar()
-
-    with pool(max_workers=workers) as executor:
-
-        for item in iterable:
-            if not item:
-                continue
-            chunk.append(item)
-            count += 1
-            if count % 10000 == 0:
-                loop()
-                chunk = []
-        if chunk:
-            loop()
+            bar(step=count)
+        bar.finish()
 
 
 def prompt(text, default=..., confirmation=False, coerce=None, hidden=False):

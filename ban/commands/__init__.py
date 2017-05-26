@@ -26,7 +26,6 @@ class Command:
         'db_name': None,
         'session_user': None,
         'workers': os.cpu_count(),
-        'batch_executor': 'thread',
         'verbose': {'action': 'count', 'default': None},
         'report_to': None,
     }
