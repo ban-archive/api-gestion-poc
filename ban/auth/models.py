@@ -76,6 +76,8 @@ class Client(ResourceModel):
 
     @property
     def default_scopes(self):
+        # Flask-Oauthlib needs default_scopes attribute, but let's keep a more
+        # intuitive name for internal use.
         return self.scopes
 
     def save(self, *args, **kwargs):
