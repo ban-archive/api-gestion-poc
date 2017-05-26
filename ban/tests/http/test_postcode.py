@@ -13,7 +13,7 @@ def test_get_postcode(get):
         'id': postcode.id,
         'name': 'EPINAY SUR SEINE',
         'code': '09350',
-        'alias': None,
+        'alias': [],
         'modified_at': postcode.modified_at.isoformat(),
         'created_at': postcode.created_at.isoformat(),
         'modified_by': postcode.modified_by.serialize(),

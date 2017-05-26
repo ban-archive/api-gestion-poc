@@ -64,7 +64,7 @@ class Client(ResourceModel):
     grant_type = db.CharField(choices=GRANT_TYPES)
     is_confidential = db.BooleanField(default=False)
     flag_id = db.CharField(choices=FLAG_IDS, default=None, null=True)
-    scopes = db.ArrayField(db.CharField, default=["view"])
+    scopes = db.ArrayField(db.CharField, default=[], null=True)
 
     @property
     def default_redirect_uri(self):
@@ -145,7 +145,7 @@ class Token(db.Model):
     token_type = db.CharField(max_length=40)
     access_token = db.CharField(max_length=255)
     refresh_token = db.CharField(max_length=255, null=True)
-    scopes = db.ArrayField(db.CharField, null=True)
+    scopes = db.ArrayField(db.CharField, default=[], null=True)
     expires = db.DateTimeField()
 
     def __init__(self, **kwargs):

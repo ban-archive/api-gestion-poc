@@ -189,9 +189,19 @@ class ArrayField(postgres_ext.ArrayField):
     __schema_type__ = 'array'
 
     def coerce(self, value):
+        if not value:
+            return []  # Coerce None to [].
         if value and not isinstance(value, (list, tuple)):
             value = [value]
         return value
+
+    def python_value(self, value):
+        return self.coerce(value)
+
+    def db_value(self, value):
+        if value is None:
+            value = []
+        return super().db_value(value)
 
 
 class DateTimeField(postgres_ext.DateTimeTZField):
