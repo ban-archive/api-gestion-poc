@@ -38,7 +38,6 @@ class ClientFactory(BaseTestModel):
     redirect_uris = ['http://localhost/authorize']
     grant_type = auth_models.Client.GRANT_CLIENT_CREDENTIALS
     flag_id = 'laposte'
-    scopes = FuzzyText(length=54)
 
     class Meta:
         model = auth_models.Client

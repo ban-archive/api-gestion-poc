@@ -1,6 +1,6 @@
 import pytest
 
-from ban.auth import models as amodels
+from ban.auth import models
 from ..factories import ClientFactory, UserFactory
 
 
@@ -94,12 +94,12 @@ def test_create_token_with_scopes(client):
         'ip': '1.2.3.4',
     })
     assert resp.status_code == 200
-    token = amodels.Token.first()
+    token = models.Token.first()
     assert token.scopes == ['municipality_write']
 
 
 def test_create_token_without_scopes(client):
-    c = ClientFactory(scopes=None)
+    c = ClientFactory(scopes=[])
     resp = client.post('/token/', data={
         'grant_type': 'client_credentials',
         'client_id': str(c.client_id),
@@ -107,5 +107,5 @@ def test_create_token_without_scopes(client):
         'ip': '1.2.3.4',
     })
     assert resp.status_code == 200
-    token = amodels.Token.first()
+    token = models.Token.first()
     assert token.scopes == []

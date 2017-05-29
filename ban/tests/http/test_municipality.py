@@ -455,7 +455,7 @@ def test_authorized_responses_contain_sessions_data(get):
     assert resp.headers['Session-User'] == session.user.id
 
 
-@authorize('view')
+@authorize('foo_bar')
 def test_get_municipality_without_scopes(get):
     municipality = MunicipalityFactory(name="Cabour")
     resp = get('/municipality/{}'.format(municipality.id))
@@ -464,7 +464,7 @@ def test_get_municipality_without_scopes(get):
     assert resp.json['name'] == 'Cabour'
 
 
-@authorize('view')
+@authorize('foo_bar')
 def test_post_municipality_without_scopes(post):
     data = {
         "name": "Fornex",
@@ -527,7 +527,7 @@ def test_patch_municipality_with_scopes(patch):
     assert 'Martigues' in municipality.alias
 
 
-@authorize('view')
+@authorize('foo_bar')
 def test_cannot_put_municipality_without_scopes(put):
     municipality = MunicipalityFactory(name="SuperVille")
     data = {
@@ -557,7 +557,7 @@ def test_put_municipality_with_scopes(put):
     assert 'Martigues' == municipality.name
 
 
-@authorize('view')
+@authorize('foo_bar')
 def test_cannot_delete_municipality_without_scopes(client):
     municipality = MunicipalityFactory()
     resp = client.delete('/municipality/{}'.format(municipality.id))
