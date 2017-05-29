@@ -190,7 +190,7 @@ class ModelEndpoint(CollectionEndpoint):
             abort(400, error=str(e))
 
     @app.jsonify
-    @app.endpoint('/<identifier>', methods=['POST'], scopes=['write'])
+    @app.endpoint('/<identifier>', methods=['POST'])
     def post_resource(self, identifier):
         """Post {resource} with 'identifier'.
 
@@ -228,7 +228,7 @@ class ModelEndpoint(CollectionEndpoint):
         return instance.as_resource
 
     @app.jsonify
-    @app.endpoint(methods=['POST'], scopes=['write'])
+    @app.endpoint(methods=['POST'])
     def post(self):
         """Create {resource}.
 
@@ -264,7 +264,7 @@ class ModelEndpoint(CollectionEndpoint):
         return instance.as_resource, 201, headers
 
     @app.jsonify
-    @app.endpoint('/<identifier>', methods=['PATCH'], scopes=['write'])
+    @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
         """Patch {resource} with 'identifier'.
 
@@ -302,7 +302,7 @@ class ModelEndpoint(CollectionEndpoint):
         return instance.as_resource
 
     @app.jsonify
-    @app.endpoint('/<identifier>', methods=['PUT'], scopes=['write'])
+    @app.endpoint('/<identifier>', methods=['PUT'])
     def put(self, identifier):
         """Replace or restore {resource} with 'identifier'.
 
@@ -345,7 +345,7 @@ class ModelEndpoint(CollectionEndpoint):
         return instance.as_resource
 
     @app.jsonify
-    @app.endpoint('/<identifier>', methods=['DELETE'], scopes=['write'])
+    @app.endpoint('/<identifier>', methods=['DELETE'])
     def delete(self, identifier):
         """Delete {resource} with 'identifier'.
 
@@ -420,8 +420,7 @@ class VersionedModelEndpoint(ModelEndpoint):
         return version.serialize()
 
     @app.jsonify
-    @app.endpoint('/<identifier>/versions/<int:ref>/flag',
-                  methods=['POST'], scopes=['write'])
+    @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
     def post_version(self, identifier, ref):
         """Flag a version.
 
@@ -448,8 +447,7 @@ class VersionedModelEndpoint(ModelEndpoint):
         else:
             abort(400, error='Body should contain a `status` boolean key')
 
-    @app.endpoint('/<identifier>/redirects/<old>',
-                  methods=['PUT', 'DELETE'], scopes=['write'])
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
     def put_delete_redirects(self, identifier, old):
         """Create a new redirect to this resource.
 

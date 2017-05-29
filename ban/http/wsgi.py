@@ -55,8 +55,9 @@ class App(Flask):
         from .auth import auth
         cls = func.__self__.__class__
         paths, kwargs = func._endpoint
-        scopes = ['{}_{}'.format(cls.__name__.lower(), s)
-                  for s in kwargs.pop('scopes', [])]
+        scopes = []
+        if kwargs['methods'] != ['GET']:
+            scopes = ['{}_write'.format(cls.__name__.lower())]
         func = auth.require_oauth(*scopes)(func)
         for path in paths:
             path = '{}{}'.format(cls.endpoint, path)

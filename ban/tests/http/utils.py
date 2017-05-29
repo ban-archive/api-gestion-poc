@@ -11,8 +11,8 @@ def authorize(func, *scopes):
         return wrapper
     if not scopes:
         # Called without arguments
-        scopes = ['municipality_write', 'postocode_write', 'group_write',
-                  'housenumber_write', 'position_write']
+        scopes = ['municipality_write', 'postcode_write', 'group_write',
+                  'housenumber_write', 'position_write', 'user_write']
         return authorize(func, *scopes)
 
     @wraps(func)
