@@ -584,7 +584,7 @@ class User(ModelEndpoint):
 
 
 @app.route('/import/bal', methods=['POST'])
-@auth.require_oauth()
+@auth.require_oauth('bal')
 def bal_post():
     """Import file at BAL format."""
     data = request.files['data']
