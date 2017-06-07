@@ -130,6 +130,11 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         return self.serialize({f: {} for f in self.versioned_fields})
 
     @property
+    def as_export(self):
+        """Flat resources plus references. May be filtered or overrided."""
+        return self.serialize({'*': {}})
+
+    @property
     def status(self):
         return 'deleted' if self.deleted_at else 'active'
 
