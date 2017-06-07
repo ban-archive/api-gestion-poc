@@ -59,7 +59,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     exclude_for_version = []
 
     id = db.CharField(max_length=50, unique=True, null=False)
-    deleted_at = db.DateTimeField(null=True)
+    deleted_at = db.DateTimeField(null=True, index=True)
 
     class Meta:
         validator = ResourceValidator
