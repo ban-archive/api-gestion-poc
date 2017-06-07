@@ -35,7 +35,7 @@ def init(*paths, limit=0, **kwargs):
             print('Computing file size')
             total = sum(1 for line in helpers.iter_file(path))
             print('Done computing file size')
-        helpers.batch(process_rows, rows, chunksize=100, total=total)
+        all(helpers.batch(process_rows, rows, chunksize=100, total=total))
 
 
 @helpers.session

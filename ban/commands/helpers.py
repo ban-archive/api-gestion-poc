@@ -69,7 +69,7 @@ def collect_report(func, chunk):
     results = func(*chunk)
     reports = reporter._reports.copy()
     reporter.clear()
-    return len(results), reports
+    return results, reports
 
 
 class ChunkedPool(Pool):
@@ -110,9 +110,10 @@ def batch(func, iterable, chunksize=1000, total=None, progress=True):
     workers = int(config.get('WORKERS', os.cpu_count()))
 
     with ChunkedPool(processes=workers) as pool:
-        for count, reports in pool.imap_unordered(func, iterable, chunksize):
+        for results, reports in pool.imap_unordered(func, iterable, chunksize):
             reporter.merge(reports)
-            bar(step=count)
+            bar(step=len(results))
+            yield from results
         bar.finish()
 
 
