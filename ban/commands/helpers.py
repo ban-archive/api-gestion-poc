@@ -12,7 +12,7 @@ import decorator
 from progressist import ProgressBar
 
 from ban.auth.models import Session, User
-from ban.commands.reporter import Reporter
+from ban.db.model import SelectQuery
 from ban.core import context, config
 from ban.core.versioning import Diff
 
@@ -74,6 +74,11 @@ def collect_report(func, chunk):
 
 class ChunkedPool(Pool):
 
+    @classmethod
+    def _get_tasks_from_query(cls, func, query, chunksize):
+        for idx in range(0, query.count(), chunksize):
+            yield (func, list(query.limit(chunksize).offset(idx)))
+
     def imap_unordered(self, func, iterable, chunksize):
         """Customized version of imap_unordered.
         Directly send chunks to func, instead of iterating in each process and
@@ -86,7 +91,11 @@ class ChunkedPool(Pool):
         - apply_async: needs manual chunking
         """
         assert self._state == RUN
-        task_batches = Pool._get_tasks(func, iterable, chunksize)
+        if isinstance(iterable, SelectQuery):
+            task_batches = self._get_tasks_from_query(func, iterable,
+                                                      chunksize)
+        else:
+            task_batches = self._get_tasks(func, iterable, chunksize)
         result = IMapUnorderedIterator(self._cache)
         tasks = ((result._job, i, collect_report, (func, chunk), {})
                  for i, (_, chunk) in enumerate(task_batches))
