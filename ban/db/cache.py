@@ -2,7 +2,7 @@
 Very simple custom cache.
 functools.lru_cache does not make it, as it only works with hashable types,
 while we need peewee.Expression to be memoized.
-On the other hand, we want to select witch SQL queries will be cached (i.e. not
+On the other hand, we want to select which SQL queries will be cached (i.e. not
 a goal to cache every get on housenumbers or positions), so we cannot just
 cache every SelectQuery.get neither every Model.get.
 """
