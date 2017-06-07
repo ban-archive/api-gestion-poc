@@ -1,6 +1,7 @@
 import peewee
 
 from .connections import database
+from . import cache
 
 
 class SerializerQueryResultWrapper(peewee.ModelQueryResultWrapper):
@@ -27,9 +28,7 @@ class SelectQuery(peewee.SelectQuery):
 
     def _get_result_wrapper(self):
         wrapper = getattr(self, '_result_wrapper', None)
-        if wrapper:
-            return wrapper
-        return super()._get_result_wrapper()
+        return wrapper or super()._get_result_wrapper()
 
     def __len__(self):
         return self.count()
@@ -53,6 +52,10 @@ class Model(peewee.Model):
     class Meta:
         database = database
         manager = SelectQuery
+
+    def save(self, *args, **kwargs):
+        cache.clear()
+        super().save(*args, **kwargs)
 
     # TODO find a way not to override the peewee.Model select classmethod.
     @classmethod

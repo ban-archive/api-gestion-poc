@@ -10,11 +10,13 @@ from postgis import Point
 from psycopg2.extras import DateTimeTZRange
 
 from ban.core.exceptions import ValidationError
+from . import cache
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
            'BooleanField', 'BinaryJSONField', 'FantoirField',
-           'ManyToManyField', 'PasswordField', 'DateRangeField', 'TextField']
+           'ManyToManyField', 'PasswordField', 'DateRangeField', 'TextField',
+           'CachedForeignKeyField']
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
@@ -104,6 +106,16 @@ class DateRangeField(peewee.Field):
         return peewee.Expression(self, peewee.OP.ACONTAINS, dt)
 
 
+class CachedRelationDescriptor(peewee.RelationDescriptor):
+
+    def get_object_or_id(self, instance):
+        rel_id = instance._data.get(self.att_name)
+        if not rel_id:
+            return rel_id
+        keys = (self.rel_model.__name__, rel_id)
+        return cache.cache(keys, super().get_object_or_id, instance)
+
+
 class ForeignKeyField(peewee.ForeignKeyField):
 
     __data_type__ = int
@@ -125,6 +137,12 @@ class ForeignKeyField(peewee.ForeignKeyField):
         # cf https://github.com/coleifer/peewee/pull/844
         return (self._related_name or '{classname}_set').format(
                                         classname=self.model_class._meta.name)
+
+
+class CachedForeignKeyField(ForeignKeyField):
+
+    def _get_descriptor(self):
+        return CachedRelationDescriptor(self, self.rel_model)
 
 
 class CharField(peewee.CharField):

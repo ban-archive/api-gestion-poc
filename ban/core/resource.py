@@ -1,5 +1,5 @@
-import uuid
 from datetime import datetime
+import uuid
 
 import peewee
 from postgis import Point
