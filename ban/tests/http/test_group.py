@@ -94,7 +94,7 @@ def test_get_group_housenumbers(get):
     }))
 
 
-@authorize
+@authorize('group_write')
 def test_create_group(client):
     municipality = MunicipalityFactory(name="Cabour")
     assert not models.Group.select().count()
@@ -114,7 +114,7 @@ def test_create_group(client):
     assert resp.headers['Location'] == uri
 
 
-@authorize
+@authorize('group_write')
 def test_cannot_create_group_without_kind(client):
     municipality = MunicipalityFactory(name="Cabour")
     assert not models.Group.select().count()
@@ -127,7 +127,7 @@ def test_cannot_create_group_without_kind(client):
     assert resp.status_code == 422
 
 
-@authorize
+@authorize('group_write')
 def test_create_group_with_municipality_insee(client):
     municipality = MunicipalityFactory(name="Cabour")
     assert not models.Group.select().count()
@@ -144,7 +144,7 @@ def test_create_group_with_municipality_insee(client):
     assert resp.headers['Location'] == uri
 
 
-@authorize
+@authorize('group_write')
 def test_create_group_with_municipality_siren(client):
     municipality = MunicipalityFactory(name="Cabour")
     assert not models.Group.select().count()
@@ -159,7 +159,7 @@ def test_create_group_with_municipality_siren(client):
     assert models.Group.select().count() == 1
 
 
-@authorize
+@authorize('group_write')
 def test_create_group_with_bad_municipality_siren(client):
     MunicipalityFactory(name="Cabour")
     assert not models.Group.select().count()
@@ -174,7 +174,7 @@ def test_create_group_with_bad_municipality_siren(client):
     assert not models.Group.select().count()
 
 
-@authorize
+@authorize('group_write')
 def test_create_group_with_invalid_municipality_identifier(client):
     municipality = MunicipalityFactory(name="Cabour")
     assert not models.Group.select().count()
@@ -189,7 +189,7 @@ def test_create_group_with_invalid_municipality_identifier(client):
     assert not models.Group.select().count()
 
 
-@authorize
+@authorize('group_write')
 def test_get_group_versions(get):
     street = GroupFactory(name="Rue de la Paix")
     street.version = 2
@@ -203,7 +203,7 @@ def test_get_group_versions(get):
     assert resp.json['collection'][1]['data']['name'] == 'Rue de la Guerre'
 
 
-@authorize
+@authorize('group_write')
 def test_get_group_version(get):
     street = GroupFactory(name="Rue de la Paix")
     street.version = 2
@@ -221,14 +221,14 @@ def test_get_group_version(get):
     assert resp.json['data']['version'] == 2
 
 
-@authorize
+@authorize('group_write')
 def test_get_group_unknown_version_should_go_in_404(get):
     street = GroupFactory(name="Rue de la Paix")
     resp = get('/group/{}/versions/{}'.format(street.id, 2))
     assert resp.status_code == 404
 
 
-@authorize
+@authorize('group_write')
 def test_delete_street(client):
     street = GroupFactory()
     resp = client.delete('/group/{}'.format(street.id))
@@ -246,7 +246,15 @@ def test_cannot_delete_group_if_not_authorized(client):
     assert models.Group.get(models.Group.id == street.id)
 
 
-@authorize
+@authorize('group_foo')
+def test_cannot_delete_group_without_correct_scope(client):
+    street = GroupFactory()
+    resp = client.delete('/group/{}'.format(street.id))
+    assert resp.status_code == 401
+    assert models.Group.get(models.Group.id == street.id)
+
+
+@authorize('group_write')
 def test_cannot_delete_group_if_linked_to_housenumber(client):
     street = GroupFactory()
     HouseNumberFactory(parent=street)
@@ -255,8 +263,8 @@ def test_cannot_delete_group_if_linked_to_housenumber(client):
     assert models.Group.get(models.Group.id == street.id)
 
 
-@authorize
-def test_create_district_with_json_string_as_attribute(client):
+@authorize('group_write')
+def test_create_group_with_json_string_as_attribute(client):
     assert not models.Group.select().count()
     municipality = MunicipalityFactory()
     data = {

@@ -9,11 +9,6 @@ def authorize(func, *scopes):
         def wrapper(f):
             return authorize(f, func, *scopes)
         return wrapper
-    if not scopes:
-        # Called without arguments
-        scopes = ['municipality_write', 'postcode_write', 'group_write',
-                  'housenumber_write', 'position_write', 'user_write']
-        return authorize(func, *scopes)
 
     @wraps(func)
     def inner(*args, **kwargs):
@@ -23,9 +18,7 @@ def authorize(func, *scopes):
         token = TokenFactory(**token_kwargs)
 
         # Subtly plug in authenticated user.
-        client = None
-        if 'client' in kwargs:
-            client = kwargs['client']
+        client = kwargs.get('client')
         for key in ['get', 'patch', 'post', 'put']:
             if key in kwargs:
                 client = kwargs[key].__self__

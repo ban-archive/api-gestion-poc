@@ -2,7 +2,7 @@ from ..factories import GroupFactory
 from .utils import authorize
 
 
-@authorize
+@authorize('group_write')
 def test_can_flag_current_version(client):
     group = GroupFactory()
     version = group.load_version()
@@ -12,7 +12,7 @@ def test_can_flag_current_version(client):
     assert version.flags.select().count()
 
 
-@authorize
+@authorize('group_write')
 def test_can_unflag_current_version(client, session):
     group = GroupFactory()
     version = group.load_version()
@@ -22,7 +22,7 @@ def test_can_unflag_current_version(client, session):
     assert version.flags.select().count()
 
 
-@authorize
+@authorize('group_write')
 def test_get_version_contain_flags(client, session):
     group = GroupFactory()
     version = group.load_version()
@@ -34,7 +34,7 @@ def test_get_version_contain_flags(client, session):
     assert resp.json['flags'][0]['by'] == 'laposte'
 
 
-@authorize
+@authorize('group_write')
 def test_can_flag_past_version(client):
     group = GroupFactory()
     group.name = 'Another name'
@@ -49,7 +49,7 @@ def test_can_flag_past_version(client):
     assert not version.flags.select().count()
 
 
-@authorize
+@authorize('group_write')
 def test_invalid_reference_returns_404(client):
     group = GroupFactory()
     group.name = 'Another name'
@@ -62,6 +62,14 @@ def test_invalid_reference_returns_404(client):
 
 
 def test_cannot_flag_without_token(client):
+    group = GroupFactory()
+    uri = '/group/{}/versions/1/flag'.format(group.id)
+    resp = client.post(uri, data={'status': True})
+    assert resp.status_code == 401
+
+
+@authorize('group_foo')
+def test_cannot_flag_without_correct_scope(client):
     group = GroupFactory()
     uri = '/group/{}/versions/1/flag'.format(group.id)
     resp = client.post(uri, data={'status': True})
