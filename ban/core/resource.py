@@ -1,5 +1,5 @@
-import uuid
 from datetime import datetime
+import uuid
 
 import peewee
 from postgis import Point
@@ -59,7 +59,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     exclude_for_version = []
 
     id = db.CharField(max_length=50, unique=True, null=False)
-    deleted_at = db.DateTimeField(null=True)
+    deleted_at = db.DateTimeField(null=True, index=True)
 
     class Meta:
         validator = ResourceValidator
@@ -128,6 +128,11 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     def as_version(self):
         """Resources plus relations references and metadata."""
         return self.serialize({f: {} for f in self.versioned_fields})
+
+    @property
+    def as_export(self):
+        """Flat resources plus references. May be filtered or overrided."""
+        return self.serialize({'*': {}})
 
     @property
     def status(self):

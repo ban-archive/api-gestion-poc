@@ -105,23 +105,48 @@ def test_truncate_should_not_ask_for_confirm_in_force_mode(monkeypatch):
 
 def test_export_resources():
     mun = factories.MunicipalityFactory()
+    pc = factories.PostCodeFactory(municipality=mun)
     street = factories.GroupFactory(municipality=mun)
-    hn = factories.HouseNumberFactory(parent=street)
+    hn = factories.HouseNumberFactory(parent=street, number='1', postcode=pc)
+    hn2 = factories.HouseNumberFactory(parent=street, number='2', postcode=pc)
     factories.PositionFactory(housenumber=hn)
     deleted = factories.PositionFactory(housenumber=hn)
     deleted.mark_deleted()
-    path = Path(__file__).parent / 'data/export.sjson'
+    path = Path(__file__).parent / 'data'
     resources(path)
 
-    with path.open() as f:
+    filepath = path.joinpath('municipality.ndjson')
+    with filepath.open() as f:
         lines = f.readlines()
-        assert len(lines) == 3
+        assert len(lines) == 1
         # loads/dumps to compare string dates to string dates.
-        assert json.loads(lines[0]) == json.loads(dumps(mun.as_resource))
-        assert json.loads(lines[1]) == json.loads(dumps(street.as_resource))
+        assert json.loads(lines[0]) == json.loads(dumps(mun.as_export))
+    filepath.unlink()
+
+    filepath = path.joinpath('group.ndjson')
+    with filepath.open() as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        # loads/dumps to compare string dates to string dates.
+        assert json.loads(lines[0]) == json.loads(dumps(street.as_export))
+    filepath.unlink()
+
+    filepath = path.joinpath('housenumber.ndjson')
+    with filepath.open() as f:
+        lines = f.readlines()
+        assert len(lines) == 2
         # Plus, JSON transform internals tuples to lists.
-        assert json.loads(lines[2]) == json.loads(dumps(hn.as_resource))
-    path.unlink()
+        assert json.loads(lines[0]) == json.loads(dumps(hn.as_export))
+        assert json.loads(lines[1]) == json.loads(dumps(hn2.as_export))
+    filepath.unlink()
+
+    filepath = path.joinpath('postcode.ndjson')
+    with filepath.open() as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        # Plus, JSON transform internals tuples to lists.
+        assert json.loads(lines[0]) == json.loads(dumps(pc.as_export))
+    filepath.unlink()
 
 
 def test_dummytoken():
