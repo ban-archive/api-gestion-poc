@@ -121,8 +121,8 @@ class Session(db.Model):
                 description: user name
         """
 
-    user = db.ForeignKeyField(User, null=True)
-    client = db.ForeignKeyField(Client, null=True)
+    user = db.CachedForeignKeyField(User, null=True)
+    client = db.CachedForeignKeyField(Client, null=True)
     ip = db.CharField(null=True)  # TODO IPField
     email = db.CharField(null=True)  # TODO EmailField
 

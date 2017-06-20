@@ -63,7 +63,8 @@ class PostCode(NamedModel):
 
     complement = db.CharField(max_length=38, null=True)
     code = db.CharField(index=True, format='\d*', length=5)
-    municipality = db.ForeignKeyField(Municipality, related_name='postcodes')
+    municipality = db.CachedForeignKeyField(Municipality,
+                                            related_name='postcodes')
 
     class Meta:
         indexes = (
@@ -105,7 +106,8 @@ class Group(NamedModel):
     fantoir = db.FantoirField(null=True, unique=True)
     laposte = db.CharField(max_length=8, null=True, unique=True, format='\d*')
     ign = db.CharField(max_length=24, null=True, unique=True)
-    municipality = db.ForeignKeyField(Municipality, related_name='groups')
+    municipality = db.CachedForeignKeyField(Municipality,
+                                            related_name='groups')
 
     @property
     def tmp_fantoir(self):
@@ -139,7 +141,7 @@ class HouseNumber(Model):
                            format=CEA_FORMAT)
     ign = db.CharField(max_length=24, null=True, unique=True)
     ancestors = db.ManyToManyField(Group, related_name='_housenumbers')
-    postcode = db.ForeignKeyField(PostCode, null=True)
+    postcode = db.CachedForeignKeyField(PostCode, null=True)
 
     class Meta:
         indexes = (
@@ -163,6 +165,13 @@ class HouseNumber(Model):
     def municipality(self):
         return Municipality.select().join(
            Group, on=Municipality.pk == self.parent.municipality.pk).first()
+
+    @property
+    def as_export(self):
+        """Resources plus relation references without metadata."""
+        mask = {f: {} for f in self.resource_fields}
+        mask['positions'] = {'*': {}}
+        return self.serialize(mask)
 
 
 class Position(Model):
