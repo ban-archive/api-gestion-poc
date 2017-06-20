@@ -32,7 +32,7 @@ def test_adding_value_to_arrayfield_column():
     municipality.save()
     diff = municipality.versions[1].diff
     assert len(diff.diff) == 1  # name, siren
-    assert diff.diff['alias']['old'] is None
+    assert diff.diff['alias']['old'] == []
     assert diff.diff['alias']['new'] == ['Orvanne']
 
 
