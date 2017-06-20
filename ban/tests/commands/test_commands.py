@@ -197,7 +197,7 @@ def test_invalidate_token_with_user(capsys):
     out, err = capsys.readouterr()
     assert 'Invalidate 1 token' in out
     updated_token = amodels.Token.first(amodels.Token.pk == token.pk)
-    assert updated_token.expires < utcnow()
+    assert updated_token.is_expired
 
 
 def test_invalidate_token_with_client(capsys):
@@ -215,5 +215,6 @@ def test_invalidate_token_with_client(capsys):
     updated_valid_token = amodels.Token.first(
         amodels.Token.pk == valid_token.pk
     )
-    assert updated_token.expires < utcnow()
-    assert updated_valid_token.expires > utcnow()
+    assert utcnow().date() >= updated_token.expires.date()
+    assert updated_token.is_expired
+    assert updated_valid_token.is_valid()
