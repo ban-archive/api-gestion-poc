@@ -197,7 +197,7 @@ class Token(db.Model):
         session_data = {
             "email": data.get('email'),
             "ip": data.get('ip'),
-            "attributes": data.get('attributes')
+            "attributes": data.get('attributes'),
             "client": client
         }
         session = Session.create(**session_data)  # get or create?
