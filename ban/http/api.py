@@ -128,9 +128,8 @@ class ModelEndpoint(CollectionEndpoint):
             fields = ','.join(self.model.collection_fields)
         return parse_mask(fields)
 
-    @auth.require_oauth()
     @app.jsonify
-    @app.endpoint('', methods=['GET'])
+    @app.endpoint(methods=['GET'])
     def get_collection(self):
         """Get {resource} collection.
 
@@ -164,7 +163,6 @@ class ModelEndpoint(CollectionEndpoint):
         except ValueError as e:
             abort(400, error=str(e))
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['GET'])
     def get_resource(self, identifier):
@@ -191,7 +189,6 @@ class ModelEndpoint(CollectionEndpoint):
         except ValueError as e:
             abort(400, error=str(e))
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['POST'])
     def post_resource(self, identifier):
@@ -230,9 +227,8 @@ class ModelEndpoint(CollectionEndpoint):
         instance = self.save_object(instance, update=True)
         return instance.as_resource
 
-    @auth.require_oauth()
     @app.jsonify
-    @app.endpoint('', methods=['POST'])
+    @app.endpoint(methods=['POST'])
     def post(self):
         """Create {resource}.
 
@@ -267,7 +263,6 @@ class ModelEndpoint(CollectionEndpoint):
         headers = {'Location': url_for(endpoint, identifier=instance.id)}
         return instance.as_resource, 201, headers
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
     def patch(self, identifier):
@@ -306,7 +301,6 @@ class ModelEndpoint(CollectionEndpoint):
         instance = self.save_object(instance, update=True)
         return instance.as_resource
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
     def put(self, identifier):
@@ -350,7 +344,6 @@ class ModelEndpoint(CollectionEndpoint):
         instance = self.save_object(instance)
         return instance.as_resource
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['DELETE'])
     def delete(self, identifier):
@@ -383,11 +376,10 @@ class ModelEndpoint(CollectionEndpoint):
 
 
 class VersionedModelEndpoint(ModelEndpoint):
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>/versions', methods=['GET'])
     def get_versions(self, identifier):
-        """Get resource versions.
+        """Get {resource} versions.
 
         parameters:
             - $ref: '#/parameters/identifier'
@@ -395,17 +387,27 @@ class VersionedModelEndpoint(ModelEndpoint):
             200:
                 description: Version collection for resource {resource}.
                 schema:
-                    type: array
-                    items:
-                        $ref: '#/definitions/Version'
+                    type: object
+                    properties:
+                        collection:
+                            type: array
+                            items:
+                                $ref: '#/definitions/Version'
+                        total:
+                            name: total
+                            type: integer
+                            description: total resources available
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         return self.collection(instance.versions.serialize())
 
-    @auth.require_oauth()
     @app.jsonify
-    @app.endpoint('/<identifier>/versions/<datetime:ref>', methods=['GET'])
-    @app.endpoint('/<identifier>/versions/<int:ref>', methods=['GET'])
+    @app.endpoint('/<identifier>/versions/<datetime:ref>',
+                  '/<identifier>/versions/<int:ref>', methods=['GET'])
     def get_version(self, identifier, ref):
         """Get {resource} version corresponding to 'ref' number or datetime.
 
@@ -421,6 +423,12 @@ class VersionedModelEndpoint(ModelEndpoint):
                 description: get specific Version for resource {resource}.
                 schema:
                     $ref: '#/definitions/Version'
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
@@ -428,22 +436,33 @@ class VersionedModelEndpoint(ModelEndpoint):
             abort(404, error='Version reference `{}` not found'.format(ref))
         return version.serialize()
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
     def post_version(self, identifier, ref):
-        """Flag a version.
+        """Flag a {resource} version.
 
         parameters:
             - $ref: '#/parameters/identifier'
             - name: ref
               in: path
-              type: string
+              type: integer
               required: true
               description: version reference, either a date or an increment.
+            - name: status
+              in: query
+              type: string
+              required: true
+              description:
+                A status boolean key (= true to flag, false to unflag).
         responses:
-            204:
+            200:
                 description: version flag was updated.
+            400:
+                $ref: '#/responses/400'
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         version = instance.load_version(ref)
@@ -457,49 +476,87 @@ class VersionedModelEndpoint(ModelEndpoint):
         else:
             abort(400, error='Body should contain a `status` boolean key')
 
-    @auth.require_oauth()
-    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT', 'DELETE'])
-    def put_delete_redirects(self, identifier, old):
-        """Create a new redirect to this resource.
 
+    @auth.require_oauth()
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT'])
+    def put_redirects(self, identifier, old):
+        """Create a new redirect to this {resource}.
         parameters:
             - $ref: '#/parameters/identifier'
             - name: old
               in: path
               type: string
               required: true
-              description: old identifier.
+              description: Old {resource} identifier:value
         responses:
-            204:
-                description: redirect was successful.
             201:
-                description: redirect was created.
+                description: redirect was successfully created.
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
             422:
                 description: error while creating the redirect.
         """
         instance = self.get_object(identifier)
         old_identifier, old_value = old.split(':')
-        if request.method == 'PUT':
-            try:
-                versioning.Redirect.add(instance, old_identifier, old_value)
-            except ValueError as e:
-                abort(422, error=str(e))
-            return '', 201
-        elif request.method == 'DELETE':
-            versioning.Redirect.remove(instance, old_identifier, old_value)
-            return '', 204
+        try:
+            versioning.Redirect.add(instance, old_identifier, old_value)
+        except ValueError as e:
+            abort(422, error=str(e))
+        return '', 201
+
+
+    @auth.require_oauth()
+    @app.endpoint('/<identifier>/redirects/<old>', methods=['DELETE'])
+    def delete_redirects(self, identifier, old):
+        """Delete a redirect to this {resource}
+        parameters:
+            - $ref: '#/parameters/identifier'
+            - name: old
+              in: path
+              type: string
+              required: true
+              description: old {resource} identifier:value
+        responses:
+            204:
+                description: redirect was successfully deleted.
+            401:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
+        """
+        instance = self.get_object(identifier)
+        old_identifier, old_value = old.split(':')
+        versioning.Redirect.remove(instance, old_identifier, old_value)
+        return '', 204
 
     @auth.require_oauth()
     @app.jsonify
     @app.endpoint('/<identifier>/redirects', methods=['GET'])
     def get_redirects(self, identifier):
-        """Get a collection of Redirect pointing to this resource.
+        """Get a collection of Redirect pointing to this {resource}.
 
-        parameters:
-            - $ref: '#/parameters/identifier'
-        responses:
-            200:
-                description: A list of redirects.
+            parameters:
+                - $ref: '#/parameters/identifier'
+            responses:
+                200:
+                    description: A list of redirects (identifier:value)
+                    schema:
+                        type: object
+                        properties:
+                            collection:
+                                type: array
+                                items:
+                                    $ref: '#/definitions/Redirect'
+                            total:
+                                name: total
+                                type: integer
+                                description: total resources available
+                401:
+                    $ref: '#/responses/401'
+                404:
+                    $ref: '#/responses/404'
         """
         instance = self.get_object(identifier)
         cls = versioning.Redirect
@@ -594,7 +651,7 @@ class User(ModelEndpoint):
 
 
 @app.route('/import/bal', methods=['POST'])
-@auth.require_oauth()
+@auth.require_oauth('bal')
 def bal_post():
     """Import file at BAL format."""
     data = request.files['data']
@@ -608,7 +665,6 @@ class Diff(CollectionEndpoint):
     endpoint = '/diff'
     model = versioning.Diff
 
-    @auth.require_oauth()
     @app.jsonify
     @app.endpoint('', methods=['GET'])
     def get_collection(self):
@@ -636,10 +692,7 @@ class Diff(CollectionEndpoint):
                             items:
                                 $ref: '#/definitions/Diff'
             400:
-                description: Invalid value for increment
-                schema:
-                    type: object
-                    $ref: '#/definitions/Error'
+                $ref: '#/responses/400'
             401:
                 $ref: '#/responses/401'
          """

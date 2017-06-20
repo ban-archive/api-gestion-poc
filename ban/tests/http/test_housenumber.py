@@ -243,7 +243,7 @@ def test_get_housenumber_positions(get):
     check(pos3)
 
 
-@authorize
+@authorize('housenumber_write')
 def test_create_housenumber(client):
     street = GroupFactory(name="Rue de Bonbons")
     assert not models.HouseNumber.select().count()
@@ -260,7 +260,7 @@ def test_create_housenumber(client):
     assert models.HouseNumber.select().count() == 1
 
 
-@authorize
+@authorize('housenumber_write')
 def test_create_housenumber_with_street_fantoir(client):
     street = GroupFactory(name="Rue de Bonbons", fantoir="900011234")
     assert not models.HouseNumber.select().count()
@@ -273,7 +273,7 @@ def test_create_housenumber_with_street_fantoir(client):
     assert models.HouseNumber.select().count() == 1
 
 
-@authorize
+@authorize('housenumber_write')
 def test_create_housenumber_does_not_honour_version_field(client):
     street = GroupFactory(name="Rue de Bonbons")
     data = {
@@ -287,7 +287,7 @@ def test_create_housenumber_does_not_honour_version_field(client):
     assert resp.json['version'] == 1
 
 
-@authorize
+@authorize('housenumber_write')
 def test_create_housenumber_with_postcode_id(client):
     postcode = PostCodeFactory(code="12345")
     street = GroupFactory(name="Rue de Bonbons")
@@ -302,7 +302,7 @@ def test_create_housenumber_with_postcode_id(client):
     assert models.HouseNumber.first().postcode == postcode
 
 
-@authorize
+@authorize('housenumber_write')
 def test_empty_body_should_not_crash(client):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     assert models.HouseNumber.select().count() == 1
@@ -311,7 +311,7 @@ def test_empty_body_should_not_crash(client):
     assert resp.status_code == 422
 
 
-@authorize
+@authorize('housenumber_write')
 def test_replace_housenumber(client):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     assert models.HouseNumber.select().count() == 1
@@ -332,7 +332,7 @@ def test_replace_housenumber(client):
     assert models.HouseNumber.select().count() == 1
 
 
-@authorize
+@authorize('housenumber_write')
 def test_replace_housenumber_with_missing_field_fails(client):
     housenumber = HouseNumberFactory(number="22", ordinal="B")
     assert models.HouseNumber.select().count() == 1
@@ -349,7 +349,7 @@ def test_replace_housenumber_with_missing_field_fails(client):
     assert models.HouseNumber.select().count() == 1
 
 
-@authorize
+@authorize('housenumber_write')
 def test_patch_housenumber_with_districts(client):
     housenumber = HouseNumberFactory()
     district = GroupFactory(municipality=housenumber.parent.municipality,
@@ -365,7 +365,7 @@ def test_patch_housenumber_with_districts(client):
     assert district in hn.ancestors
 
 
-@authorize
+@authorize('housenumber_write')
 def test_patch_housenumber_with_postcode(client):
     postcode = PostCodeFactory(code="12345")
     housenumber = HouseNumberFactory()
@@ -380,7 +380,7 @@ def test_patch_housenumber_with_postcode(client):
     assert hn.postcode == postcode
 
 
-@authorize
+@authorize('housenumber_write')
 def test_delete_housenumber(client):
     housenumber = HouseNumberFactory()
     uri = '/housenumber/{}'.format(housenumber.id)
@@ -400,7 +400,16 @@ def test_cannot_delete_housenumber_if_not_authorized(client):
     assert models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
 
 
-@authorize
+@authorize('housenumber_foo')
+def test_cannot_delete_housenumber_without_correct_scope(client):
+    housenumber = HouseNumberFactory()
+    uri = '/housenumber/{}'.format(housenumber.id)
+    resp = client.delete(uri)
+    assert resp.status_code == 401
+    assert models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
+
+
+@authorize('housenumber_write')
 def test_cannot_delete_housenumber_if_linked_to_position(client):
     housenumber = HouseNumberFactory()
     PositionFactory(housenumber=housenumber)
@@ -432,7 +441,7 @@ def test_housenumber_select_use_default_orderby(get):
     assert resp.json['collection'][4]['ordinal'] == 'ter'
 
 
-@authorize
+@authorize('housenumber_write')
 def test_cannot_duplicate_number_and_ordinal_for_same_parent(client):
     assert not models.HouseNumber.select().count()
     housenumber = HouseNumberFactory(number='4', ordinal='bis')
@@ -449,7 +458,7 @@ def test_cannot_duplicate_number_and_ordinal_for_same_parent(client):
     assert 'parent' in resp.json['errors']
 
 
-@authorize
+@authorize('housenumber_write')
 def test_cannot_duplicate_number_with_empty_ordinal_for_same_parent(client):
     assert not models.HouseNumber.select().count()
     housenumber = HouseNumberFactory(number='4', ordinal=None)

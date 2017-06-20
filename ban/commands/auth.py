@@ -84,7 +84,7 @@ def listusers(**kwargs):
 
 
 @command
-def createclient(name=None, user=None, **kwargs):
+def createclient(name=None, user=None, scopes=[], **kwargs):
     """Create a client.
 
     name    name of the client to create
@@ -97,7 +97,10 @@ def createclient(name=None, user=None, **kwargs):
     user_inst = User.first((User.username == user) | (User.email == user))
     if not user_inst:
         return reporter.error('User not found', user)
-    validator = Client.validator(name=name, user=user_inst)
+    if not scopes:
+        scopes = helpers.prompt('Scopes (separated by spaces)',
+                                default='').split()
+    validator = Client.validator(name=name, user=user_inst, scopes=scopes)
     if validator.errors:
         return reporter.error('Errored', validator.errors)
     client = validator.save()
@@ -108,8 +111,8 @@ def createclient(name=None, user=None, **kwargs):
 @command
 def listclients(**kwargs):
     """List existing clients with details."""
-    tpl = '{:<40} {:<40} {}'
-    print(tpl.format('name', 'client_id', 'client_secret'))
+    tpl = '{:<40} {:<40} {:<60} {}'
+    print(tpl.format('name', 'client_id', 'client_secret', 'scopes'))
     for client in Client.select():
         print(tpl.format(client.name, str(client.client_id),
-                         client.client_secret))
+                         client.client_secret, ' '.join(client.scopes or [])))

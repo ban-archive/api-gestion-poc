@@ -27,6 +27,7 @@ def pytest_configure(config):
 def pytest_unconfigure(config):
     db.database.drop_tables(models)
     db.database.close()
+    db.cache.clear()
 
 
 def pytest_runtest_setup(item):

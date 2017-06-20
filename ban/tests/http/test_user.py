@@ -3,7 +3,7 @@ from ban.auth import models
 from .utils import authorize
 
 
-@authorize
+@authorize('user_write')
 def test_create_user(client):
     # Client user + session user == 2
     assert models.User.select().count() == 2
@@ -17,7 +17,7 @@ def test_create_user(client):
     assert resp.headers['Location'] == uri
 
 
-@authorize
+@authorize('user_write')
 def test_cannot_create_user_without_username(client):
     assert models.User.select().count() == 2
     resp = client.post('/user', {
@@ -28,7 +28,7 @@ def test_cannot_create_user_without_username(client):
     assert models.User.select().count() == 2
 
 
-@authorize
+@authorize('user_write')
 def test_cannot_create_user_without_email(client):
     assert models.User.select().count() == 2
     resp = client.post('/user', {
