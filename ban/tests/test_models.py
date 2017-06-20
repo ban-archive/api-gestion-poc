@@ -148,7 +148,7 @@ def test_group_as_relation():
         'municipality': municipality.id,
         'kind': 'way',
         'fantoir': '930311491',
-        'alias': None,
+        'alias': [],
         'ign': None,
         'name': 'Rue des Fleurs',
         'resource': 'group',

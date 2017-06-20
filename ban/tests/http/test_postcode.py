@@ -13,7 +13,7 @@ def test_get_postcode(get):
         'id': postcode.id,
         'name': 'EPINAY SUR SEINE',
         'code': '09350',
-        'alias': None,
+        'alias': [],
         'modified_at': postcode.modified_at.isoformat(),
         'created_at': postcode.created_at.isoformat(),
         'modified_by': postcode.modified_by.serialize(),
@@ -26,7 +26,7 @@ def test_get_postcode(get):
     }
 
 
-@authorize
+@authorize('postcode_write')
 def test_create_postcode(client):
     municipality = MunicipalityFactory()
     assert not models.PostCode.select().count()
@@ -47,7 +47,7 @@ def test_create_postcode(client):
     assert resp.headers['Location'] == uri
 
 
-@authorize
+@authorize('postcode_write')
 def test_can_update_postcode_complement(client):
     postcode = PostCodeFactory()
     data = {
@@ -59,7 +59,7 @@ def test_can_update_postcode_complement(client):
     assert resp.json['complement'] == "SAINT SAINT"
 
 
-@authorize
+@authorize('postcode_write')
 def test_can_create_postcode_with_same_code_but_different_complement(client):
     assert not models.PostCode.select().count()
     postcode = PostCodeFactory(code='12345', name='VILLE',
@@ -75,7 +75,7 @@ def test_can_create_postcode_with_same_code_but_different_complement(client):
     assert models.PostCode.select().count() == 2
 
 
-@authorize
+@authorize('postcode_write')
 def test_cannot_duplicate_code_complement_and_municipality(client):
     assert not models.PostCode.select().count()
     postcode = PostCodeFactory(code='12345', name='VILLE',
@@ -94,7 +94,7 @@ def test_cannot_duplicate_code_complement_and_municipality(client):
     assert 'municipality' in resp.json['errors']
 
 
-@authorize
+@authorize('postcode_write')
 def test_postcode_select_use_default_orderby(get):
     mun1 = MunicipalityFactory(insee="90002")
     mun2 = MunicipalityFactory(insee="90001")

@@ -31,12 +31,14 @@ class App(Flask):
             return resp
         return wrapper
 
-    def endpoint(self, path='/', **kwargs):
+    def endpoint(self, *paths, **kwargs):
+        if not paths:
+            paths = ['/']
+
         def wrapper(func):
-            if not hasattr(func, '_endpoints'):
-                func._endpoints = []
-            func._endpoints.append((path, kwargs))
+            func._endpoint = (paths, kwargs)
             return func
+
         return wrapper
 
     def resource(self, cls):
@@ -45,14 +47,19 @@ class App(Flask):
         instance = cls()
         for name in dir(cls):
             func = getattr(instance, name)
-            if hasattr(func, '_endpoints'):
-                self.register_endpoints(func)
+            if hasattr(func, '_endpoint'):
+                self.register_endpoint(func)
         return cls
 
-    def register_endpoints(self, func):
+    def register_endpoint(self, func):
+        from .auth import auth
         cls = func.__self__.__class__
-        for endpoint in func._endpoints:
-            path, kwargs = endpoint
+        paths, kwargs = func._endpoint
+        scopes = []
+        if kwargs['methods'] != ['GET']:
+            scopes = ['{}_write'.format(cls.__name__.lower())]
+        func = auth.require_oauth(*scopes)(func)
+        for path in paths:
             path = '{}{}'.format(cls.endpoint, path)
             endpoint = ('{}-{}'.format(cls.__name__, func.__name__)
                                .lower().replace('_', '-'))

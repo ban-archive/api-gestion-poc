@@ -47,7 +47,7 @@ def test_listusers_with_invoke(capsys):
 def test_create_client_should_accept_username():
     user = factories.UserFactory()
     assert not amodels.Client.select().count()
-    createclient(name='test client', user=user.username)
+    createclient(name='test client', user=user.username, scopes=['test'])
     assert amodels.Client.select().count() == 1
     client = amodels.Client.first()
     assert client.user == user
@@ -56,7 +56,7 @@ def test_create_client_should_accept_username():
 def test_create_client_should_accept_email():
     user = factories.UserFactory()
     assert not amodels.Client.select().count()
-    createclient(name='test client', user=user.email)
+    createclient(name='test client', user=user.email, scopes=['test'])
     assert amodels.Client.select().count() == 1
     client = amodels.Client.first()
     assert client.user == user
@@ -68,6 +68,23 @@ def test_create_client_should_not_crash_on_non_existing_user(capsys):
     assert not amodels.Client.select().count()
     out, err = capsys.readouterr()
     assert 'User not found' in out
+
+
+def test_create_client_with_scopes(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt',
+                        lambda *x, **wk: 'municipality_write group_write')
+    user = factories.UserFactory()
+    createclient(name='test client', user=user.username)
+    client = amodels.Client.first()
+    assert client.scopes == ['municipality_write', 'group_write']
+
+
+def test_create_client_without_scopes(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: '')
+    user = factories.UserFactory()
+    createclient(name='test client', user=user.username)
+    client = amodels.Client.first()
+    assert client.scopes == []
 
 
 def test_listclients(capsys):

@@ -41,7 +41,7 @@ class User(ResourceModel):
 
 class Client(ResourceModel):
     identifiers = ['client_id']
-    resource_fields = ['name', 'user']
+    resource_fields = ['name', 'user', 'scopes']
 
     GRANT_AUTHORIZATION_CODE = 'authorization_code'
     GRANT_IMPLICIT = 'implicit'
@@ -53,7 +53,6 @@ class Client(ResourceModel):
         (GRANT_PASSWORD, _('Resource owner password-based')),
         (GRANT_CLIENT_CREDENTIALS, _('Client credentials')),
     )
-    default_scopes = ['contrib']
     FLAGS = ['ign', 'laposte', 'local_authority']
     FLAG_IDS = tuple((i, i) for i in FLAGS) + (None, 'None')
 
@@ -65,6 +64,7 @@ class Client(ResourceModel):
     grant_type = db.CharField(choices=GRANT_TYPES)
     is_confidential = db.BooleanField(default=False)
     flag_id = db.CharField(choices=FLAG_IDS, default=None, null=True)
+    scopes = db.ArrayField(db.CharField, default=[], null=True)
 
     @property
     def default_redirect_uri(self):
@@ -73,6 +73,12 @@ class Client(ResourceModel):
     @property
     def allowed_grant_types(self):
         return [id for id, name in self.GRANT_TYPES]
+
+    @property
+    def default_scopes(self):
+        # Flask-Oauthlib needs default_scopes attribute, but let's keep a more
+        # intuitive name for internal use.
+        return self.scopes
 
     def save(self, *args, **kwargs):
         if not self.client_secret:
@@ -141,18 +147,13 @@ class Token(db.Model):
     token_type = db.CharField(max_length=40)
     access_token = db.CharField(max_length=255)
     refresh_token = db.CharField(max_length=255, null=True)
-    scope = db.CharField(max_length=255)
+    scopes = db.ArrayField(db.CharField, default=[], null=True)
     expires = db.DateTimeField()
 
     def __init__(self, **kwargs):
         expires_in = kwargs.pop('expires_in', 60 * 60)
         kwargs['expires'] = utcnow() + timedelta(seconds=expires_in)
         super().__init__(**kwargs)
-
-    @property
-    def scopes(self):
-        # TODO: custom charfield
-        return self.scope.split() if self.scope else None
 
     def is_valid(self, scopes=None):
         """
@@ -190,11 +191,13 @@ class Token(db.Model):
             return None
         if not data.get('client_id'):
             return None
+        client = Client.first(Client.client_id == data['client_id'])
         session_data = {
             "email": data.get('email'),
             "ip": data.get('ip'),
-            "client": Client.first(Client.client_id == data['client_id'])
+            "client": client
         }
         session = Session.create(**session_data)  # get or create?
         data['session'] = session.pk
+        data['scopes'] = client.scopes
         return Token.create(**data)
