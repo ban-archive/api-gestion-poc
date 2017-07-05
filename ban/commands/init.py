@@ -64,7 +64,9 @@ def process_row(row):
 
 
 def process_municipality(row):
-    row['attributes'] = {'source': row.pop('source')}
+    source = row.get('source')
+    if source:
+        row['attributes'] = {'source': row.pop('source')}
     validator = Municipality.validator(**row)
     if validator.errors:
         return reporter.error('Municipality errors', validator.errors)
@@ -92,7 +94,8 @@ def process_group(row):
         data['municipality'] = 'insee:{}'.format(insee)
     source = row.get('source')
     attributes = row.get('attributes', {})
-    attributes['source'] = source
+    if source:
+        attributes['source'] = source
     data['attributes'] = attributes
     if 'addressing' in row:
         if hasattr(Group, row['addressing'].upper()):
@@ -137,12 +140,14 @@ def process_group(row):
 def process_postcode(row):
     insee = row['municipality:insee']
     municipality = 'insee:{}'.format(insee)
-    attributes = {'source': row.pop('source')}
+    source = row.get('source')
+    if source:
+        attributes = {'source': row.pop('source')}
     name = row.get('name')
     code = row.get('postcode')
     complement = row.get('complement')
     data = dict(name=name, code=code, municipality=municipality,
-                version=1, attributes=attributes, complement=complement)
+                version=1, complement=complement)
     instance = PostCode.select().join(Municipality).where(
         PostCode.complement == complement,
         PostCode.code == code,
@@ -174,7 +179,8 @@ def process_housenumber(row):
         if data.get('cia'):
             data['cia'] = computed_cia
     source = row.get('source')
-    data['attributes'] = {'source': source}
+    if source:
+        data['attributes'] = {'source': source}
     # Only override if key is present (even if value is null).
     if 'postcode:code' in row:
         code = row.get('postcode:code')
