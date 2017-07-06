@@ -141,13 +141,14 @@ def process_postcode(row):
     insee = row['municipality:insee']
     municipality = 'insee:{}'.format(insee)
     source = row.get('source')
+    attributes = {}
     if source:
         attributes = {'source': row.pop('source')}
     name = row.get('name')
     code = row.get('postcode')
     complement = row.get('complement')
     data = dict(name=name, code=code, municipality=municipality,
-                version=1, complement=complement)
+                version=1, attributes=attributes, complement=complement)
     instance = PostCode.select().join(Municipality).where(
         PostCode.complement == complement,
         PostCode.code == code,
