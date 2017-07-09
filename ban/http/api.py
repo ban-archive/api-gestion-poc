@@ -481,6 +481,7 @@ class VersionedModelEndpoint(ModelEndpoint):
     @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT'])
     def put_redirects(self, identifier, old):
         """Create a new redirect to this {resource}.
+
         parameters:
             - $ref: '#/parameters/identifier'
             - name: old
@@ -511,6 +512,7 @@ class VersionedModelEndpoint(ModelEndpoint):
     @app.endpoint('/<identifier>/redirects/<old>', methods=['DELETE'])
     def delete_redirects(self, identifier, old):
         """Delete a redirect to this {resource}
+
         parameters:
             - $ref: '#/parameters/identifier'
             - name: old
