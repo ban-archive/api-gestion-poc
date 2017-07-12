@@ -115,7 +115,7 @@ class Group(NamedModel):
 
     def get_fantoir(self):
         # Without INSEE code.
-        return self.fantoir[5:] if self.fantoir else self.tmp_fantoir
+        return self.fantoir[5:] if self.fantoir else self.tmp_fantoir[:min(len(self.tmp_fantoir),80)]
 
     @property
     def housenumbers(self):
