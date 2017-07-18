@@ -266,7 +266,7 @@ def process_housenumber(row):
 
 
 def process_position(row):
-    positioning = row.get('positionning')  # two "n" in the data.
+    positioning = row.get('positioning')
     if not positioning or not hasattr(Position, positioning.upper()):
         positioning = Position.OTHER
     source = row.get('source')
