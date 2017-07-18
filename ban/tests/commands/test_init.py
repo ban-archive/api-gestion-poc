@@ -356,7 +356,7 @@ def test_can_import_group_with_laposte_but_no_fantoir(session):
 # File: 09x_positions_sga-ign.json
 def test_process_positions_from_sga_ign(session):
     data = {'type': 'position', 'kind': 'segment',
-            'positionning': 'interpolation', 'source': 'IGN (2016-04)',
+            'positioning': 'interpolation', 'source': 'IGN (2016-04)',
             'housenumber:cia': '90004_0022_1_',
             'ign': 'ADRNIVX_0000000354868426',
             'geometry': {'type': 'Point',
@@ -379,7 +379,7 @@ def test_process_positions_from_sga_ign(session):
 # File: 09x_positions_sga-ign.json
 def test_can_update_position_from_ign_identifier(session):
     data = {'type': 'position', 'kind': 'segment',
-            'positionning': 'interpolation', 'source': 'IGN (2016-04)',
+            'positioning': 'interpolation', 'source': 'IGN (2016-04)',
             'housenumber:cia': '90004_0022_1_',
             'ign': 'ADRNIVX_0000000354868426',
             'geometry': {'type': 'Point',
