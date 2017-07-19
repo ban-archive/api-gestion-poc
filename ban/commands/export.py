@@ -12,12 +12,11 @@ from ban.db import database
 from . import helpers
 
 QUERIES = {
-    PostCode: PostCode.select().join(Municipality),
+    PostCode: PostCode.select(),
     Municipality: Municipality.select(),
-    Group: Group.select().join(Municipality),
-    HouseNumber: (HouseNumber.select().join(Group, on=HouseNumber.parent == Group.pk)  # noqa
-                                      .join(Position, peewee.JOIN_LEFT_OUTER, on=Position.housenumber == HouseNumber.pk)  # noqa
-                                      .group_by(HouseNumber.pk)),
+    Group: Group.select(),
+    HouseNumber: HouseNumber.select(),
+    Position: Position.select()
 }
 
 
@@ -27,7 +26,7 @@ def resources(path, **kwargs):
 
     path    path of file where to write resources
     """
-    resources = [Municipality, PostCode, Group, HouseNumber]
+    resources = [Municipality, PostCode, Group, HouseNumber, Position]
     for resource in resources:
         query = QUERIES.get(resource)
         filename = '{}.ndjson'.format(resource.__name__.lower())
