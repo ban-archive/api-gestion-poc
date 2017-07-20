@@ -31,7 +31,7 @@ def resources(resource, path, **kwargs):
     if resource not in resources:
         helpers.abort('Resource {} does not exists'.format(resource))
     query = QUERIES.get(resource)
-    filename = '{}.ndjson'.format(resource_.lower())
+    filename = '{}.ndjson'.format(resource.lower())
     with Path(path).joinpath(filename).open(mode='w') as f:
         print('Exporting to', f.name)
         query = query.order_by(resource.pk)
