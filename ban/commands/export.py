@@ -29,7 +29,7 @@ def resources(resource, path, **kwargs):
     """
     resources = [Municipality, PostCode, Group, HouseNumber, Position]
     if resource not in resources:
-        helpers.abort('Resource {} does not exists'.fomat(resource))
+        helpers.abort('Resource {} does not exists'.format(resource))
     query = QUERIES.get(resource)
     filename = '{}.ndjson'.format(resource.__name__.lower())
     with Path(path).joinpath(filename).open(mode='w') as f:
