@@ -34,7 +34,6 @@ def resources(resource, path, **kwargs):
     filename = '{}.ndjson'.format(resource.lower())
     with Path(path).joinpath(filename).open(mode='w') as f:
         print('Exporting to', f.name)
-        query = query.order_by(resource.pk)
         results = []
         for result in helpers.batch(process_resource, query,
                                     chunksize=1000, total=query.count()):
