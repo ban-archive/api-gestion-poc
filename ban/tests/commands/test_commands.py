@@ -184,7 +184,7 @@ def test_export_postcode():
     path = Path(__file__).parent / 'data'
     resources('PostCode', path)
 
-    filepath = path.joinpath('position.ndjson')
+    filepath = path.joinpath('postcode.ndjson')
     with filepath.open() as f:
         lines = f.readlines()
         assert len(lines) == 1
