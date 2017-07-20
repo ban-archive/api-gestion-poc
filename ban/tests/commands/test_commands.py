@@ -151,17 +151,15 @@ def test_export_group():
 
 def test_export_housenumber():
     hn = factories.HouseNumberFactory(number='1')
-    hn2 = factories.HouseNumberFactory(number='2')
     path = Path(__file__).parent / 'data'
     resources('HouseNumber', path)
 
     filepath = path.joinpath('housenumber.ndjson')
     with filepath.open() as f:
         lines = f.readlines()
-        assert len(lines) == 2
+        assert len(lines) == 1
         # Plus, JSON transform internals tuples to lists.
         assert json.loads(lines[0]) == json.loads(dumps(hn.as_export))
-        assert json.loads(lines[1]) == json.loads(dumps(hn2.as_export))
     filepath.unlink()
 
 
