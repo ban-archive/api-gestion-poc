@@ -206,11 +206,19 @@ def process_housenumber(row):
         try:
             parent = Group.coerce(parent)
         except Group.DoesNotExist:
-            reporter.error('Parent given but not found', parent)
+            reporter.error('Ancestor given but not found', parent)
             parent = None
         else:
             data['parent'] = parent
-
+    ancestor = row.get('ancestor:fantoir')
+    if ancestor:
+        try:
+            ancestor = Group.coerce('fantoir:{}'.format(ancestor))
+        except Group.DoesNotExist:
+            reporter.error('Parent given but not found', parent)
+            ancestor = None
+        else:
+            data['ancestors'] = ancestor
     update = False
     instance = None
     ign = data.get('ign')
