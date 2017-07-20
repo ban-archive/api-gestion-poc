@@ -12,11 +12,11 @@ from ban.db import database
 from . import helpers
 
 QUERIES = {
-    PostCode: PostCode.select(),
-    Municipality: Municipality.select(),
-    Group: Group.select(),
-    HouseNumber: HouseNumber.select(),
-    Position: Position.select()
+    'PostCode': PostCode.select(),
+    'Municipality': Municipality.select(),
+    'Group': Group.select(),
+    'HouseNumber': HouseNumber.select(),
+    'Position': Position.select()
 }
 
 
@@ -27,7 +27,7 @@ def resources(resource, path, **kwargs):
     path    path of file where to write resources
     resource Municipality, PostCode, Group, HouseNumber or Position
     """
-    resources = [Municipality, PostCode, Group, HouseNumber, Position]
+    resources = ['Municipality', 'PostCode', 'Group', 'HouseNumber', 'Position']
     if resource not in resources:
         helpers.abort('Resource {} does not exists'.format(resource))
     query = QUERIES.get(resource)

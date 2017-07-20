@@ -124,7 +124,7 @@ def test_truncate_should_not_ask_for_confirm_in_force_mode(monkeypatch):
 def test_export_municipality():
     mun = factories.MunicipalityFactory()
     path = Path(__file__).parent / 'data'
-    resources(Municipality, path)
+    resources('Municipality', path)
 
     filepath = path.joinpath('municipality.ndjson')
     with filepath.open() as f:
@@ -138,7 +138,7 @@ def test_export_municipality():
 def test_export_group():
     street = factories.GroupFactory()
     path = Path(__file__).parent / 'data'
-    resources(Group, path)
+    resources('Group', path)
 
     filepath = path.joinpath('group.ndjson')
     with filepath.open() as f:
@@ -153,7 +153,7 @@ def test_export_housenumber():
     hn = factories.HouseNumberFactory(number='1')
     hn2 = factories.HouseNumberFactory(number='2')
     path = Path(__file__).parent / 'data'
-    resources(HouseNumber, path)
+    resources('HouseNumber', path)
 
     filepath = path.joinpath('housenumber.ndjson')
     with filepath.open() as f:
@@ -170,7 +170,7 @@ def test_export_position():
     deleted = factories.PositionFactory()
     deleted.mark_deleted()
     path = Path(__file__).parent / 'data'
-    resources(Position, path)
+    resources('Position', path)
 
     filepath = path.joinpath('position.ndjson')
     with filepath.open() as f:
@@ -184,7 +184,7 @@ def test_export_position():
 def test_export_postcode():
     pc = factories.PostCodeFactory()
     path = Path(__file__).parent / 'data'
-    resources(PostCode, path)
+    resources('PostCode', path)
 
     filepath = path.joinpath('position.ndjson')
     with filepath.open() as f:
