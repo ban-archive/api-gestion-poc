@@ -21,28 +21,30 @@ QUERIES = {
 
 
 @command
-def resources(path, **kwargs):
+def resources(resource, path, **kwargs):
     """Export database as resources in json stream format.
 
     path    path of file where to write resources
+    resource Municipality, PostCode, Group, HouseNumber or Position
     """
     resources = [Municipality, PostCode, Group, HouseNumber, Position]
-    for resource in resources:
-        query = QUERIES.get(resource)
-        filename = '{}.ndjson'.format(resource.__name__.lower())
-        with Path(path).joinpath(filename).open(mode='w') as f:
-            print('Exporting to', f.name)
-            query = query.order_by(resource.pk)
-            results = []
-            for result in helpers.batch(process_resource, query,
-                                        chunksize=1000, total=query.count()):
-                results.append(result)
-                if len(results) == 10000:
-                    f.write('\n'.join(results) + '\n')
-                    f.flush()
-                    results = []
-            if results:
+    if resource not in resources:
+        helpers.abort('Resource {} does not exists'.fomat(resource))
+    query = QUERIES.get(resource)
+    filename = '{}.ndjson'.format(resource.__name__.lower())
+    with Path(path).joinpath(filename).open(mode='w') as f:
+        print('Exporting to', f.name)
+        query = query.order_by(resource.pk)
+        results = []
+        for result in helpers.batch(process_resource, query,
+                                    chunksize=1000, total=query.count()):
+            results.append(result)
+            if len(results) == 10000:
                 f.write('\n'.join(results) + '\n')
+                f.flush()
+                results = []
+        if results:
+            f.write('\n'.join(results) + '\n')
 
 
 def process_resource(*rows):
