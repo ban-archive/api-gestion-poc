@@ -1,3 +1,5 @@
+import pytest
+
 import json
 from unittest.mock import Mock
 from pathlib import Path
@@ -121,17 +123,10 @@ def test_truncate_should_not_ask_for_confirm_in_force_mode(monkeypatch):
     assert not models.Municipality.select().count()
 
 
-def test_export_resources():
+def test_export_municipality():
     mun = factories.MunicipalityFactory()
-    pc = factories.PostCodeFactory(municipality=mun)
-    street = factories.GroupFactory(municipality=mun)
-    hn = factories.HouseNumberFactory(parent=street, number='1', postcode=pc)
-    hn2 = factories.HouseNumberFactory(parent=street, number='2', postcode=pc)
-    factories.PositionFactory(housenumber=hn)
-    deleted = factories.PositionFactory(housenumber=hn)
-    deleted.mark_deleted()
     path = Path(__file__).parent / 'data'
-    resources(path)
+    resources('Municipality', path)
 
     filepath = path.joinpath('municipality.ndjson')
     with filepath.open() as f:
@@ -141,6 +136,12 @@ def test_export_resources():
         assert json.loads(lines[0]) == json.loads(dumps(mun.as_export))
     filepath.unlink()
 
+
+def test_export_group():
+    street = factories.GroupFactory()
+    path = Path(__file__).parent / 'data'
+    resources('Group', path)
+
     filepath = path.joinpath('group.ndjson')
     with filepath.open() as f:
         lines = f.readlines()
@@ -149,14 +150,41 @@ def test_export_resources():
         assert json.loads(lines[0]) == json.loads(dumps(street.as_export))
     filepath.unlink()
 
+
+def test_export_housenumber():
+    hn = factories.HouseNumberFactory(number='1')
+    path = Path(__file__).parent / 'data'
+    resources('HouseNumber', path)
+
     filepath = path.joinpath('housenumber.ndjson')
     with filepath.open() as f:
         lines = f.readlines()
-        assert len(lines) == 2
+        assert len(lines) == 1
         # Plus, JSON transform internals tuples to lists.
         assert json.loads(lines[0]) == json.loads(dumps(hn.as_export))
-        assert json.loads(lines[1]) == json.loads(dumps(hn2.as_export))
     filepath.unlink()
+
+
+def test_export_position():
+    position = factories.PositionFactory()
+    deleted = factories.PositionFactory()
+    deleted.mark_deleted()
+    path = Path(__file__).parent / 'data'
+    resources('Position', path)
+
+    filepath = path.joinpath('position.ndjson')
+    with filepath.open() as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        # Plus, JSON transform internals tuples to lists.
+        assert json.loads(lines[0]) == json.loads(dumps(position.as_export))
+    filepath.unlink()
+
+
+def test_export_postcode():
+    pc = factories.PostCodeFactory()
+    path = Path(__file__).parent / 'data'
+    resources('PostCode', path)
 
     filepath = path.joinpath('postcode.ndjson')
     with filepath.open() as f:
@@ -165,6 +193,13 @@ def test_export_resources():
         # Plus, JSON transform internals tuples to lists.
         assert json.loads(lines[0]) == json.loads(dumps(pc.as_export))
     filepath.unlink()
+
+
+def test_cannot_export_wrong_resource():
+    pc = factories.PostCodeFactory()
+    path = Path(__file__).parent / 'data'
+    with pytest.raises(SystemExit):
+        resources('toto', path)
 
 
 def test_dummytoken():
