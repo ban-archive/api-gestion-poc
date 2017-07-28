@@ -38,6 +38,7 @@ def test_listusers(capsys):
     listusers()
     out, err = capsys.readouterr()
     assert user.username in out
+    assert user.id in out
 
 
 def test_listusers_with_invoke(capsys):
@@ -97,6 +98,7 @@ def test_listclients(capsys):
     assert client.name in out
     assert str(client.client_id) in out
     assert client.client_secret in out
+    assert client.id in out
 
 
 def test_truncate_should_truncate_all_tables_by_default(monkeypatch):
