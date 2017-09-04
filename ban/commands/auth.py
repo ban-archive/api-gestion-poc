@@ -79,9 +79,9 @@ def createuser(username=None, email=None, is_staff=False, **kwargs):
 def listusers(**kwargs):
     """List registered users with details."""
     tpl = '{:<20} {}'
-    print(tpl.format('username', 'email'))
+    print(tpl.format('id', 'username', 'email'))
     for user in User.select():
-        print(tpl.format(user.username, user.email))
+        print(tpl.format(user.id, user.username, user.email))
 
 
 @command
@@ -113,7 +113,7 @@ def createclient(name=None, user=None, scopes=[], **kwargs):
 def listclients(**kwargs):
     """List existing clients with details."""
     tpl = '{:<40} {:<40} {:<60} {}'
-    print(tpl.format('name', 'client_id', 'client_secret', 'scopes'))
+    print(tpl.format('id', 'name', 'client_id', 'client_secret', 'scopes'))
     for client in Client.select():
-        print(tpl.format(client.name, str(client.client_id),
+        print(tpl.format(client.id, client.name, str(client.client_id),
                          client.client_secret, ' '.join(client.scopes or [])))
