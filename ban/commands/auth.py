@@ -14,7 +14,8 @@ def dummytoken(token, **kwargs):
     Token.delete().where(Token.access_token == token).execute()
     Token.create(session=session.pk, access_token=token, expires_in=3600*24,
                  token_type='Bearer',
-                 scopes="municipality_write postcode_write group_write housenumber_write position_write".split())
+                 scopes="municipality_write postcode_write \
+                 group_write housenumber_write position_write".split())
     reporter.notice('Created token', token)
 
 
