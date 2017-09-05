@@ -170,7 +170,6 @@ class HouseNumber(Model):
     def as_export(self):
         """Resources plus relation references without metadata."""
         mask = {f: {} for f in self.resource_fields}
-        mask['positions'] = {'*': {}}
         return self.serialize(mask)
 
 
