@@ -2,6 +2,7 @@ from ban.auth import models as amodels
 from ban.commands import command, reporter
 from ban.core import models as cmodels
 from ban.core.versioning import Diff, Version, Redirect, Flag
+from ban.db.connections import database
 
 from . import helpers
 
@@ -10,7 +11,7 @@ models = [Version, Diff, Redirect, amodels.User, amodels.Client,
           cmodels.PostCode, cmodels.Group, cmodels.HouseNumber,
           cmodels.HouseNumber.ancestors.get_through_model(),
           cmodels.Position, Flag]
-
+		  
 
 @command
 def create(fail_silently=False, **kwargs):
@@ -45,3 +46,11 @@ def truncate(*names, force=False, **kwargs):
             continue
         model.delete().execute()
         reporter.notice('Truncated', name)
+
+		
+@command
+def createindexforinit(**kwargs):
+	"""Create indexes for init
+	"""
+	for model in models:
+		database.create_index(model, field, unique=True)

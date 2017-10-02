@@ -33,9 +33,14 @@ postgres_ext.PostgresqlExtDatabase.register_ops({
     peewee.OP.BBOXCONTAINED: peewee.OP.BBOXCONTAINED,
 })
 
+class NoIndexMixin:
+
+	def __init__(self, *args, **kwargs):
+		kwargs['index'] = False
+		super().__init__(*args, **kwargs)
 
 # TODO: mv to a third-party module.
-class PointField(peewee.Field, postgres_ext.IndexedFieldMixin):
+class PointField(NoIndexMixin, peewee.Field, postgres_ext.IndexedFieldMixin):
     db_field = 'point'
     __data_type__ = Point
     # TODO how to deal properly with custom type?
@@ -82,7 +87,7 @@ postgres_ext.PostgresqlExtDatabase.register_fields({'point':
                                                     'geometry(Point)'})
 
 
-class DateRangeField(peewee.Field):
+class DateRangeField(NoIndexMixin, peewee.Field):
     db_field = 'tstzrange'
     __data_type__ = datetime
     __schema_type__ = 'string'
@@ -106,7 +111,7 @@ class DateRangeField(peewee.Field):
         return peewee.Expression(self, peewee.OP.ACONTAINS, dt)
 
 
-class CachedRelationDescriptor(peewee.RelationDescriptor):
+class CachedRelationDescriptor(NoIndexMixin, peewee.RelationDescriptor):
 
     def get_object_or_id(self, instance):
         rel_id = instance._data.get(self.att_name)
@@ -116,7 +121,7 @@ class CachedRelationDescriptor(peewee.RelationDescriptor):
         return cache.cache(keys, super().get_object_or_id, instance)
 
 
-class ForeignKeyField(peewee.ForeignKeyField):
+class ForeignKeyField(NoIndexMixin, peewee.ForeignKeyField):
 
     __data_type__ = int
     __schema_type__ = 'integer'
@@ -139,13 +144,13 @@ class ForeignKeyField(peewee.ForeignKeyField):
                                         classname=self.model_class._meta.name)
 
 
-class CachedForeignKeyField(ForeignKeyField):
+class CachedForeignKeyField(NoIndexMixin, ForeignKeyField):
 
     def _get_descriptor(self):
         return CachedRelationDescriptor(self, self.rel_model)
 
 
-class CharField(peewee.CharField):
+class CharField(NoIndexMixin, peewee.CharField):
     __data_type__ = str
     __schema_type__ = 'string'
 
@@ -163,7 +168,7 @@ class CharField(peewee.CharField):
         return super().coerce(value)
 
 
-class TextField(peewee.TextField):
+class TextField(NoIndexMixin, peewee.TextField):
     __data_type__ = str
     __schema_type__ = 'string'
 
@@ -173,7 +178,7 @@ class TextField(peewee.TextField):
         return super().coerce(value)
 
 
-class IntegerField(peewee.IntegerField):
+class IntegerField(NoIndexMixin, peewee.IntegerField):
     __data_type__ = int
     __schema_type__ = 'integer'
 
@@ -183,7 +188,7 @@ class IntegerField(peewee.IntegerField):
         return super().coerce(value)
 
 
-class HStoreField(postgres_ext.HStoreField):
+class HStoreField(NoIndexMixin, postgres_ext.HStoreField):
     __data_type__ = dict
     __schema_type__ = 'object'
 
@@ -193,16 +198,16 @@ class HStoreField(postgres_ext.HStoreField):
         return super().coerce(value)
 
 
-class BinaryJSONField(postgres_ext.BinaryJSONField):
+class BinaryJSONField(NoIndexMixin, postgres_ext.BinaryJSONField):
     __data_type__ = dict
     __schema_type__ = 'object'
 
 
-class UUIDField(peewee.UUIDField):
+class UUIDField(NoIndexMixin, peewee.UUIDField):
     pass
 
 
-class ArrayField(postgres_ext.ArrayField):
+class ArrayField(NoIndexMixin, postgres_ext.ArrayField):
     __data_type__ = list
     __schema_type__ = 'array'
 
@@ -222,7 +227,7 @@ class ArrayField(postgres_ext.ArrayField):
         return super().db_value(value)
 
 
-class DateTimeField(postgres_ext.DateTimeTZField):
+class DateTimeField(NoIndexMixin, postgres_ext.DateTimeTZField):
     __data_type__ = datetime
     __schema_type__ = 'string'
     __schema_format__ = 'date-time'
@@ -235,12 +240,12 @@ class DateTimeField(postgres_ext.DateTimeTZField):
             return value.astimezone(timezone.utc)
 
 
-class BooleanField(peewee.BooleanField):
+class BooleanField(NoIndexMixin, peewee.BooleanField):
     __data_type__ = bool
     __schema_type__ = 'boolean'
 
 
-class FantoirField(CharField):
+class FantoirField(NoIndexMixin, CharField):
 
     max_length = 9
 
@@ -257,7 +262,7 @@ class FantoirField(CharField):
         return value
 
 
-class ManyToManyField(fields.ManyToManyField):
+class ManyToManyField(NoIndexMixin, fields.ManyToManyField):
     __data_type__ = list
     __schema_type__ = 'array'
 
@@ -284,7 +289,7 @@ class ManyToManyField(fields.ManyToManyField):
         super().add_to_class(model_class, name)
 
 
-class PasswordField(PWDField):
+class PasswordField(NoIndexMixin, PWDField):
 
     def python_value(self, value):
         if value is None:
