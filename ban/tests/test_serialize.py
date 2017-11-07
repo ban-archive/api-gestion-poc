@@ -124,7 +124,7 @@ def test_serialize_with_double_wildcard():
         'postcode': None,
         'ancestors': [],
         'laposte': None,
-        'cia': '93031_1491_1_BIS',
+        'cia': None,
         'ign': None,
         'attributes': None,
         'positions': [],
