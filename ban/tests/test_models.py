@@ -154,13 +154,6 @@ def test_cannot_create_group_with_fantoir_greater_than_9_or_10_chars():
         GroupFactory(fantoir=fantoir)
 
 
-def test_housenumber_should_create_cia_on_save():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='930311491')
-    hn = HouseNumberFactory(parent=street, number="84", ordinal="bis")
-    assert hn.cia == '93031_1491_84_BIS'
-
-
 def test_get_postcode_housenumbers_sorted():
     postcode = PostCodeFactory()
     hn2 = HouseNumberFactory(postcode=postcode, number="2", ordinal="")
