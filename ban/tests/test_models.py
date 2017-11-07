@@ -109,13 +109,6 @@ def test_should_not_allow_deleting_street_linked_to_housenumber():
     assert models.Group.get(models.Group.id == street.id)
 
 
-def test_compute_cia_should_use_locality_if_no_street():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='930311491')
-    hn = HouseNumberFactory(parent=street, number="84", ordinal="")
-    assert hn.compute_cia() == '93031_1491_84_'
-
-
 def test_group_as_relation():
     municipality = MunicipalityFactory()
     street = GroupFactory(municipality=municipality, name="Rue des Fleurs",
