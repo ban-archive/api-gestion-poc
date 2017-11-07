@@ -109,21 +109,6 @@ def test_should_not_allow_deleting_street_linked_to_housenumber():
     assert models.Group.get(models.Group.id == street.id)
 
 
-def test_compute_cia_should_consider_insee_fantoir_number_and_ordinal():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='930311491')
-    hn = HouseNumberFactory(parent=street, number="84", ordinal="bis")
-    hn = models.HouseNumber.get(models.HouseNumber.id == hn.id)
-    assert hn.compute_cia() == '93031_1491_84_BIS'
-
-
-def test_compute_cia_should_let_ordinal_empty_if_not_set():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='930311491')
-    hn = HouseNumberFactory(parent=street, number="84", ordinal="")
-    assert hn.compute_cia() == '93031_1491_84_'
-
-
 def test_compute_cia_should_use_locality_if_no_street():
     municipality = MunicipalityFactory(insee='93031')
     street = GroupFactory(municipality=municipality, fantoir='930311491')
