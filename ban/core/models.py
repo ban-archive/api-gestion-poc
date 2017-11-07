@@ -142,6 +142,10 @@ class HouseNumber(Model):
     def __str__(self):
         return ' '.join([self.number or '', self.ordinal or ''])
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self._clean_called = False
+
     @cached_property
     def municipality(self):
         return Municipality.select().join(
