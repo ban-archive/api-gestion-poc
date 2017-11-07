@@ -98,13 +98,10 @@ def process_housenumber(row, id, name, insee, group_id, fantoir):
         parent = instance.parent
     elif fantoir:
         parent = 'fantoir:{}'.format(fantoir)
-        cia = instance.cia
     elif group_id:
         parent = Group.where(Group.id == group_id).first()
         if not parent:
             return reporter.error('Group id not found', group_id)
-        if parent.fantoir:
-            cia = instance.cia
     else:
         return reporter.error('Missing group id and fantoir', id)
     if cia:
