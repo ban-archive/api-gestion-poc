@@ -271,7 +271,8 @@ def test_housenumber_as_resource():
     housenumber = HouseNumberFactory(number="90", ordinal="bis",
                                      attributes={"source": "openbar"},
                                      parent__municipality__insee="21892",
-                                     parent__fantoir="218921234")
+                                     parent__fantoir="218921234",
+                                     cia="21892_1234_90_BIS")
     assert housenumber.as_resource == {
         'ancestors': [],
         'cia': '21892_1234_90_BIS',
@@ -299,7 +300,7 @@ def test_housenumber_as_relation():
                                      parent__municipality__insee="21892",
                                      parent__fantoir="218921234")
     assert housenumber.as_relation == {
-        'cia': '21892_1234_90_BIS',
+        'cia': None,
         'parent': housenumber.parent.id,
         'laposte': None,
         'ign': None,
