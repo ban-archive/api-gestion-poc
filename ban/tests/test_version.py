@@ -137,7 +137,7 @@ def test_housenumber_as_version():
                             laposte='123456')
     assert hn.as_version == {
         'laposte': '123456',
-        'cia': '12345_6789_84_BIS',
+        'cia': None,
         'version': 1,
         'ordinal': 'bis',
         'number': '84',

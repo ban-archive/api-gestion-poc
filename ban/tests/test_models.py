@@ -109,35 +109,6 @@ def test_should_not_allow_deleting_street_linked_to_housenumber():
     assert models.Group.get(models.Group.id == street.id)
 
 
-def test_tmp_fantoir_should_use_name():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='',
-                          name="Rue des Pêchers")
-    assert street.tmp_fantoir == '#RUEDESPECHERS'
-
-
-def test_compute_cia_should_consider_insee_fantoir_number_and_ordinal():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='930311491')
-    hn = HouseNumberFactory(parent=street, number="84", ordinal="bis")
-    hn = models.HouseNumber.get(models.HouseNumber.id == hn.id)
-    assert hn.compute_cia() == '93031_1491_84_BIS'
-
-
-def test_compute_cia_should_let_ordinal_empty_if_not_set():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='930311491')
-    hn = HouseNumberFactory(parent=street, number="84", ordinal="")
-    assert hn.compute_cia() == '93031_1491_84_'
-
-
-def test_compute_cia_should_use_locality_if_no_street():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='930311491')
-    hn = HouseNumberFactory(parent=street, number="84", ordinal="")
-    assert hn.compute_cia() == '93031_1491_84_'
-
-
 def test_group_as_relation():
     municipality = MunicipalityFactory()
     street = GroupFactory(municipality=municipality, name="Rue des Fleurs",
@@ -183,13 +154,6 @@ def test_cannot_create_group_with_fantoir_greater_than_9_or_10_chars():
         GroupFactory(fantoir=fantoir)
 
 
-def test_housenumber_should_create_cia_on_save():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='930311491')
-    hn = HouseNumberFactory(parent=street, number="84", ordinal="bis")
-    assert hn.cia == '93031_1491_84_BIS'
-
-
 def test_get_postcode_housenumbers_sorted():
     postcode = PostCodeFactory()
     hn2 = HouseNumberFactory(postcode=postcode, number="2", ordinal="")
@@ -233,9 +197,9 @@ def test_cannot_duplicate_housenumber_on_same_street():
         HouseNumberFactory(parent=street, ordinal="b", number="10")
 
 
-def test_cannot_create_housenumber_without_parent():
-    with pytest.raises(peewee.DoesNotExist):
-        HouseNumberFactory(parent=None)
+#def test_cannot_create_housenumber_without_parent():
+#    with pytest.raises(peewee.DoesNotExist):
+#        HouseNumberFactory(parent=None)
 
 
 def test_housenumber_str():
@@ -307,7 +271,8 @@ def test_housenumber_as_resource():
     housenumber = HouseNumberFactory(number="90", ordinal="bis",
                                      attributes={"source": "openbar"},
                                      parent__municipality__insee="21892",
-                                     parent__fantoir="218921234")
+                                     parent__fantoir="218921234",
+                                     cia="21892_1234_90_BIS")
     assert housenumber.as_resource == {
         'ancestors': [],
         'cia': '21892_1234_90_BIS',
@@ -335,7 +300,7 @@ def test_housenumber_as_relation():
                                      parent__municipality__insee="21892",
                                      parent__fantoir="218921234")
     assert housenumber.as_relation == {
-        'cia': '21892_1234_90_BIS',
+        'cia': None,
         'parent': housenumber.parent.id,
         'laposte': None,
         'ign': None,

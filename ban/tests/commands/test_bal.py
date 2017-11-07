@@ -109,7 +109,7 @@ def test_bal_should_update_housenumber_when_updating_group(staff):
                                    name="Esplanade Alain Le Ray",
                                    fantoir="381850172")
     housenumber = factories.HouseNumberFactory(number=None, parent=group,
-                                               ordinal=None)
+                                               ordinal=None, cia='38185_0172_99999')
     content = """cle_interop;uid_adresse;voie_nom;numero;suffixe;commune_nom;position;x;y;long;lat;source;date_der_maj\n
 38185_0172_99999;;Esplanade Alain Le Ray;99999;;Grenoble;délivrance postale;914027.84;6457539.01;5.72559773087959;45.1839130425293;Ville de Grenoble;2010-12-21
 """
@@ -130,7 +130,8 @@ def test_bal_should_update_position_when_updating_group(staff):
                                    name="Esplanade Alain Le Ray",
                                    fantoir="381850172")
     housenumber = factories.HouseNumberFactory(number=None, parent=group,
-                                               ordinal=None)
+                                               ordinal=None,
+                                               cia="38185_0172_99999")
     old_position = factories.PositionFactory(housenumber=housenumber,
                                              kind=models.Position.POSTAL)
     content = """cle_interop;uid_adresse;voie_nom;numero;suffixe;commune_nom;position;x;y;long;lat;source;date_der_maj\n

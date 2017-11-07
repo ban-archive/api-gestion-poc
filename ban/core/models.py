@@ -5,7 +5,6 @@ from unidecode import unidecode
 from werkzeug.utils import cached_property
 
 from ban import db
-from ban.utils import compute_cia
 from .versioning import Versioned, BaseVersioned
 from .resource import ResourceModel, BaseResource
 from .validators import VersionedResourceValidator
@@ -110,14 +109,6 @@ class Group(NamedModel):
                                             related_name='groups')
 
     @property
-    def tmp_fantoir(self):
-        return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
-
-    def get_fantoir(self):
-        # Without INSEE code.
-        return self.fantoir[5:] if self.fantoir else self.tmp_fantoir[:min(len(self.tmp_fantoir),80)]
-
-    @property
     def housenumbers(self):
         qs = (self._housenumbers | self.housenumber_set)
         return qs.order_by(peewee.SQL('number ASC NULLS FIRST'),
@@ -131,7 +122,7 @@ class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'positions', 'ign', 'postcode']
-    readonly_fields = Model.readonly_fields + ['cia']
+    readonly_fields = Model.readonly_fields
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
@@ -152,14 +143,8 @@ class HouseNumber(Model):
         return ' '.join([self.number or '', self.ordinal or ''])
 
     def save(self, *args, **kwargs):
-        self.cia = self.compute_cia()
         super().save(*args, **kwargs)
         self._clean_called = False
-
-    def compute_cia(self):
-        return compute_cia(str(self.parent.municipality.insee),
-                           self.parent.get_fantoir(),
-                           self.number, self.ordinal)
 
     @cached_property
     def municipality(self):

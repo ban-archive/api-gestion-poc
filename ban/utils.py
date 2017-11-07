@@ -18,11 +18,6 @@ def is_uuid4(uuid_string):
     return True
 
 
-def compute_cia(insee, fantoir, number=None, ordinal=None):
-    return '_'.join([insee, fantoir, (number or '').upper(),
-                     (ordinal or '').upper()])
-
-
 def make_diff(old, new, update=False):
     """Create a diff between two versions of the same resource.
 
