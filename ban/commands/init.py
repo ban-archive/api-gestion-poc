@@ -6,7 +6,6 @@ from ban.commands import command, reporter
 from ban.core.models import (Group, HouseNumber, Municipality, Position,
                              PostCode)
 from ban.db import database
-from ban.utils import compute_cia
 
 from . import helpers
 

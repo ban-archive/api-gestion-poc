@@ -5,7 +5,6 @@ from unidecode import unidecode
 from werkzeug.utils import cached_property
 
 from ban import db
-from ban.utils import compute_cia
 from .versioning import Versioned, BaseVersioned
 from .resource import ResourceModel, BaseResource
 from .validators import VersionedResourceValidator

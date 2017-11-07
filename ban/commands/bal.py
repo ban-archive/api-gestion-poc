@@ -3,7 +3,6 @@ import peewee
 from ban.commands import command, reporter
 from ban.core.models import HouseNumber, Group, Position
 from ban.db import database
-from ban.utils import compute_cia
 
 from . import helpers
 
@@ -99,14 +98,13 @@ def process_housenumber(row, id, name, insee, group_id, fantoir):
         parent = instance.parent
     elif fantoir:
         parent = 'fantoir:{}'.format(fantoir)
-        cia = compute_cia(insee, fantoir[5:], number, ordinal)
+        cia = instance.cia
     elif group_id:
         parent = Group.where(Group.id == group_id).first()
         if not parent:
             return reporter.error('Group id not found', group_id)
         if parent.fantoir:
-            cia = compute_cia(parent.fantoir[:5], parent.fantoir[5:], number,
-                              ordinal)
+            cia = instance.cia
     else:
         return reporter.error('Missing group id and fantoir', id)
     if cia:
