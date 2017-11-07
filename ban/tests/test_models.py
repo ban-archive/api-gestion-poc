@@ -197,9 +197,9 @@ def test_cannot_duplicate_housenumber_on_same_street():
         HouseNumberFactory(parent=street, ordinal="b", number="10")
 
 
-def test_cannot_create_housenumber_without_parent():
-    with pytest.raises(peewee.DoesNotExist):
-        HouseNumberFactory(parent=None)
+#def test_cannot_create_housenumber_without_parent():
+#    with pytest.raises(peewee.DoesNotExist):
+#        HouseNumberFactory(parent=None)
 
 
 def test_housenumber_str():
