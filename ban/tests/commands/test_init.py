@@ -182,11 +182,11 @@ def test_process_housenumber_from_oldban(session):
             "cia": "90001_0005_2_BIS", "group:fantoir": "900010005",
             "numero": "2", "ordinal": "BIS",
             "ign": "ADRNIVX_0000000259416737", "postcode:code": "90400",
-            "postcode:complement": "", "municipality:insee": "90001"}
+            "postcode:complement": "90002", "municipality:insee": "90001"}
     group = factories.GroupFactory(municipality__insee="90001",
                                    fantoir="900010005")
     factories.HouseNumberFactory(parent=group, number="2", ordinal="bis")
-    factories.PostCodeFactory(municipality=group.municipality, code="90400")
+    factories.PostCodeFactory(municipality=group.municipality, code="90400", complement="90002")
     process_row(data)
     assert models.HouseNumber.select().count() == 1
     housenumber = models.HouseNumber.first()
@@ -195,6 +195,8 @@ def test_process_housenumber_from_oldban(session):
     assert housenumber.number == "2"
     assert housenumber.ordinal == "BIS"
     assert housenumber.postcode.code == "90400"
+    assert housenumber.postcode.compelemnt == "90002"
+    assert housenumber.postocde.municipality.insee == "90001"
     assert housenumber.ign == "ADRNIVX_0000000259416737"
     assert len(housenumber.versions) == 2
 
