@@ -84,7 +84,7 @@ class PostCodeFactory(BaseFactory):
     name = 'Test PostCode Area Name'
     code = FuzzyInteger(10000, 97000)
     municipality = factory.SubFactory(MunicipalityFactory)
-
+    complement = ''
     class Meta:
         model = models.PostCode
 
