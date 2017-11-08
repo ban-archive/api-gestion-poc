@@ -196,7 +196,7 @@ def test_process_housenumber_from_oldban(session):
     assert housenumber.ordinal == "BIS"
     assert housenumber.postcode.code == "90400"
     assert housenumber.postcode.complement == "90002"
-    assert housenumber.postocde.municipality.insee == "90001"
+    assert housenumber.postcode.municipality.insee == "90001"
     assert housenumber.ign == "ADRNIVX_0000000259416737"
     assert len(housenumber.versions) == 2
 
