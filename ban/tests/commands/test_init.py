@@ -182,7 +182,7 @@ def test_process_housenumber_from_oldban(session):
             "cia": "90001_0005_2_BIS", "group:fantoir": "900010005",
             "numero": "2", "ordinal": "BIS",
             "ign": "ADRNIVX_0000000259416737", "postcode:code": "90400",
-            "postcode:complement": "" ; "municipality:insee": "90001"}
+            "postcode:complement": "", "municipality:insee": "90001"}
     group = factories.GroupFactory(municipality__insee="90001",
                                    fantoir="900010005")
     factories.HouseNumberFactory(parent=group, number="2", ordinal="bis")
