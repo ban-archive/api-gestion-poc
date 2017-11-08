@@ -109,13 +109,6 @@ class Group(NamedModel):
     municipality = db.CachedForeignKeyField(Municipality,
                                             related_name='groups')
 
-    @property
-    def tmp_fantoir(self):
-        return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
-
-    def get_fantoir(self):
-        # Without INSEE code.
-        return self.fantoir[5:] if self.fantoir else self.tmp_fantoir[:min(len(self.tmp_fantoir),80)]
 
     @property
     def housenumbers(self):
@@ -157,9 +150,9 @@ class HouseNumber(Model):
         self._clean_called = False
 
     def compute_cia(self):
-        return compute_cia(str(self.parent.municipality.insee),
-                           self.parent.get_fantoir(),
-                           self.number, self.ordinal)
+        return compute_cia(self.parent.fantoir[:5],
+                           self.parent.fantoir[5:],
+                           self.number, self.ordinal) if self.parent.fantoir else None
 
     @cached_property
     def municipality(self):
