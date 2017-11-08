@@ -127,7 +127,7 @@ def test_cannot_create_position_with_invalid_positioning(client):
 
 @authorize('position_write')
 def test_create_position_with_housenumber_cia(client):
-    housenumber = HouseNumberFactory(number="22")
+    housenumber = HouseNumberFactory(number="22", cia="33001_1234_1_")
     assert not models.Position.select().count()
     data = {
         "center": "(3, 4)",
