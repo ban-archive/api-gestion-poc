@@ -111,7 +111,7 @@ class DateRangeField(NoIndexMixin, peewee.Field):
         return peewee.Expression(self, peewee.OP.ACONTAINS, dt)
 
 
-class CachedRelationDescriptor(NoIndexMixin, peewee.RelationDescriptor):
+class CachedRelationDescriptor(peewee.RelationDescriptor):
 
     def get_object_or_id(self, instance):
         rel_id = instance._data.get(self.att_name)
@@ -144,7 +144,7 @@ class ForeignKeyField(NoIndexMixin, peewee.ForeignKeyField):
                                         classname=self.model_class._meta.name)
 
 
-class CachedForeignKeyField(NoIndexMixin, ForeignKeyField):
+class CachedForeignKeyField(ForeignKeyField):
 
     def _get_descriptor(self):
         return CachedRelationDescriptor(self, self.rel_model)
@@ -245,7 +245,7 @@ class BooleanField(NoIndexMixin, peewee.BooleanField):
     __schema_type__ = 'boolean'
 
 
-class FantoirField(NoIndexMixin, CharField):
+class FantoirField(CharField):
 
     max_length = 9
 
@@ -262,7 +262,7 @@ class FantoirField(NoIndexMixin, CharField):
         return value
 
 
-class ManyToManyField(NoIndexMixin, fields.ManyToManyField):
+class ManyToManyField(fields.ManyToManyField):
     __data_type__ = list
     __schema_type__ = 'array'
 
@@ -289,7 +289,7 @@ class ManyToManyField(NoIndexMixin, fields.ManyToManyField):
         super().add_to_class(model_class, name)
 
 
-class PasswordField(NoIndexMixin, PWDField):
+class PasswordField(PWDField):
 
     def python_value(self, value):
         if value is None:
