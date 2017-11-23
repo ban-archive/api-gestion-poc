@@ -3,10 +3,11 @@ from urllib.parse import urlencode
 
 import peewee
 from flask import request, url_for
+import psycopg2
 
 from ban.auth import models as amodels
 from ban.commands.bal import bal
-from ban.core import context, models, versioning
+from ban.core import context, models, versioning, config
 from ban.core.encoder import dumps
 from ban.core.exceptions import (IsDeletedError, MultipleRedirectsError,
                                  RedirectError, ResourceLinkedError)
@@ -709,6 +710,89 @@ class Diff(CollectionEndpoint):
             qs = qs.where(versioning.Diff.pk > increment)
         return self.collection(qs.serialize())
 
+@app.route('/bbox', methods=['GET'])
+@app.jsonify
+def bbox():
+    limit = min(int(request.args.get('limit', CollectionEndpoint.DEFAULT_LIMIT)), CollectionEndpoint.MAX_LIMIT)
+    bbox = get_bbox(request.args)
+
+    dbname = config.DB_NAME
+    user = config.get('DB_USER')
+    password = config.get('DB_PASSWORD')
+    host = config.get('DB_HOST')
+    if (host is None):
+        host = "localhost"
+    port = config.get('DB_PORT')
+
+    connectString = "dbname='{}' user='{}' password='{}' host='{}' port='{}'".format(dbname,user,password,host,port)
+    conn = psycopg2.connect(connectString)
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        """SELECT count(*) FROM position WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)""",
+        {
+            "west": bbox["west"],
+            "south": bbox["south"],
+            "east": bbox["east"],
+            "north": bbox["north"]
+        }
+    )
+    response = {"collection": [], "total": cur.fetchone()["count"]}
+    cur.execute(
+        """SELECT
+            p.id as pos_id, st_x(center) as pos_x, st_y(center) as pos_y, p.kind as pos_kind, p.positioning as pos_positioning,
+            h.id as hn_id, h.number as hn_number, h.ordinal as hn_ordinal, 
+            po.id as post_id, po.name as post_name, po.code as post_code,
+            g.id as group_id, g.addressing as group_addressing, g.alias as group_alias, g.fantoir as group_fantoir, g.ign as group_ign, g.kind as group_kind, g.laposte as group_laposte, g.name as group_name
+            FROM position as p 
+            LEFT JOIN housenumber as h 
+            on (h.pk = p.housenumber_id) 
+            LEFT JOIN "group" as g 
+            on (h.parent_id = g.pk) 
+            LEFT JOIN postcode as po 
+            on (h.postcode_id = po.pk) 
+            WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)
+            limit %(limit)s""",
+        {
+            "limit": limit,
+            "west": bbox["west"],
+            "south": bbox["south"],
+            "east": bbox["east"],
+            "north": bbox["north"]
+        })
+
+    for row in cur:
+        occ = {
+            "id": row["pos_id"],
+            "center": {
+                "type": "Point",
+                "coordinates": [row["pos_x"], row["pos_y"]]
+            },
+            "kind": row["pos_kind"],
+            "positioning": row["pos_positioning"],
+            "housenumber": {
+                "id": row["hn_id"],
+                "number": row["hn_number"],
+                "ordinal": row["hn_ordinal"],
+                "postcode": {
+                    "id": row["post_id"],
+                    "name": row["post_name"],
+                    "code": row["post_code"]
+                },
+                "group": {
+                    "id": row["group_id"],
+                    "addressing": row["group_addressing"],
+                    "alias": row["group_alias"],
+                    "fantoir": row["group_fantoir"],
+                    "ign": row["group_ign"],
+                    "kind": row["group_kind"],
+                    "laposte": row["group_laposte"],
+                    "name": row["group_name"]
+                }
+            }
+        }
+        response["collection"].append(occ)
+
+    return response
 
 @app.route('/openapi', methods=['GET'])
 @app.jsonify
