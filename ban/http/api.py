@@ -710,6 +710,7 @@ class Diff(CollectionEndpoint):
             qs = qs.where(versioning.Diff.pk > increment)
         return self.collection(qs.serialize())
 
+@auth.require_oauth()
 @app.route('/bbox', methods=['GET'])
 @app.jsonify
 def bbox():
