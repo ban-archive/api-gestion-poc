@@ -710,8 +710,8 @@ class Diff(CollectionEndpoint):
             qs = qs.where(versioning.Diff.pk > increment)
         return self.collection(qs.serialize())
 
-@auth.require_oauth()
 @app.route('/bbox', methods=['GET'])
+@auth.require_oauth()
 @app.jsonify
 def bbox():
     limit = min(int(request.args.get('limit', CollectionEndpoint.DEFAULT_LIMIT)), CollectionEndpoint.MAX_LIMIT)
