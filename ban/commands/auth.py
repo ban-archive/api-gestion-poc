@@ -113,7 +113,7 @@ def createclient(name=None, user=None, scopes=[], **kwargs):
 @command
 def listclients(**kwargs):
     """List existing clients with details."""
-    tpl = '{:<40} {:<40} {:<60} {}'
+    tpl = '{:<50} {:<40} {:<40} {:<60} {}'
     print(tpl.format('id', 'name', 'client_id', 'client_secret', 'scopes'))
     for client in Client.select():
         print(tpl.format(client.id, client.name, str(client.client_id),
