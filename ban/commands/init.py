@@ -174,7 +174,7 @@ def process_housenumber(row):
     number = row.get('number')
     ordinal = row.get('ordinal')
     source = row.get('source')
-    attributes = row.get('attributes')
+    attributes = row.get('attributes', {})
     if source:
         attributes['source'] = source
     data['attributes'] = attributes
