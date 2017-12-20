@@ -260,8 +260,6 @@ def process_position(row):
     source = row.get('source')
     cia = row.get('housenumber:cia')
     housenumber_ign = row.get('housenumber:ign')
-    attributes = row.get('attributes',{})
-    data['attributes'] = attributes
     housenumber = None
     if cia:
         cia = cia.upper()
@@ -280,6 +278,7 @@ def process_position(row):
     data = dict(source=source, housenumber=housenumber,
                 positioning=positioning, version=version)
     kind = row.get('kind', '')
+    data['attributes'] = row.get('attributes',{})
     if hasattr(Position, kind.upper()):
         data['kind'] = kind
     elif not instance:
