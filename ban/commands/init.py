@@ -174,8 +174,10 @@ def process_housenumber(row):
     number = row.get('number')
     ordinal = row.get('ordinal')
     source = row.get('source')
+    attributes = row.get('attributes')
     if source:
-        data['attributes'] = {'source': source}
+        attributes['source'] = source
+    data['attributes'] = attributes
     # Only override if key is present (even if value is null).
     if 'postcode:code' in row:
         code = row.get('postcode:code')
