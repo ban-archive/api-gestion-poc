@@ -260,6 +260,8 @@ def process_position(row):
     source = row.get('source')
     cia = row.get('housenumber:cia')
     housenumber_ign = row.get('housenumber:ign')
+    attributes = row.get('attributes',{})
+    data['attributes'] = attributes
     housenumber = None
     if cia:
         cia = cia.upper()
