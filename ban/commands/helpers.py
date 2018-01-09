@@ -11,7 +11,7 @@ from pathlib import Path
 import decorator
 from progressist import ProgressBar
 
-from ban.auth.models import Session, User, Client
+from ban.auth.models import Session, User
 from ban.db.model import SelectQuery
 from ban.core import context, config
 from ban.core.versioning import Diff

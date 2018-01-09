@@ -1,14 +1,12 @@
 import json
 
-import peewee 
+import peewee
 
 from ban.commands import command, reporter
 from ban.core.models import (Group, HouseNumber, Municipality, Position,
                              PostCode)
-from ban.auth.models import Client, Session
 from ban.db import database
 from ban.utils import compute_cia
-from ban.core import context, config
 
 from . import helpers
 
@@ -17,29 +15,32 @@ __namespace__ = 'import'
 
 @command
 @helpers.nodiff
-def init(clientname, *paths, **kwargs):
+def init(*paths, limit=0, **kwargs):
     """Initial import for real™.
 
     paths   Paths to json files."""
-    if not clientname:
-        helpers.abort('Client not given')
-    try:
-        client = Client.get(Client.name == clientname)
-    except Client.DoesNotExist:
-        helpers.abort('Client not found {}'.format(clientname))
-    session = Session.create(client=client)
-    context.set('session',session)
     for path in paths:
         print('Processing', path)
         rows = helpers.iter_file(path, formatter=json.loads)
-        print('Computing file size')
-        total = sum(1 for line in helpers.iter_file(path))
-        print('Done computing file size')
+        if limit:
+            print('Running with limit', limit)
+            extract = []
+            for i, row in enumerate(rows):
+                if i >= limit:
+                    break
+                extract.append(row)
+            rows = extract
+            total = limit
+        else:
+            print('Computing file size')
+            total = sum(1 for line in helpers.iter_file(path))
+            print('Done computing file size')
         # Use `all` to force generator evaluation.
         all(helpers.batch(process_rows, rows, chunksize=100, total=total))
 
 
-def process_rows(*rows, **kwargs):
+@helpers.session
+def process_rows(*rows):
     with database.atomic():
         for row in rows:
             process_row(row)
@@ -49,17 +50,17 @@ def process_rows(*rows, **kwargs):
 def process_row(row):
     kind = row.pop('type')
     if kind == "municipality":
-         process_municipality(row)
+        return process_municipality(row)
     elif kind == "group":
-         process_group(row)
+        return process_group(row)
     elif kind == "postcode":
-         process_postcode(row)
+        return process_postcode(row)
     elif kind == "housenumber":
-         process_housenumber(row)
+        return process_housenumber(row)
     elif kind == "position":
-         process_position(row)
+        return process_position(row)
     else:
-         reporter.error('Missing "type" key', row)
+        return reporter.error('Missing "type" key', row)
 
 
 def process_municipality(row):
@@ -154,7 +155,7 @@ def process_postcode(row):
         Municipality.insee == insee).first()
     if instance:
         return reporter.notice('PostCode already exists', code)
-    validator = PostCode.validator(data)
+    validator = PostCode.validator(**data)
     if validator.errors:
         return reporter.error('PostCode errors', (validator.errors,
                                                   code, insee))

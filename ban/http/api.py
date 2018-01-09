@@ -722,7 +722,7 @@ def bbox():
     password = config.get('DB_PASSWORD')
     host = config.get('DB_HOST')
     if (host is None):
-        host = "127.0.0.1"
+        host = "localhost"
     port = config.get('DB_PORT')
 
     connectString = "dbname='{}' user='{}' password='{}' host='{}' port='{}'".format(dbname,user,password,host,port)
