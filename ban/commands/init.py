@@ -7,7 +7,8 @@ from ban.core.models import (Group, HouseNumber, Municipality, Position,
                              PostCode)
 from ban.db import database
 from ban.utils import compute_cia
-
+from ban.core import context, config
+from ban.auth.models import Session, Client
 from . import helpers
 
 __namespace__ = 'import'
@@ -15,10 +16,23 @@ __namespace__ = 'import'
 
 @command
 @helpers.nodiff
-def init(*paths, limit=0, **kwargs):
+def init(clientname, *paths, limit=0, **kwargs):
     """Initial import for real™.
 
     paths   Paths to json files."""
+    session = context.get('session')
+    if not session:
+        if not clientname:
+            helpers.abort('Client not given')
+        qs = Client.select().where(Client.name == clientname)
+        if qs.exists():
+#        try:
+            client = qs.get()
+        else:
+#        except Client.DoesNotExist:
+            helpers.abort('Client not found {}'.format(clientname or ''))
+        session = Session.create(client=client)
+        context.set('session',session)
     for path in paths:
         print('Processing', path)
         rows = helpers.iter_file(path, formatter=json.loads)
@@ -35,11 +49,11 @@ def init(*paths, limit=0, **kwargs):
             print('Computing file size')
             total = sum(1 for line in helpers.iter_file(path))
             print('Done computing file size')
+#        rows = list(rows)
         # Use `all` to force generator evaluation.
-        all(helpers.batch(process_rows, rows, chunksize=100, total=total))
+        all(helpers.batch(process_rows,rows,chunksize=100,total=total))
 
 
-@helpers.session
 def process_rows(*rows):
     with database.atomic():
         for row in rows:
