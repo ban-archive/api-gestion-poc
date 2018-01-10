@@ -7,6 +7,8 @@ from ban.core.models import (Group, HouseNumber, Municipality, Position,
                              PostCode)
 from ban.db import database
 from ban.utils import compute_cia
+from ban.auth.models import Session, Client
+from ban.core import context, config
 
 from . import helpers
 
@@ -15,10 +17,13 @@ __namespace__ = 'import'
 
 @command
 @helpers.nodiff
-def init(*paths, limit=0, **kwargs):
+def init(clientname, *paths, limit=0, **kwargs):
     """Initial import for real™.
 
     paths   Paths to json files."""
+    if not clientname:
+        helpers.abort('Client not given')
+    context.set('clientname',clientname)
     for path in paths:
         print('Processing', path)
         rows = helpers.iter_file(path, formatter=json.loads)
@@ -37,7 +42,6 @@ def init(*paths, limit=0, **kwargs):
             print('Done computing file size')
         # Use `all` to force generator evaluation.
         all(helpers.batch(process_rows, rows, chunksize=100, total=total))
-
 
 @helpers.session
 def process_rows(*rows):
