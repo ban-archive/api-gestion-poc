@@ -11,7 +11,7 @@ from pathlib import Path
 import decorator
 from progressist import ProgressBar
 
-from ban.auth.models import Session, User, Client
+from ban.auth.models import Session, User
 from ban.db.model import SelectQuery
 from ban.core import context, config
 from ban.core.versioning import Diff
@@ -55,7 +55,7 @@ def iter_file(path, formatter=lambda x: x):
 
 def abort(msg):
     sys.stderr.write("\n" + msg)
-    os._exit(1)
+    sys.exit(1)
 
 
 class Bar(ProgressBar):
@@ -72,18 +72,49 @@ def collect_report(func, chunk):
     return results, reports
 
 
+class ChunkedPool(Pool):
+
+    @classmethod
+    def _get_tasks_from_query(cls, func, query, chunksize):
+        for idx in range(0, query.count(), chunksize):
+            yield (func, list(query.limit(chunksize).offset(idx)))
+
+    def imap_unordered(self, func, iterable, chunksize):
+        """Customized version of imap_unordered.
+        Directly send chunks to func, instead of iterating in each process and
+        sending one by one.
+        Original:
+        https://hg.python.org/cpython/file/tip/Lib/multiprocessing/pool.py#l271
+        Other tried options:
+        - map_async: makes a list(iterable), so it loads all the data for each
+          process into RAM
+        - apply_async: needs manual chunking
+        """
+        assert self._state == RUN
+        if isinstance(iterable, SelectQuery):
+            task_batches = self._get_tasks_from_query(func, iterable,
+                                                      chunksize)
+        else:
+            task_batches = self._get_tasks(func, iterable, chunksize)
+        result = IMapUnorderedIterator(self._cache)
+        tasks = ((result._job, i, collect_report, (func, chunk), {})
+                 for i, (_, chunk) in enumerate(task_batches))
+        self._taskqueue.put((tasks, result._set_length))
+        return result
+
+
 def batch(func, iterable, chunksize=1000, total=None, progress=True):
     # This is the main reporter instance.
     reporter = context.get('reporter')
     bar = Bar(total=total, throttle=timedelta(seconds=1))
     workers = int(config.get('WORKERS', os.cpu_count()))
 
-    pool = Pool(processes=workers)
-    for results, reports in pool.map(func, iterable, chunksize):
-        reporter.merge(reports)
-        bar(step=len(results))
-        yield from results
-    bar.finish()
+    with ChunkedPool(processes=workers) as pool:
+        for results, reports in pool.imap_unordered(func, iterable, chunksize):
+            reporter.merge(reports)
+            bar(step=len(results))
+            yield from results
+        bar.finish()
 
 
 def prompt(text, default=..., confirmation=False, coerce=None, hidden=False):
@@ -150,17 +181,20 @@ def confirm(text, default=None):
         if value == '' and default is not None:
             return default
 
+
 @decorator.decorator
 def session(func, *args, **kwargs):
     session = context.get('session')
     if not session:
-        clientname = context.get('clientname')
-        qs = Client.select().where(Client.name == clientname)
+        qs = User.select().where(User.is_staff == True)
+        username = config.get('SESSION_USER')
+        if username:
+            qs = qs.where(User.username == username)
         try:
-            client = qs.get()
-        except Client.DoesNotExist:
-            abort('Client not found {}'.format(clientname or ''))
-        session = Session.create(client=client)
+            user = qs.get()
+        except User.DoesNotExist:
+            abort('Admin user not found {}'.format(username or ''))
+        session = Session.create(user=user)
         context.set('session', session)
     return func(*args, **kwargs)
 
