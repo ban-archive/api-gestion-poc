@@ -19,7 +19,6 @@ def init(*paths, limit=0, **kwargs):
     """Initial import for real™.
 
     paths   Paths to json files."""
-    import pdb;pdb.set_trace()
     for path in paths:
         print('Processing', path)
         rows = helpers.iter_file(path, formatter=json.loads)
