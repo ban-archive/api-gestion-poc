@@ -71,7 +71,7 @@ def grantsetter(client_id, code, request, *args, **kwargs):
     pass
 
 
-@app.route('/token/', methods=['POST'])
+@app.route('/token', methods=['POST'])
 @json_to_form
 @auth.token_handler
 def authorize(*args, **kwargs):
