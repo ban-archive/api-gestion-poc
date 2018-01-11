@@ -115,7 +115,7 @@ def process_group(row):
         return
     if instance:
         attributes = getattr(instance, 'attributes') or {}
-        if attributes.get('source') == source:
+        if attributes.get('source') and attributes.get('source') == source:
             # Reimporting same data?
             reporter.warning('Group already exist', fantoir)
             return
