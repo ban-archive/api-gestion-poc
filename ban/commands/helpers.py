@@ -5,13 +5,14 @@ import os
 import pkgutil
 import sys
 from multiprocessing.pool import RUN, IMapUnorderedIterator, Pool
+from multiprocessing import Manager, Event
 from importlib import import_module
 from pathlib import Path
 
 import decorator
 from progressist import ProgressBar
 
-from ban.auth.models import Session, User
+from ban.auth.models import Session, Client
 from ban.db.model import SelectQuery
 from ban.core import context, config
 from ban.core.versioning import Diff
@@ -55,7 +56,7 @@ def iter_file(path, formatter=lambda x: x):
 
 def abort(msg):
     sys.stderr.write("\n" + msg)
-    sys.exit(1)
+    os._exit(1)
 
 
 class Bar(ProgressBar):
@@ -110,11 +111,15 @@ def batch(func, iterable, chunksize=1000, total=None, progress=True):
     workers = int(config.get('WORKERS', os.cpu_count()))
 
     with ChunkedPool(processes=workers) as pool:
-        for results, reports in pool.imap_unordered(func, iterable, chunksize):
-            reporter.merge(reports)
-            bar(step=len(results))
-            yield from results
-        bar.finish()
+        try:
+            for results, reports in pool.imap_unordered(func, iterable, chunksize):
+                reporter.merge(reports)
+                bar(step=len(results))
+                yield from results
+            bar.finish()
+        except Exception as e:
+            print("\n"+e.args[0])
+            pool.terminate()
 
 
 def prompt(text, default=..., confirmation=False, coerce=None, hidden=False):
@@ -184,18 +189,13 @@ def confirm(text, default=None):
 
 @decorator.decorator
 def session(func, *args, **kwargs):
-    session = context.get('session')
-    if not session:
-        qs = User.select().where(User.is_staff == True)
-        username = config.get('SESSION_USER')
-        if username:
-            qs = qs.where(User.username == username)
-        try:
-            user = qs.get()
-        except User.DoesNotExist:
-            abort('Admin user not found {}'.format(username or ''))
-        session = Session.create(user=user)
-        context.set('session', session)
+    clientname = context.get('clientname')
+    try:
+        client = Client.select().where(Client.name == clientname).get()
+    except Client.DoesNotExist:
+        raise Exception('Client not found {}'.format(clientname or ''))
+    session = Session.create(client=client)
+    context.set('session', session)
     return func(*args, **kwargs)
 
 
