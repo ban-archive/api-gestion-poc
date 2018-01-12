@@ -5,7 +5,6 @@ import os
 import pkgutil
 import sys
 from multiprocessing.pool import RUN, IMapUnorderedIterator, Pool
-from multiprocessing import Manager, Event
 from importlib import import_module
 from pathlib import Path
 
@@ -56,7 +55,7 @@ def iter_file(path, formatter=lambda x: x):
 
 def abort(msg):
     sys.stderr.write("\n" + msg)
-    os._exit(1)
+    sys.exit(1)
 
 
 class Bar(ProgressBar):
