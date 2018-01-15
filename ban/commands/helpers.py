@@ -11,7 +11,7 @@ from pathlib import Path
 import decorator
 from progressist import ProgressBar
 
-from ban.auth.models import Session, Client
+from ban.auth.models import Session, Client, User
 from ban.db.model import SelectQuery
 from ban.core import context, config
 from ban.core.versioning import Diff
@@ -188,6 +188,23 @@ def confirm(text, default=None):
 
 @decorator.decorator
 def session(func, *args, **kwargs):
+    session = context.get('session')
+    if not session:
+        qs = User.select().where(User.is_staff == True)
+        username = config.get('SESSION_USER')
+        if username:
+            qs = qs.where(User.username == username)
+        try:
+            user = qs.get()
+        except User.DoesNotExist:
+            abort('Admin user not found {}'.format(username or ''))
+        session = Session.create(user=user)
+        context.set('session', session)
+    return func(*args, **kwargs)
+
+
+@decorator.decorator
+def session_client(func, *args, **kwargs):
     clientname = context.get('clientname')
     try:
         client = Client.select().where(Client.name == clientname).get()

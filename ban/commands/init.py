@@ -41,7 +41,7 @@ def init(clientname, *paths, limit=0, **kwargs):
         all(helpers.batch(process_rows, rows, chunksize=100, total=total))
 
 
-@helpers.session
+@helpers.session_client
 def process_rows(*rows):
     with database.atomic():
         for row in rows:
