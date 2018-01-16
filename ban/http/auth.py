@@ -5,7 +5,8 @@ from werkzeug.datastructures import ImmutableMultiDict
 
 from ban.auth import models
 from ban.core import context
-from ban.utils import is_uuid4
+from ban.utils import is_uuid4, utcnow
+from datetime import timedelta
 
 from .wsgi import app
 
@@ -41,6 +42,9 @@ def tokengetter(access_token=None, refresh_token=None):
     if access_token:
         token = models.Token.first(models.Token.access_token == access_token)
         if token:
+            if token.expires > utcnow() and token.expires < utcnow()+ timedelta(minutes=30):
+                token.expires = token.expires + timedelta(hours=1)
+                token.save()
             context.set('session', token.session)
             # We use TZ aware datetime while Flask Oauthlib wants naive ones.
             token.expires = token.expires.replace(tzinfo=None)
