@@ -153,7 +153,7 @@ class Token(db.Model):
     expires = db.DateTimeField()
 
     def __init__(self, **kwargs):
-        expires_in = kwargs.pop('expires_in', 60 * 60 * 24)
+        expires_in = kwargs.pop('expires_in', 60 * 60 )
         kwargs['expires'] = utcnow() + timedelta(seconds=expires_in)
         super().__init__(**kwargs)
 
