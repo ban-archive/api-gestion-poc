@@ -11,7 +11,7 @@ from pathlib import Path
 import decorator
 from progressist import ProgressBar
 
-from ban.auth.models import Session, User
+from ban.auth.models import Session, Client, User
 from ban.db.model import SelectQuery
 from ban.core import context, config
 from ban.core.versioning import Diff
@@ -110,11 +110,15 @@ def batch(func, iterable, chunksize=1000, total=None, progress=True):
     workers = int(config.get('WORKERS', os.cpu_count()))
 
     with ChunkedPool(processes=workers) as pool:
-        for results, reports in pool.imap_unordered(func, iterable, chunksize):
-            reporter.merge(reports)
-            bar(step=len(results))
-            yield from results
-        bar.finish()
+        try:
+            for results, reports in pool.imap_unordered(func, iterable, chunksize):
+                reporter.merge(reports)
+                bar(step=len(results))
+                yield from results
+            bar.finish()
+        except Exception as e:
+            print("\n"+e.args[0])
+            pool.terminate()
 
 
 def prompt(text, default=..., confirmation=False, coerce=None, hidden=False):
@@ -196,6 +200,18 @@ def session(func, *args, **kwargs):
             abort('Admin user not found {}'.format(username or ''))
         session = Session.create(user=user)
         context.set('session', session)
+    return func(*args, **kwargs)
+
+
+@decorator.decorator
+def session_client(func, *args, **kwargs):
+    clientname = context.get('clientname')
+    try:
+        client = Client.select().where(Client.name == clientname).get()
+    except Client.DoesNotExist:
+        raise Exception('Client not found {}'.format(clientname or ''))
+    session = Session.create(client=client)
+    context.set('session', session)
     return func(*args, **kwargs)
 
 
