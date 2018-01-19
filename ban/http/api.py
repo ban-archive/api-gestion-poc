@@ -87,9 +87,9 @@ class ModelEndpoint(CollectionEndpoint):
             instance = err.instance
         return instance
 
-    def save_object(self, instance=None, update=False):
+    def save_object(self, instance=None, update=False, json=None):
         validator = self.model.validator(update=update, instance=instance,
-                                         **request.json or {})
+                                         **json or {})
         if validator.errors:
             abort(422, error='Invalid data', errors=validator.errors)
         try:
@@ -229,7 +229,7 @@ class ModelEndpoint(CollectionEndpoint):
 
     @app.jsonify
     @app.endpoint(methods=['POST'])
-    def post(self):
+    def post(self, json=None):
         """Create {resource}.
 
         parameters:
@@ -258,14 +258,16 @@ class ModelEndpoint(CollectionEndpoint):
             422:
                 $ref: '#/responses/422'
         """
-        instance = self.save_object()
+        if not json:
+            json = request.json
+        instance = self.save_object(json=json)
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         headers = {'Location': url_for(endpoint, identifier=instance.id)}
         return instance.as_resource, 201, headers
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
-    def patch(self, identifier):
+    def patch(self, identifier, json=None):
         """Patch {resource} with 'identifier'.
 
         parameters:
@@ -297,13 +299,15 @@ class ModelEndpoint(CollectionEndpoint):
             422:
                 $ref: '#/responses/422'
         """
+        if not json:
+            json = request.json
         instance = self.get_object(identifier)
-        instance = self.save_object(instance, update=True)
+        instance = self.save_object(instance, update=True, json=json)
         return instance.as_resource
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
-    def put(self, identifier):
+    def put(self, identifier, json=None):
         """Replace or restore {resource} with 'identifier'.
 
         parameters:
@@ -335,13 +339,15 @@ class ModelEndpoint(CollectionEndpoint):
             422:
                 $ref: '#/responses/422'
         """
+        if not json:
+            json = request.json
         instance = self.get_object(identifier)
         if instance.deleted_at:
             # We want to create only one new version for a restore. Change the
             # property here, but let the save_object do the actual save
             # if the data is valid.
             instance.deleted_at = None
-        instance = self.save_object(instance)
+        instance = self.save_object(instance, json=json)
         return instance.as_resource
 
     @app.jsonify
@@ -654,6 +660,53 @@ def bal_post():
     bal(StringIO(data.read().decode('utf-8-sig')))
     reporter = context.get('reporter')
     return dumps({'report': reporter})
+
+
+@app.route('/batch', methods=['POST'])
+@auth.require_oauth()
+def batch():
+    """
+    Execute multiple requests, submitted as a batch.
+    :statuscode 207: Multi status
+    """
+    try:
+        req = request.json
+    except ValueError as e:
+        abort(400, error=str(e))
+    reponse = []
+    db = models.Municipality._meta.database
+    with db.atomic():
+        for index, re in enumerate(req):
+            method = re['method']
+            path = re['path']
+            body = re.get('body')
+            if path[:13] == Municipality.endpoint:
+                self = Municipality()
+            elif path[:9] == PostCode.endpoint:
+                self = PostCode()
+            elif path[:6] == Group.endpoint:
+                self = Group()
+            elif path[:12] == HouseNumber.endpoint:
+                self = HouseNumber()
+            elif path[:9] == Position.endpoint:
+                self = Position()
+            else:
+                abort(422, error="Wrong resource {}".format(path))
+            if method == 'POST':
+                rep = self.post(json=body)
+                reponse.append(rep)
+            elif method == 'PUT':
+                identifier = path.split('/')[2]
+                rep = self.put(identifier=identifier, json=body)
+            elif method == 'PATCH':
+                identifier = path.split('/')[2]
+                rep = self.patch(identifier=identifier, json=body)
+            elif method == 'DELETE':
+                identifier = path.split('/')[2]
+                rep = self.delete(identifier=identifier)
+            else:
+                abort(422, error="Wrong request {}".format(method))
+    return rep
 
 
 @app.resource
