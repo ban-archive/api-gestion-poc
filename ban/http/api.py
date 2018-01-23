@@ -191,7 +191,7 @@ class ModelEndpoint(CollectionEndpoint):
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['POST'])
-    def post_resource(self, identifier):
+    def post_resource(self, identifier, json=None):
         """Post {resource} with 'identifier'.
 
         parameters:
@@ -223,8 +223,10 @@ class ModelEndpoint(CollectionEndpoint):
             422:
                 $ref: '#/responses/422'
         """
+        if not json:
+            json = request.json
         instance = self.get_object(identifier)
-        instance = self.save_object(instance, update=True)
+        instance = self.save_object(instance, update=True, json=json)
         return instance.as_resource
 
     @app.jsonify

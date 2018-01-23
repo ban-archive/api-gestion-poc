@@ -69,6 +69,7 @@ def test_batch_post_municipality_without_scopes(post):
     resp = post('/batch', data)
     assert resp.status_code == 401
 
+
 @authorize('municipality_write')
 def test_batch_rollback_error(post):
     assert not models.Municipality.select().count()
