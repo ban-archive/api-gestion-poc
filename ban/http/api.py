@@ -673,14 +673,22 @@ def batch():
     """
     try:
         req = request.json
+        if req == []:
+            raise ValueError
     except ValueError as e:
         abort(400, error=str(e))
     db = models.Municipality._meta.database
     with db.atomic():
         for index, re in enumerate(req):
             method = re.get('method')
+            if method is None:
+                abort(422, error="No method given")
             path = re.get('path')
-            body = re.get('body')
+            if path is None:
+                abort(422, error="No path given")
+            body = re.get('body') or {}
+            if body == {} and method != 'DELETE':
+                abort(422, error='No body given')
             if path[:13] == Municipality.endpoint:
                 self = Municipality()
             elif path[:9] == PostCode.endpoint:
