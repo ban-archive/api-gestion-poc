@@ -673,12 +673,11 @@ def batch():
         req = request.json
     except ValueError as e:
         abort(400, error=str(e))
-    reponse = []
     db = models.Municipality._meta.database
     with db.atomic():
         for index, re in enumerate(req):
-            method = re['method']
-            path = re['path']
+            method = re.get('method')
+            path = re.get('path')
             body = re.get('body')
             if path[:13] == Municipality.endpoint:
                 self = Municipality()
@@ -692,9 +691,11 @@ def batch():
                 self = Position()
             else:
                 abort(422, error="Wrong resource {}".format(path))
+            scopes = '{}_write'.format(self.__class__.__name__.lower())
+            if scopes not in request.oauth.access_token.scopes:
+                abort(401)
             if method == 'POST':
                 rep = self.post(json=body)
-                reponse.append(rep)
             elif method == 'PUT':
                 identifier = path.split('/')[2]
                 rep = self.put(identifier=identifier, json=body)
