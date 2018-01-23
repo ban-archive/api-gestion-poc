@@ -63,6 +63,9 @@ class PointField(peewee.Field, postgres_ext.IndexedFieldMixin):
             if search:
                 value = (float(search.group('lon')),
                          float(search.group('lat')))
+            else:
+                if not value[0].isdigit() or not value[1].isdigit():
+                    raise ValueError
         return Point(value[0], value[1], srid=self.srid)
 
     def contained(self, geom):

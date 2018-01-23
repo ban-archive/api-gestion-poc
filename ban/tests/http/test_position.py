@@ -424,3 +424,15 @@ def test_can_get_position_from_laposte_id(get, url):
     resp = get('/position/laposte:123456789')
     assert resp.status_code == 200
     assert resp.json['laposte'] == '123456789'
+
+@authorize('position_write')
+def test_check_position_center(post):
+    housenumber = HouseNumberFactory()
+    data = {
+        "center": "fake",
+        "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
+        "housenumber": housenumber.id,
+    }
+    resp = post('/position', data)
+    assert resp.status_code == 422
