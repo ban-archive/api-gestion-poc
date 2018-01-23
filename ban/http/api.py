@@ -646,12 +646,6 @@ class Position(VersionedModelEndpoint):
         return qs
 
 
-@app.resource
-class User(ModelEndpoint):
-    endpoint = '/user'
-    model = amodels.User
-
-
 @app.route('/import/bal', methods=['POST'])
 @auth.require_oauth('bal')
 def bal_post():

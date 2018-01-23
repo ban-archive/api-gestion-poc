@@ -109,13 +109,6 @@ def test_should_not_allow_deleting_street_linked_to_housenumber():
     assert models.Group.get(models.Group.id == street.id)
 
 
-def test_tmp_fantoir_should_use_name():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='',
-                          name="Rue des Pêchers")
-    assert street.tmp_fantoir == '#RUEDESPECHERS'
-
-
 def test_compute_cia_should_consider_insee_fantoir_number_and_ordinal():
     municipality = MunicipalityFactory(insee='93031')
     street = GroupFactory(municipality=municipality, fantoir='930311491')

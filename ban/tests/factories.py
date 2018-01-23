@@ -30,6 +30,16 @@ class UserFactory(BaseTestModel):
     class Meta:
         model = auth_models.User
 
+class ClientFactory(BaseTestModel):
+    name = FuzzyText(length=12)
+    # Avoid running bcrypt crypting at each test.
+    # password = factory.PostGenerationMethodCall('set_password', 'password')
+    email = factory.LazyAttribute(lambda obj: '%s@example.com' % obj.username)
+
+    class Meta:
+        model = auth_models.User
+
+
 
 class ClientFactory(BaseTestModel):
     name = FuzzyText(length=54)
