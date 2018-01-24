@@ -7,18 +7,17 @@ from ban.core.models import (Group, HouseNumber, Municipality, Position,
                              PostCode)
 from ban.db import database
 from ban.core import context
-from ban.auth.models import Client
+from ban.http.auth import auth
 
 from . import helpers
 
 __namespace__ = 'import'
 
-
 @command
 @helpers.nodiff
 def init(clientname, *paths, limit=0, **kwargs):
     """Initial import for real™.
-
+    clientname Name of the client
     paths   Paths to json files."""
     context.set('clientname', clientname)
     for path in paths:
