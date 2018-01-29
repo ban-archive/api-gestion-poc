@@ -11,7 +11,7 @@ def test_access_token_with_client_credentials_and_ip(client):
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'ip': '1.2.3.4',
-        'status': 'dev'
+        'status': 'develop'
     })
     assert resp.status_code == 200
     assert 'access_token' in resp.json
@@ -24,7 +24,7 @@ def test_access_token_with_client_credentials_and_email(client):
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'email': 'ba@to.fr',
-        'status': 'dev'
+        'status': 'develop'
     })
     assert resp.status_code == 200
     assert 'access_token' in resp.json
@@ -82,7 +82,7 @@ def test_can_request_token_with_json_enoded_body(client):
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'ip': '1.2.3.4',
-        'status': 'dev'
+        'status': 'develop'
     }, content_type='application/json')
     assert resp.status_code == 200
     assert 'access_token' in resp.json
@@ -95,7 +95,7 @@ def test_create_token_with_scopes(client):
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'ip': '1.2.3.4',
-        'status': 'dev'
+        'status': 'develop'
     })
     assert resp.status_code == 200
     token = models.Token.first()
@@ -109,7 +109,7 @@ def test_create_token_without_scopes(client):
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'ip': '1.2.3.4',
-        'status': 'dev'
+        'status': 'develop'
     })
     assert resp.status_code == 200
     token = models.Token.first()

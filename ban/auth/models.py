@@ -154,6 +154,7 @@ class Token(db.Model):
     STATUS_SDIS = 'sdis'
     STATUS_MUNICIPAL = 'municipal administration'
     STATUS_ADMIN = 'admin'
+    STATUS_DEV = 'develop'
     STATUS_INSEE = 'insee'
     STATUS_TOKEN = (
         STATUS_SDIS,
@@ -163,7 +164,8 @@ class Token(db.Model):
         STATUS_DGFIP,
         STATUS_MUNICIPAL,
         STATUS_ADMIN,
-        STATUS_INSEE)
+        STATUS_INSEE,
+        STATUS_DEV)
     session = db.ForeignKeyField(Session)
     token_type = db.CharField(max_length=40)
     access_token = db.CharField(max_length=255)
