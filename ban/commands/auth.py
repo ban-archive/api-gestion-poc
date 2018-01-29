@@ -15,7 +15,7 @@ def dummytoken(token, **kwargs):
     Token.create(session=session.pk, access_token=token, expires_in=3600*24,
                  token_type='Bearer',
                  scopes="municipality_write postcode_write \
-                 group_write housenumber_write position_write".split())
+                 group_write housenumber_write position_write bal".split())
     reporter.notice('Created token', token)
 
 
@@ -113,7 +113,7 @@ def createclient(name=None, user=None, scopes=[], **kwargs):
 @command
 def listclients(**kwargs):
     """List existing clients with details."""
-    tpl = '{:<40} {:<40} {:<60} {}'
+    tpl = '{:<50} {:<40} {:<40} {:<60} {}'
     print(tpl.format('id', 'name', 'client_id', 'client_secret', 'scopes'))
     for client in Client.select():
         print(tpl.format(client.id, client.name, str(client.client_id),
