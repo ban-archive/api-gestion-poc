@@ -125,7 +125,7 @@ class Session(db.Model):
     client = db.CachedForeignKeyField(Client, null=True)
     ip = db.CharField(null=True)  # TODO IPField
     email = db.CharField(null=True)  # TODO EmailField
-    attributes = db.HStoreField(null=True)
+    status = db.CharField(null=True)
 
     def serialize(self, *args):
         # Pretend to be a resource for created_by/modified_by values in
@@ -135,22 +135,42 @@ class Session(db.Model):
             'id': self.pk,
             'client': self.client.name if self.client else None,
             'user': self.user.username if self.user else None,
-            'attributes': self.attributes if self.attributes else None
+            'status': self.status if self.status else None
         }
 
     def save(self, **kwargs):
         if not self.user and not self.client:
             raise ValueError('Session must have either a client or a user')
+        if not self.status:
+            raise ValueError('Session must have a status')
         super().save(**kwargs)
 
 
 class Token(db.Model):
+    STATUS_IGN = 'ign'
+    STATUS_LAPOSTE = 'laposte'
+    STATUS_DGFIP = 'dgfip'
+    STATUS_OSM = 'osm'
+    STATUS_SDIS = 'sdis'
+    STATUS_MUNICIPAL = 'municipal administration'
+    STATUS_ADMIN = 'admin'
+    STATUS_INSEE = 'insee'
+    STATUS_TOKEN = (
+        STATUS_SDIS,
+        STATUS_OSM,
+        STATUS_LAPOSTE,
+        STATUS_IGN,
+        STATUS_DGFIP,
+        STATUS_MUNICIPAL,
+        STATUS_DEV,
+        STATUS_INSEE)
     session = db.ForeignKeyField(Session)
     token_type = db.CharField(max_length=40)
     access_token = db.CharField(max_length=255)
     refresh_token = db.CharField(max_length=255, null=True)
     scopes = db.ArrayField(db.CharField, default=[], null=True)
     expires = db.DateTimeField()
+    status = db.CharField(choices=STATUS_TOKEN, null=True)
 
     def __init__(self, **kwargs):
         expires_in = kwargs.pop('expires_in', 60 * 60 )
@@ -193,11 +213,15 @@ class Token(db.Model):
             return None
         if not data.get('client_id'):
             return None
+        if not data.get('status'):
+            return None
+        if data.get('status') not in cls.STATUS_TOKEN:
+            return None
         client = Client.first(Client.client_id == data['client_id'])
         session_data = {
             "email": data.get('email'),
             "ip": data.get('ip'),
-            "attributes": data.get('attributes'),
+            "status": data.get('status'),
             "client": client
         }
         session = Session.create(**session_data)  # get or create?
