@@ -162,7 +162,7 @@ class Token(db.Model):
         STATUS_IGN,
         STATUS_DGFIP,
         STATUS_MUNICIPAL,
-        STATUS_DEV,
+        STATUS_ADMIN,
         STATUS_INSEE)
     session = db.ForeignKeyField(Session)
     token_type = db.CharField(max_length=40)
