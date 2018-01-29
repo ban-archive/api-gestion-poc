@@ -16,25 +16,25 @@ def test_user_password_is_hashed():
 
 def test_session_can_be_created_with_a_user():
     user = UserFactory()
-    session = models.Session.create(user=user)
+    session = models.Session.create(user=user, status='admin')
     assert session.user == user
     assert session.serialize() == {
         'id': session.pk,
         'user': user.username,
         'client': None,
-        'attributes': None
+        'status': 'admin'
     }
 
 
 def test_session_can_be_created_with_a_client():
     client = ClientFactory()
-    session = models.Session.create(client=client)
+    session = models.Session.create(client=client, status='admin')
     assert session.client == client
     assert session.serialize() == {
         'id': session.pk,
         'user': None,
         'client': client.name,
-        'attributes': None
+        'status': 'admin'
     }
 
 
