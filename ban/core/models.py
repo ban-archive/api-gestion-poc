@@ -207,7 +207,7 @@ class Position(Model):
 
     identifiers = ['laposte', 'ign']
     resource_fields = ['center', 'source', 'housenumber', 'kind', 'comment',
-                       'parent', 'positioning', 'name', 'ign', 'laposte']
+                       'parent', 'positioning', 'name', 'ign', 'laposte', 'source_kind']
     readonly_fields = Model.readonly_fields + ['source_kind']
 
     name = db.CharField(max_length=200, null=True)
