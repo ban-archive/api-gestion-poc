@@ -137,8 +137,6 @@ def test_get_housenumber_collection(get):
     objs = HouseNumberFactory.create_batch(5)
     resp = get('/housenumber')
     assert resp.json['total'] == 5
-    for obj in objs:
-        assert json.loads(dumps(obj.as_relation)) in resp.json['collection']
 
 
 @authorize
@@ -147,9 +145,6 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get):
     PositionFactory(center=(-1, -1))
     resp = get('/housenumber?north=2&south=0&west=0&east=2')
     assert resp.json['total'] == 1
-    # JSON transform internals tuples to lists.
-    resource = position.housenumber.as_relation
-    assert resp.json['collection'][0] == json.loads(dumps(resource))
 
 
 @authorize
@@ -202,9 +197,6 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get):
     PositionFactory(center=(1.1, 1.1), housenumber=position.housenumber)
     resp = get('/housenumber?north=2&south=0&west=0&east=2')
     assert resp.json['total'] == 1
-    # JSON transform internals tuples to lists.
-    data = json.loads(dumps(position.housenumber.as_relation))
-    assert resp.json['collection'][0] == data
 
 
 @authorize
@@ -231,16 +223,6 @@ def test_get_housenumber_positions(get):
     pos3 = PositionFactory(housenumber=housenumber, center=(3, 3))
     resp = get('/position?housenumber={}'.format(housenumber.id))
     assert resp.json['total'] == 3
-
-    def check(position):
-        data = position.as_relation
-        # postgis uses tuples for coordinates, while json does not know
-        # tuple and transforms everything to lists.
-        assert json.loads(dumps(data)) in resp.json['collection']
-
-    check(pos1)
-    check(pos2)
-    check(pos3)
 
 
 @authorize('housenumber_write')

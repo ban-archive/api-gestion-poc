@@ -119,12 +119,6 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         return self.serialize({'*': {}})
 
     @property
-    def as_relation(self):
-        """Resources plus relation references without metadata."""
-        # All fields plus relations references.
-        return self.serialize({f: {} for f in self.collection_fields})
-
-    @property
     def as_version(self):
         """Resources plus relations references and metadata."""
         return self.serialize({f: {} for f in self.versioned_fields})
