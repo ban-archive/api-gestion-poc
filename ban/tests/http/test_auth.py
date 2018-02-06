@@ -11,7 +11,7 @@ def test_access_token_with_client_credentials_and_ip(client):
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'ip': '1.2.3.4',
-        'status': 'develop'
+        'contributor_type': 'develop'
     })
     assert resp.status_code == 200
     assert 'access_token' in resp.json
@@ -24,7 +24,7 @@ def test_access_token_with_client_credentials_and_email(client):
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'email': 'ba@to.fr',
-        'status': 'develop'
+        'contributor_type': 'develop'
     })
     assert resp.status_code == 200
     assert 'access_token' in resp.json
@@ -82,7 +82,7 @@ def test_can_request_token_with_json_enoded_body(client):
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'ip': '1.2.3.4',
-        'status': 'develop'
+        'contributor_type': 'develop'
     }, content_type='application/json')
     assert resp.status_code == 200
     assert 'access_token' in resp.json
@@ -95,7 +95,7 @@ def test_create_token_with_scopes(client):
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'ip': '1.2.3.4',
-        'status': 'develop'
+        'contributor_type': 'develop'
     })
     assert resp.status_code == 200
     token = models.Token.first()
@@ -109,14 +109,14 @@ def test_create_token_without_scopes(client):
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'ip': '1.2.3.4',
-        'status': 'develop'
+        'contributor_type': 'develop'
     })
     assert resp.status_code == 200
     token = models.Token.first()
     assert token.scopes == []
 
 
-def test_cannot_create_token_without_status(client):
+def test_cannot_create_token_without_contributor_type(client):
     c = ClientFactory()
     resp = client.post('/token', data={
         'grant_type': 'client_credentials',
@@ -127,13 +127,13 @@ def test_cannot_create_token_without_status(client):
     assert resp.status_code == 400
 
 
-def test_cannot_create_token_with_wrong_status(client):
+def test_cannot_create_token_with_wrong_contributor_type(client):
     c = ClientFactory()
     resp = client.post('/token', data={
         'grant_type': 'client_credentials',
         'client_id': str(c.client_id),
         'client_secret': c.client_secret,
         'ip': '1.2.3.4',
-        'status': 'wrong'
+        'contributor_type': 'wrong'
     })
     assert resp.status_code == 400

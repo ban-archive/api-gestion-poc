@@ -15,13 +15,13 @@ __namespace__ = 'import'
 
 @command
 @helpers.nodiff
-def init(clientname, status, *paths, limit=0, **kwargs):
+def init(clientname, contributor_type, *paths, limit=0, **kwargs):
     """Initial import for real™.
     clientname Name of the client
-    status Status of the session
+    contributor_type Contributor type of the session
     paths   Paths to json files."""
     context.set('clientname', clientname)
-    context.set('status', status)
+    context.set('contributor_type', contributor_type)
     for path in paths:
         print('Processing', path)
         rows = helpers.iter_file(path, formatter=json.loads)

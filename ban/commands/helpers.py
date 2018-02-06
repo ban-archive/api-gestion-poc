@@ -198,7 +198,7 @@ def session(func, *args, **kwargs):
             user = qs.get()
         except User.DoesNotExist:
             abort('Admin user not found {}'.format(username or ''))
-        session = Session.create(user=user, status='admin')
+        session = Session.create(user=user, contributor_type='admin')
         context.set('session', session)
     return func(*args, **kwargs)
 
@@ -206,12 +206,12 @@ def session(func, *args, **kwargs):
 @decorator.decorator
 def session_client(func, *args, **kwargs):
     clientname = context.get('clientname')
-    status = context.get('status')
+    contributor_type = context.get('contributor_type')
     try:
         client = Client.select().where(Client.name == clientname).get()
     except Client.DoesNotExist:
         raise Exception('Client not found {}'.format(clientname or ''))
-    session = Session.create(client=client, status=status)
+    session = Session.create(client=client, contributor_type=contributor_type)
     context.set('session', session)
     return func(*args, **kwargs)
 

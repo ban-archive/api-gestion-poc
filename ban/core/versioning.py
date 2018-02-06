@@ -133,7 +133,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             self.check_version()
             self.update_meta()
             try:
-                self.source_kind = self.created_by.status
+                self.source_kind = self.created_by.contributor_type
             except Exception:
                 pass
             super().save(*args, **kwargs)

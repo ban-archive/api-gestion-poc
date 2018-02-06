@@ -125,7 +125,7 @@ class Session(db.Model):
     client = db.CachedForeignKeyField(Client, null=True)
     ip = db.CharField(null=True)  # TODO IPField
     email = db.CharField(null=True)  # TODO EmailField
-    status = db.CharField(null=True)
+    contributor_type = db.CharField(null=True)
 
     def serialize(self, *args):
         # Pretend to be a resource for created_by/modified_by values in
@@ -135,44 +135,44 @@ class Session(db.Model):
             'id': self.pk,
             'client': self.client.name if self.client else None,
             'user': self.user.username if self.user else None,
-            'status': self.status if self.status else None
+            'contributor_type': self.contributor_type if self.contributor_type else None
         }
 
     def save(self, **kwargs):
         if not self.user and not self.client:
             raise ValueError('Session must have either a client or a user')
-        if not self.status:
-            raise ValueError('Session must have a status')
+        if not self.contributor_type:
+            raise ValueError('Session must have a contributor type')
         super().save(**kwargs)
 
 
 class Token(db.Model):
-    STATUS_IGN = 'ign'
-    STATUS_LAPOSTE = 'laposte'
-    STATUS_DGFIP = 'dgfip'
-    STATUS_OSM = 'osm'
-    STATUS_SDIS = 'sdis'
-    STATUS_MUNICIPAL = 'municipal administration'
-    STATUS_ADMIN = 'admin'
-    STATUS_DEV = 'develop'
-    STATUS_INSEE = 'insee'
-    STATUS_TOKEN = (
-        STATUS_SDIS,
-        STATUS_OSM,
-        STATUS_LAPOSTE,
-        STATUS_IGN,
-        STATUS_DGFIP,
-        STATUS_MUNICIPAL,
-        STATUS_ADMIN,
-        STATUS_INSEE,
-        STATUS_DEV)
+    TYPE_IGN = 'ign'
+    TYPE_LAPOSTE = 'laposte'
+    TYPE_DGFIP = 'dgfip'
+    TYPE_OSM = 'osm'
+    TYPE_SDIS = 'sdis'
+    TYPE_MUNICIPAL = 'municipal administration'
+    TYPE_ADMIN = 'admin'
+    TYPE_DEV = 'develop'
+    TYPE_INSEE = 'insee'
+    CONTRIBUTOR_TYPE = (
+        TYPE_SDIS,
+        TYPE_OSM,
+        TYPE_LAPOSTE,
+        TYPE_IGN,
+        TYPE_DGFIP,
+        TYPE_MUNICIPAL,
+        TYPE_ADMIN,
+        TYPE_INSEE,
+        TYPE_DEV)
     session = db.ForeignKeyField(Session)
     token_type = db.CharField(max_length=40)
     access_token = db.CharField(max_length=255)
     refresh_token = db.CharField(max_length=255, null=True)
     scopes = db.ArrayField(db.CharField, default=[], null=True)
     expires = db.DateTimeField()
-    status = db.CharField(choices=STATUS_TOKEN, null=True)
+    contributor_type = db.CharField(choices=CONTRIBUTOR_TYPE, null=True)
 
     def __init__(self, **kwargs):
         expires_in = kwargs.pop('expires_in', 60 * 60 )
@@ -215,15 +215,15 @@ class Token(db.Model):
             return None
         if not data.get('client_id'):
             return None
-        if not data.get('status'):
+        if not data.get('contributor_type'):
             return None
-        if data.get('status') not in cls.STATUS_TOKEN:
+        if data.get('contributor_type') not in cls.CONTRIBUTOR_TYPE:
             return None
         client = Client.first(Client.client_id == data['client_id'])
         session_data = {
             "email": data.get('email'),
             "ip": data.get('ip'),
-            "status": data.get('status'),
+            "contributor_type": data.get('contributor_type'),
             "client": client
         }
         session = Session.create(**session_data)  # get or create?

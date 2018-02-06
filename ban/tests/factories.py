@@ -58,7 +58,7 @@ class SessionFactory(BaseTestModel):
     client = factory.SubFactory(ClientFactory)
     ip = '127.0.0.1'
     email = 'yeehoo@yay.com'
-    status = 'admin'
+    contributor_type = 'admin'
 
     class Meta:
         model = auth_models.Session
@@ -70,7 +70,7 @@ class TokenFactory(BaseTestModel):
     access_token = FuzzyText(length=50)
     refresh_token = FuzzyText(length=50)
     scope = 'contrib'
-    status = 'admin'
+    contributor_type = 'admin'
     expires = factory.LazyAttribute(
                             lambda x: utcnow() + timedelta(minutes=50))
 
