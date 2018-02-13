@@ -156,6 +156,7 @@ class Token(db.Model):
     TYPE_ADMIN = 'admin'
     TYPE_DEV = 'develop'
     TYPE_INSEE = 'insee'
+    TYPE_VIEWER = 'viewer'
     CONTRIBUTOR_TYPE = (
         TYPE_SDIS,
         TYPE_OSM,
@@ -165,7 +166,8 @@ class Token(db.Model):
         TYPE_MUNICIPAL,
         TYPE_ADMIN,
         TYPE_INSEE,
-        TYPE_DEV)
+        TYPE_DEV,
+        TYPE_VIEWER)
     session = db.ForeignKeyField(Session)
     token_type = db.CharField(max_length=40)
     access_token = db.CharField(max_length=255)
@@ -229,4 +231,6 @@ class Token(db.Model):
         session = Session.create(**session_data)  # get or create?
         data['session'] = session.pk
         data['scopes'] = client.scopes
+        if session.contributor_type == cls.TYPE_VIEWER:
+            data['scopes'] = None
         return Token.create(**data)
