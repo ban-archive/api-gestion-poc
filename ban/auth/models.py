@@ -214,13 +214,13 @@ class Token(db.Model):
     @classmethod
     def create_with_session(cls, **data):
         if not data.get('ip') and not data.get('email'):
-            return None
+            return None, None
         if not data.get('client_id'):
-            return None
+            return None, 'Client id missing'
         if not data.get('contributor_type'):
-            return None
+            return None, 'Contributor type missing'
         if data.get('contributor_type') not in cls.CONTRIBUTOR_TYPE:
-            return None
+            return None, 'wrong contributor type : must be in the list {}'.format(cls.CONTRIBUTOR_TYPE)
         client = Client.first(Client.client_id == data['client_id'])
         session_data = {
             "email": data.get('email'),
@@ -233,4 +233,4 @@ class Token(db.Model):
         data['scopes'] = client.scopes
         if session.contributor_type == cls.TYPE_VIEWER:
             data['scopes'] = None
-        return Token.create(**data)
+        return Token.create(**data), None

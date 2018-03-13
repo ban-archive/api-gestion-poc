@@ -56,9 +56,9 @@ def tokensetter(metadata, req, *args, **kwargs):
     # req: oauthlib.Request (not Flask one).
     metadata.update(dict(req.decoded_body))
     metadata['client'] = req.client_id
-    token = models.Token.create_with_session(**metadata)
+    token, error = models.Token.create_with_session(**metadata)
     if not token:
-        abort(400, error='Missing payload')
+        abort(400, error=error)
 
 
 @auth.grantgetter
