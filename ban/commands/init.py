@@ -90,7 +90,7 @@ def populate(keys, source, dest):
 
 def process_group(row):
     data = dict(version=1)
-    keys = ['name', ('group', 'kind'), 'laposte', 'ign', 'fantoir']
+    keys = ['name', ('group', 'kind'), 'laposte', 'ign', 'fantoir', 'alias']
     populate(keys, row, data)
     insee = row.get('municipality:insee')
     if insee:
