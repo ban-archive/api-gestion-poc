@@ -132,6 +132,10 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         with self._meta.database.atomic():
             self.check_version()
             self.update_meta()
+            try:
+                self.source_kind = self.created_by.contributor_type
+            except Exception:
+                pass
             super().save(*args, **kwargs)
             self.store_version()
             self.lock_version()

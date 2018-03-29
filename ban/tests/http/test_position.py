@@ -319,9 +319,6 @@ def test_get_position_collection_can_be_filtered_by_bbox(get, url):
     PositionFactory(center=(-1, -1))
     resp = get('/position?north=2&south=0&west=0&east=2')
     assert resp.json['total'] == 1
-    # JSON transforms internals tuples to lists.
-    resource = position.as_relation
-    assert resp.json['collection'][0] == json.loads(dumps(resource))
 
 
 @authorize

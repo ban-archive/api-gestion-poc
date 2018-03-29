@@ -13,7 +13,7 @@ def test_init_should_accept_files_as_arguments(tmpdir):
     f2.write(json.dumps({"type": "municipality", "source": "INSEE/COG (2015)",
                          "insee": "22058", "name": "Le Feu"}))
     factories.ClientFactory(name='client')
-    init('client',str(f1), str(f2))
+    init('client', 'dev', str(f1), str(f2))
     assert models.Municipality.select().count() == 2
 
 
@@ -24,7 +24,7 @@ def test_init_should_accept_limit_argument(tmpdir):
     f.write(json.dumps({"type": "municipality", "source": "INSEE/COG (2015)",
                         "insee": "22058", "name": "Le Feu"}))
     factories.ClientFactory(name='client')
-    init('client',str(f), limit=1)
+    init('client', 'dev', str(f), limit=1)
     assert models.Municipality.select().count() == 1
 
 
@@ -361,7 +361,7 @@ def test_can_import_group_with_laposte_but_no_fantoir(session):
 # File: 09x_positions_sga-ign.json
 def test_process_positions_from_sga_ign(session):
     data = {'type': 'position', 'kind': 'segment',
-            'positionning': 'interpolation', 'source': 'IGN (2016-04)',
+            'positioning': 'interpolation', 'source': 'IGN (2016-04)',
             'housenumber:cia': '90004_0022_1_',
             'ign': 'ADRNIVX_0000000354868426',
             'geometry': {'type': 'Point',
@@ -384,7 +384,7 @@ def test_process_positions_from_sga_ign(session):
 # File: 09x_positions_sga-ign.json
 def test_can_update_position_from_ign_identifier(session):
     data = {'type': 'position', 'kind': 'segment',
-            'positionning': 'interpolation', 'source': 'IGN (2016-04)',
+            'positioning': 'interpolation', 'source': 'IGN (2016-04)',
             'housenumber:cia': '90004_0022_1_',
             'ign': 'ADRNIVX_0000000354868426',
             'geometry': {'type': 'Point',

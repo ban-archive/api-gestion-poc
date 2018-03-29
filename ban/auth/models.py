@@ -125,7 +125,7 @@ class Session(db.Model):
     client = db.CachedForeignKeyField(Client, null=True)
     ip = db.CharField(null=True)  # TODO IPField
     email = db.CharField(null=True)  # TODO EmailField
-    attributes = db.HStoreField(null=True)
+    contributor_type = db.CharField(null=True)
 
     def serialize(self, *args):
         # Pretend to be a resource for created_by/modified_by values in
@@ -135,22 +135,46 @@ class Session(db.Model):
             'id': self.pk,
             'client': self.client.name if self.client else None,
             'user': self.user.username if self.user else None,
-            'attributes': self.attributes if self.attributes else None
+            'contributor_type': self.contributor_type if self.contributor_type else None
         }
 
     def save(self, **kwargs):
         if not self.user and not self.client:
             raise ValueError('Session must have either a client or a user')
+        if not self.contributor_type:
+            raise ValueError('Session must have a contributor type')
         super().save(**kwargs)
 
 
 class Token(db.Model):
+    TYPE_IGN = 'ign'
+    TYPE_LAPOSTE = 'laposte'
+    TYPE_DGFIP = 'dgfip'
+    TYPE_OSM = 'osm'
+    TYPE_SDIS = 'sdis'
+    TYPE_MUNICIPAL = 'municipal administration'
+    TYPE_ADMIN = 'admin'
+    TYPE_DEV = 'develop'
+    TYPE_INSEE = 'insee'
+    TYPE_VIEWER = 'viewer'
+    CONTRIBUTOR_TYPE = (
+        TYPE_SDIS,
+        TYPE_OSM,
+        TYPE_LAPOSTE,
+        TYPE_IGN,
+        TYPE_DGFIP,
+        TYPE_MUNICIPAL,
+        TYPE_ADMIN,
+        TYPE_INSEE,
+        TYPE_DEV,
+        TYPE_VIEWER)
     session = db.ForeignKeyField(Session)
     token_type = db.CharField(max_length=40)
     access_token = db.CharField(max_length=255)
     refresh_token = db.CharField(max_length=255, null=True)
     scopes = db.ArrayField(db.CharField, default=[], null=True)
     expires = db.DateTimeField()
+    contributor_type = db.CharField(choices=CONTRIBUTOR_TYPE, null=True)
 
     def __init__(self, **kwargs):
         expires_in = kwargs.pop('expires_in', 60 * 60 )
@@ -190,17 +214,23 @@ class Token(db.Model):
     @classmethod
     def create_with_session(cls, **data):
         if not data.get('ip') and not data.get('email'):
-            return None
+            return None, None
         if not data.get('client_id'):
-            return None
+            return None, 'Client id missing'
+        if not data.get('contributor_type'):
+            return None, 'Contributor type missing'
+        if data.get('contributor_type') not in cls.CONTRIBUTOR_TYPE:
+            return None, 'wrong contributor type : must be in the list {}'.format(cls.CONTRIBUTOR_TYPE)
         client = Client.first(Client.client_id == data['client_id'])
         session_data = {
             "email": data.get('email'),
             "ip": data.get('ip'),
-            "attributes": data.get('attributes'),
+            "contributor_type": data.get('contributor_type'),
             "client": client
         }
         session = Session.create(**session_data)  # get or create?
         data['session'] = session.pk
         data['scopes'] = client.scopes
-        return Token.create(**data)
+        if session.contributor_type == cls.TYPE_VIEWER:
+            data['scopes'] = None
+        return Token.create(**data), None

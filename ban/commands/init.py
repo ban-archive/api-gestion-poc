@@ -15,11 +15,13 @@ __namespace__ = 'import'
 
 @command
 @helpers.nodiff
-def init(clientname, *paths, limit=0, **kwargs):
+def init(clientname, contributor_type, *paths, limit=0, **kwargs):
     """Initial import for real™.
     clientname Name of the client
+    contributor_type Contributor type of the session
     paths   Paths to json files."""
     context.set('clientname', clientname)
+    context.set('contributor_type', contributor_type)
     for path in paths:
         print('Processing', path)
         rows = helpers.iter_file(path, formatter=json.loads)
@@ -88,7 +90,7 @@ def populate(keys, source, dest):
 
 def process_group(row):
     data = dict(version=1)
-    keys = ['name', ('group', 'kind'), 'laposte', 'ign', 'fantoir']
+    keys = ['name', ('group', 'kind'), 'laposte', 'ign', 'fantoir', 'alias']
     populate(keys, row, data)
     insee = row.get('municipality:insee')
     if insee:
@@ -255,7 +257,7 @@ def process_housenumber(row):
 
 
 def process_position(row):
-    positioning = row.get('positionning')  # two "n" in the data.
+    positioning = row.get('positioning')  
     if not positioning or not hasattr(Position, positioning.upper()):
         positioning = Position.OTHER
     source = row.get('source')

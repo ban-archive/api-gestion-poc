@@ -124,7 +124,6 @@ class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'positions', 'ign', 'postcode']
-    readonly_fields = Model.readonly_fields + ['cia']
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
@@ -208,7 +207,8 @@ class Position(Model):
 
     identifiers = ['laposte', 'ign']
     resource_fields = ['center', 'source', 'housenumber', 'kind', 'comment',
-                       'parent', 'positioning', 'name', 'ign', 'laposte']
+                       'parent', 'positioning', 'name', 'ign', 'laposte', 'source_kind']
+    readonly_fields = Model.readonly_fields + ['source_kind']
 
     name = db.CharField(max_length=200, null=True)
     center = db.PointField(verbose_name=_("center"), null=True, index=True)
@@ -221,6 +221,7 @@ class Position(Model):
     laposte = db.CharField(length=10, null=True, unique=True,
                            format=HouseNumber.CEA_FORMAT)
     comment = db.TextField(null=True)
+    source_kind = db.CharField()
 
     @classmethod
     def validate(cls, validator, document, instance):
@@ -240,3 +241,8 @@ class Position(Model):
         return Municipality.select().join(
                Group, on=Municipality.pk == Group.municipality).join(
                HouseNumber, on=Group.pk == self.housenumber.parent.pk).first()
+
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self._clean_called = False

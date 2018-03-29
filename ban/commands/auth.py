@@ -15,7 +15,8 @@ def dummytoken(token, **kwargs):
     Token.create(session=session.pk, access_token=token, expires_in=3600*24,
                  token_type='Bearer',
                  scopes="municipality_write postcode_write \
-                 group_write housenumber_write position_write bal".split())
+                 group_write housenumber_write position_write bal".split(),
+                 status='dev')
     reporter.notice('Created token', token)
 
 

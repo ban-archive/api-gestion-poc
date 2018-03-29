@@ -45,8 +45,6 @@ def test_get_municipality_groups_collection(get):
     street = GroupFactory(municipality=municipality, name="Rue de la Plage")
     resp = get('/group?municipality={}'.format(municipality.id))
     assert resp.status_code == 200
-    # loads/dumps to compare date strings to date strings.
-    assert resp.json['collection'][0] == json.loads(dumps(street.as_relation))
     assert resp.json['total'] == 1
 
 
