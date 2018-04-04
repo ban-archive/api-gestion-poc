@@ -150,6 +150,7 @@ class Token(db.Model):
     TYPE_IGN = 'ign'
     TYPE_LAPOSTE = 'laposte'
     TYPE_DGFIP = 'dgfip'
+    TYPE_ETALAB = 'etalab'
     TYPE_OSM = 'osm'
     TYPE_SDIS = 'sdis'
     TYPE_MUNICIPAL = 'municipal administration'
@@ -163,6 +164,7 @@ class Token(db.Model):
         TYPE_LAPOSTE,
         TYPE_IGN,
         TYPE_DGFIP,
+        TYPE_ETALAB,
         TYPE_MUNICIPAL,
         TYPE_ADMIN,
         TYPE_INSEE,
