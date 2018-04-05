@@ -16,7 +16,7 @@ __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
            'BooleanField', 'BinaryJSONField', 'FantoirField',
            'ManyToManyField', 'PasswordField', 'DateRangeField', 'TextField',
-           'CachedForeignKeyField']
+           'CachedForeignKeyField', 'GroupNameField']
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
@@ -293,3 +293,15 @@ class PasswordField(PWDField):
         if value is None:
             return value
         return super().python_value(value)
+
+
+class GroupNameField(CharField):
+    def search(self, **kwargs):
+        if kwargs['type'] is None or kwargs['search'] is None:
+            raise ValueError('None value for search.')
+        if kwargs['type'] == 'strict':
+            return peewee.StringExpression(self, peewee.OP.EQ, kwargs['search'])
+        elif kwargs['type'] == 'case':
+            return peewee.StringExpression(self, peewee.OP.ILIKE, kwargs['search'])
+        else:
+            raise ValueError('Search type {} is unknown'.format(kwargs['type']))
