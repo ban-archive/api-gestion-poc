@@ -15,7 +15,7 @@ from ban.http.auth import auth
 from ban.http.wsgi import app
 from ban.utils import parse_mask
 
-from .utils import abort, get_bbox, link
+from .utils import abort, get_bbox, link, get_group_search
 
 
 class CollectionEndpoint:
@@ -595,6 +595,13 @@ class Group(VersionedModelEndpoint):
     endpoint = '/group'
     model = models.Group
     filters = ['municipality']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search_params = get_group_search(request.args)
+        if search_params['search'] is not None:
+            qs = (qs.where(models.Group.name.search(**search_params)))
+        return qs
 
 
 @app.resource

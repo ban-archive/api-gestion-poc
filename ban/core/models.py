@@ -78,7 +78,7 @@ class PostCode(NamedModel):
             peewee.SQL('ordinal ASC NULLS FIRST'))
 
 
-class Group(NamedModel):
+class Group(Model):
     AREA = 'area'
     WAY = 'way'
     KIND = (
@@ -97,6 +97,8 @@ class Group(NamedModel):
         (MIXED, 'mixed types'),
         (ANARCHICAL, 'anarchical'),
     )
+    name = db.GroupNameField(max_length=200)
+    alias = db.ArrayField(db.CharField, default=[], null=True)
     identifiers = ['fantoir', 'laposte', 'ign']
     resource_fields = ['name', 'alias', 'fantoir', 'municipality', 'kind',
                        'laposte', 'ign', 'addressing']
