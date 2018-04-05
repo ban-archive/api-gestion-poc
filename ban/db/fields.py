@@ -300,8 +300,8 @@ class GroupNameField(CharField):
         if kwargs['type'] is None or kwargs['search'] is None:
             raise ValueError('None value for search.')
         if kwargs['type'] == 'strict':
-            return peewee.StringExpression(self, peewee.OP.EQ, kwargs['search'])
+            return peewee.Expression(self, peewee.OP.EQ, kwargs['search'])
         elif kwargs['type'] == 'case':
-            return peewee.StringExpression(self, peewee.OP.ILIKE, kwargs['search'])
+            return peewee.Expression(self, peewee.OP.ILIKE, kwargs['search'])
         else:
             raise ValueError('Search type {} is unknown'.format(kwargs['type']))
