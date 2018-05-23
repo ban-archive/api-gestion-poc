@@ -11,14 +11,16 @@ from . import context
 
 
 @decorator.decorator
-def flag_id_required(func, self, *args, **kwargs):
+def contributor_type_required(func, self, *args, **kwargs):
     session = context.get('session')
     if not session:
         raise ValueError('Must be logged in.')
     if not session.client:
         raise ValueError('Token must be linked to a client.')
-    if not session.client.flag_id:
-        raise ValueError('Client must have a valid flag_id.')
+    if not session.contributor_type:
+        raise ValueError('Session must have a valid contributor_type.')
+    if session.contributor_type == Client.TYPE_VIEWER:
+        raise ValueError('Contributor type viewer cannot flag/unflag resource.')
 
     # Even if session is declared as kwarg, "decorator" helper injects it
     # as arg. Bad.
@@ -192,14 +194,14 @@ class Version(db.Model):
     def diff(self):
         return Diff.first(Diff.new == self.pk)
 
-    @flag_id_required
+    @contributor_type_required
     def flag(self, session=None):
         """Flag current version with current client."""
         if not Flag.where(Flag.version == self,
                           Flag.client == session.client).exists():
             Flag.create(version=self, session=session, client=session.client)
 
-    @flag_id_required
+    @contributor_type_required
     def unflag(self, session=None):
         """Delete current version's flags made by current session client."""
         Flag.delete().where(Flag.version == self,
@@ -396,5 +398,5 @@ class Flag(db.Model):
     def serialize(self, *args):
         return {
             'at': self.created_at,
-            'by': self.client.flag_id
+            'by': self.session.contributor_type
         }
