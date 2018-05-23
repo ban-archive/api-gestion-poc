@@ -115,17 +115,6 @@ def test_create_token_without_scopes(client):
     assert token.scopes == []
 
 
-def test_cannot_create_token_without_contributor_type_none_in_client(client):
-    c = ClientFactory(contributor_types=[])
-    resp = client.post('/token', data={
-        'grant_type': 'client_credentials',
-        'client_id': str(c.client_id),
-        'client_secret': c.client_secret,
-        'ip': '1.2.3.4'
-    })
-    assert resp.status_code == 400
-
-
 def test_can_create_token_without_contributor_type_one_in_client(client):
     c = ClientFactory(contributor_types=["develop"])
     resp = client.post('/token', data={

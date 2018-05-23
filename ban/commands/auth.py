@@ -87,7 +87,7 @@ def listusers(**kwargs):
 
 
 @command
-def createclient(name=None, user=None, scopes=[], **kwargs):
+def createclient(name=None, user=None, scopes=[], contributor_types=[], **kwargs):
     """Create a client.
 
     name    name of the client to create
@@ -103,7 +103,13 @@ def createclient(name=None, user=None, scopes=[], **kwargs):
     if not scopes:
         scopes = helpers.prompt('Scopes (separated by spaces)',
                                 default='').split()
-    validator = Client.validator(name=name, user=user_inst, scopes=scopes)
+    if not contributor_types:
+        contributor_types = helpers.prompt('Contributor types (separated by spaces)',
+                                           default='viewer').split()
+    for ct in contributor_types:
+        if ct not in Client.CONTRIBUTOR_TYPE:
+            return reporter.error('{} not in {}'.format(ct, str(Client.CONTRIBUTOR_TYPE)), contributor_types)
+    validator = Client.validator(name=name, user=user_inst, scopes=scopes, contributor_types=contributor_types)
     if validator.errors:
         return reporter.error('Errored', validator.errors)
     client = validator.save()
@@ -114,8 +120,9 @@ def createclient(name=None, user=None, scopes=[], **kwargs):
 @command
 def listclients(**kwargs):
     """List existing clients with details."""
-    tpl = '{:<50} {:<40} {:<40} {:<60} {}'
-    print(tpl.format('id', 'name', 'client_id', 'client_secret', 'scopes'))
+    tpl = '{:<50} {:<40} {:<40} {:<60} {:<200} {}'
+    print(tpl.format('id', 'name', 'client_id', 'client_secret', 'scopes', 'contributor_types'))
     for client in Client.select():
         print(tpl.format(client.id, client.name, str(client.client_id),
-                         client.client_secret, ' '.join(client.scopes or [])))
+                         client.client_secret, ' '.join(client.scopes or []),
+                         ' '.join(client.contributor_types or [])))

@@ -41,7 +41,7 @@ class User(ResourceModel):
 
 class Client(ResourceModel):
     identifiers = ['client_id']
-    resource_fields = ['name', 'user', 'scopes']
+    resource_fields = ['name', 'user', 'scopes', 'contributor_types']
 
     GRANT_AUTHORIZATION_CODE = 'authorization_code'
     GRANT_IMPLICIT = 'implicit'
@@ -106,6 +106,8 @@ class Client(ResourceModel):
             self.client_secret = generate_secret()
             self.redirect_uris = ['http://localhost/authorize']  # FIXME
             self.grant_type = self.GRANT_CLIENT_CREDENTIALS
+        if not self.contributor_types:
+            self.contributor_types = ['viewer']
         super().save(*args, **kwargs)
 
 
