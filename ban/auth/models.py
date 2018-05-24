@@ -41,7 +41,7 @@ class User(ResourceModel):
 
 class Client(ResourceModel):
     identifiers = ['client_id']
-    resource_fields = ['name', 'user', 'scopes']
+    resource_fields = ['name', 'user', 'scopes', 'contributor_types']
 
     GRANT_AUTHORIZATION_CODE = 'authorization_code'
     GRANT_IMPLICIT = 'implicit'
@@ -53,8 +53,29 @@ class Client(ResourceModel):
         (GRANT_PASSWORD, _('Resource owner password-based')),
         (GRANT_CLIENT_CREDENTIALS, _('Client credentials')),
     )
-    FLAGS = ['ign', 'laposte', 'local_authority']
-    FLAG_IDS = tuple((i, i) for i in FLAGS) + (None, 'None')
+    TYPE_IGN = 'ign'
+    TYPE_LAPOSTE = 'laposte'
+    TYPE_DGFIP = 'dgfip'
+    TYPE_ETALAB = 'etalab'
+    TYPE_OSM = 'osm'
+    TYPE_SDIS = 'sdis'
+    TYPE_MUNICIPAL = 'municipal administration'
+    TYPE_ADMIN = 'admin'
+    TYPE_DEV = 'develop'
+    TYPE_INSEE = 'insee'
+    TYPE_VIEWER = 'viewer'
+    CONTRIBUTOR_TYPE = (
+        TYPE_SDIS,
+        TYPE_OSM,
+        TYPE_LAPOSTE,
+        TYPE_IGN,
+        TYPE_DGFIP,
+        TYPE_ETALAB,
+        TYPE_MUNICIPAL,
+        TYPE_ADMIN,
+        TYPE_INSEE,
+        TYPE_DEV,
+        TYPE_VIEWER)
 
     client_id = db.UUIDField(unique=True, default=uuid.uuid4)
     name = db.CharField(max_length=100)
@@ -63,7 +84,7 @@ class Client(ResourceModel):
     redirect_uris = db.ArrayField(db.CharField)
     grant_type = db.CharField(choices=GRANT_TYPES)
     is_confidential = db.BooleanField(default=False)
-    flag_id = db.CharField(choices=FLAG_IDS, default=None, null=True)
+    contributor_types = db.ArrayField(db.CharField, default=[TYPE_VIEWER], null=True)
     scopes = db.ArrayField(db.CharField, default=[], null=True)
 
     @property
@@ -85,6 +106,8 @@ class Client(ResourceModel):
             self.client_secret = generate_secret()
             self.redirect_uris = ['http://localhost/authorize']  # FIXME
             self.grant_type = self.GRANT_CLIENT_CREDENTIALS
+        if not self.contributor_types:
+            self.contributor_types = ['viewer']
         super().save(*args, **kwargs)
 
 
@@ -147,36 +170,13 @@ class Session(db.Model):
 
 
 class Token(db.Model):
-    TYPE_IGN = 'ign'
-    TYPE_LAPOSTE = 'laposte'
-    TYPE_DGFIP = 'dgfip'
-    TYPE_ETALAB = 'etalab'
-    TYPE_OSM = 'osm'
-    TYPE_SDIS = 'sdis'
-    TYPE_MUNICIPAL = 'municipal administration'
-    TYPE_ADMIN = 'admin'
-    TYPE_DEV = 'develop'
-    TYPE_INSEE = 'insee'
-    TYPE_VIEWER = 'viewer'
-    CONTRIBUTOR_TYPE = (
-        TYPE_SDIS,
-        TYPE_OSM,
-        TYPE_LAPOSTE,
-        TYPE_IGN,
-        TYPE_DGFIP,
-        TYPE_ETALAB,
-        TYPE_MUNICIPAL,
-        TYPE_ADMIN,
-        TYPE_INSEE,
-        TYPE_DEV,
-        TYPE_VIEWER)
     session = db.ForeignKeyField(Session)
     token_type = db.CharField(max_length=40)
     access_token = db.CharField(max_length=255)
     refresh_token = db.CharField(max_length=255, null=True)
     scopes = db.ArrayField(db.CharField, default=[], null=True)
     expires = db.DateTimeField()
-    contributor_type = db.CharField(choices=CONTRIBUTOR_TYPE, null=True)
+    contributor_type = db.CharField(choices=Client.CONTRIBUTOR_TYPE, null=True)
 
     def __init__(self, **kwargs):
         expires_in = kwargs.pop('expires_in', 60 * 60 )
@@ -219,20 +219,26 @@ class Token(db.Model):
             return None, None
         if not data.get('client_id'):
             return None, 'Client id missing'
-        if not data.get('contributor_type'):
-            return None, 'Contributor type missing'
-        if data.get('contributor_type') not in cls.CONTRIBUTOR_TYPE:
-            return None, 'wrong contributor type : must be in the list {}'.format(cls.CONTRIBUTOR_TYPE)
         client = Client.first(Client.client_id == data['client_id'])
+        if len(client.contributor_types) == 0:
+            return None, 'Client has none contributor types'
+        contributor_type = client.contributor_types[0]
+        if len(client.contributor_types) > 1:
+            if not data.get('contributor_type'):
+                return None, 'Contributor type missing'
+            if data.get('contributor_type') not in client.contributor_types:
+                return None, 'wrong contributor type : must be in the list {}'.format(client.contributor_types)
+            contributor_type = data.get('contributor_type')
+
         session_data = {
             "email": data.get('email'),
             "ip": data.get('ip'),
-            "contributor_type": data.get('contributor_type'),
+            "contributor_type": contributor_type,
             "client": client
         }
         session = Session.create(**session_data)  # get or create?
         data['session'] = session.pk
         data['scopes'] = client.scopes
-        if session.contributor_type == cls.TYPE_VIEWER:
+        if session.contributor_type == Client.TYPE_VIEWER:
             data['scopes'] = None
         return Token.create(**data), None
