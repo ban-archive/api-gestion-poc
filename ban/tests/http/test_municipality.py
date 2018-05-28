@@ -156,6 +156,14 @@ def test_get_municipality_version(get):
 
 
 @authorize
+def test_get_municipality_name_search(get):
+    municipality = MunicipalityFactory(name="MARTIGUES")
+    resp = get('/municipality?searchName=MARTIGUES')
+    assert resp.status_code == 200
+    assert resp.json['collection'][0]['name'] == "MARTIGUES"
+
+
+@authorize
 def test_old_insee_should_redirect(get):
     municipality = MunicipalityFactory(insee="12345")
     # This should create a redirect.

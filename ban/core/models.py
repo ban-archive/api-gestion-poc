@@ -37,7 +37,7 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
 
 
 class NamedModel(Model):
-    name = db.CharField(max_length=200)
+    name = db.NameField(max_length=200)
     alias = db.ArrayField(db.CharField, default=[], null=True)
 
     def __str__(self):
@@ -78,7 +78,7 @@ class PostCode(NamedModel):
             peewee.SQL('ordinal ASC NULLS FIRST'))
 
 
-class Group(Model):
+class Group(NamedModel):
     AREA = 'area'
     WAY = 'way'
     KIND = (
@@ -97,8 +97,6 @@ class Group(Model):
         (MIXED, 'mixed types'),
         (ANARCHICAL, 'anarchical'),
     )
-    name = db.GroupNameField(max_length=200)
-    alias = db.ArrayField(db.CharField, default=[], null=True)
     identifiers = ['fantoir', 'laposte', 'ign']
     resource_fields = ['name', 'alias', 'fantoir', 'municipality', 'kind',
                        'laposte', 'ign', 'addressing']
