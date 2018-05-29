@@ -15,7 +15,7 @@ from ban.http.auth import auth
 from ban.http.wsgi import app
 from ban.utils import parse_mask
 
-from .utils import abort, get_bbox, link
+from .utils import abort, get_bbox, link, get_search_params
 
 
 class CollectionEndpoint:
@@ -581,6 +581,13 @@ class Municipality(VersionedModelEndpoint):
     model = models.Municipality
     order_by = [model.insee]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search_params = get_search_params(request.args)
+        if search_params['search'] is not None:
+            qs = (qs.where(models.Municipality.name.search(**search_params)))
+        return qs
+
 
 @app.resource
 class PostCode(VersionedModelEndpoint):
@@ -589,12 +596,26 @@ class PostCode(VersionedModelEndpoint):
     order_by = [model.code, model.municipality]
     filters = ['code', 'municipality']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search_params = get_search_params(request.args)
+        if search_params['search'] is not None:
+            qs = (qs.where(models.PostCode.name.search(**search_params)))
+        return qs
+
 
 @app.resource
 class Group(VersionedModelEndpoint):
     endpoint = '/group'
     model = models.Group
     filters = ['municipality']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search_params = get_search_params(request.args)
+        if search_params['search'] is not None:
+            qs = (qs.where(models.Group.name.search(**search_params)))
+        return qs
 
 
 @app.resource

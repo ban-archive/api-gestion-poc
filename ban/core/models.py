@@ -37,7 +37,7 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
 
 
 class NamedModel(Model):
-    name = db.CharField(max_length=200)
+    name = db.NameField(max_length=200)
     alias = db.ArrayField(db.CharField, default=[], null=True)
 
     def __str__(self):

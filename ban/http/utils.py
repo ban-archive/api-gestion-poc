@@ -30,6 +30,15 @@ def get_bbox(args):
     return bbox
 
 
+def get_search_params(args):
+    enum_types = ['strict', 'case']
+    type = args.get('searchType') if args.get('searchType') is not None else 'strict'
+    search = args.get('searchName')
+    if type not in enum_types and search is not None:
+        abort(400, error='Invalid value for searchType: {}. Value must be {}'.format(type, str(enum_types)))
+    return {'type': type, 'search': search}
+
+
 # Do not encode them, as per RFC 3986
 RESERVED = ":/?#[]@!$&'()*+,;="
 
