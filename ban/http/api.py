@@ -622,17 +622,23 @@ class Group(VersionedModelEndpoint):
 class HouseNumber(VersionedModelEndpoint):
     endpoint = '/housenumber'
     model = models.HouseNumber
-    filters = ['parent', 'postcode', 'ancestors', 'group']
+    filters = ['parent', 'postcode', 'ancestors', 'group', 'number','ordinal']
     order_by = [peewee.SQL('number ASC NULLS FIRST'),
                 peewee.SQL('ordinal ASC NULLS FIRST')]
 
-    def filter_ancestors_and_group(self, qs):
+    def filter_ancestors_and_group_and_hn_and_ordinal(self, qs):
         # ancestors is a m2m so we cannot use the basic filtering
         # from self.filters.
         ancestors = request.args.getlist('ancestors')
         group = request.args.getlist('group')  # Means parent + ancestors.
         values = group or ancestors
         values = list(map(self.model.ancestors.coerce, values))
+        number = request.args.get('number')
+        if number is not None:
+            qs = qs.where(self.model.number == number)
+        ordinal = request.args.get('ordinal')
+        if ordinal is not None:
+           qs = qs.where(self.model.ordinal == ordinal)
         parent_qs = qs.where(self.model.parent << values) if group else None
         if values:
             m2m = self.model.ancestors.get_through_model()
@@ -649,7 +655,7 @@ class HouseNumber(VersionedModelEndpoint):
             qs = [h.serialize(mask) for h in qs.order_by(*self.order_by)]
         return qs
 
-    filter_ancestors = filter_group = filter_ancestors_and_group
+    filter_ancestors = filter_group = filter_number = filter_ordinal = filter_ancestors_and_group_and_hn_and_ordinal
 
     def get_queryset(self):
         qs = super().get_queryset()
