@@ -119,6 +119,40 @@ def test_get_housenumber_with_cia(get):
     assert resp.status_code == 200
     assert resp.json['number'] == "22"
 
+@authorize
+def test_get_housenumber_with_number(get):
+    housenumber = HouseNumberFactory(number="22")
+    resp = get('/housenumber?number=22')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
+
+@authorize
+def test_get_housenumber_with_bad_number(get):
+    housenumber = HouseNumberFactory(number="22")
+    resp = get('/housenumber?number=23')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 0
+
+@authorize
+def test_get_housenumber_with_ordinal(get):
+    housenumber = HouseNumberFactory(ordinal="BIS")
+    resp = get('/housenumber?ordinal=BIS')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
+
+@authorize
+def test_get_housenumber_with_bad_ordinal(get):
+    housenumber = HouseNumberFactory(number="TER")
+    resp = get('/housenumber?ordinal=BIS')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 0
+
+@authorize
+def test_get_housenumber_with_number_ordinal(get):
+    housenumber = HouseNumberFactory(number="22", ordinal="BIS")
+    resp = get('/housenumber?number=22&ordinal=BIS')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
 
 @authorize
 def test_get_housenumber_with_districts(get):

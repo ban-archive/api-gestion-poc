@@ -302,6 +302,6 @@ class NameField(CharField):
         if kwargs['type'] == 'strict':
             return peewee.Expression(self, peewee.OP.EQ, kwargs['search'])
         elif kwargs['type'] == 'case':
-            return peewee.Expression(self, peewee.OP.ILIKE, kwargs['search'])
+            return peewee.Expression(peewee.fn.unaccent(self), peewee.OP.ILIKE, peewee.fn.unaccent(kwargs['search']))
         else:
             raise ValueError('Search type {} is unknown'.format(kwargs['type']))
