@@ -127,6 +127,22 @@ def test_get_housenumber_with_number(get):
     assert resp.json['total'] == 1
 
 @authorize
+def test_get_housenumber_with_group_number(get):
+    municipality = MunicipalityFactory()
+    area = GroupFactory(municipality=municipality, kind=models.Group.AREA)
+    housenumber = HouseNumberFactory(parent=area, number="22")
+    resp = get('/housenumber?group={}&number=22'.format(area.id))
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
+
+@authorize
+def test_get_housenumber_with_bad_group(get):
+    housenumber = HouseNumberFactory(number="22")
+    resp = get('/housenumber?group=6666')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 0
+
+@authorize
 def test_get_housenumber_with_bad_number(get):
     housenumber = HouseNumberFactory(number="22")
     resp = get('/housenumber?number=23')
@@ -165,6 +181,25 @@ def test_get_housenumber_with_districts(get):
     assert 'ancestors' in resp.json
     assert resp.json['ancestors'][0] == district.id
 
+@authorize
+def test_get_housenumber_with_ancestors(get):
+    municipality = MunicipalityFactory()
+    ancestor = GroupFactory(municipality=municipality, kind=models.Group.AREA)
+    housenumber = HouseNumberFactory(ancestors=[ancestor],
+                                     parent__municipality=municipality)
+    resp = get('/housenumber?ancestors={}'.format(ancestor.id))
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
+
+@authorize
+def test_get_housenumber_with_ancestors(get):
+    municipality = MunicipalityFactory()
+    ancestor = GroupFactory(municipality=municipality, kind=models.Group.AREA)
+    housenumber = HouseNumberFactory(number="22", ancestors=[ancestor],
+                                     parent__municipality=municipality)
+    resp = get('/housenumber?ancestors={}&number=22'.format(ancestor.id))
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
 
 @authorize
 def test_get_housenumber_collection(get):
