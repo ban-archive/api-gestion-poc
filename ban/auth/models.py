@@ -59,7 +59,7 @@ class Client(ResourceModel):
     TYPE_ETALAB = 'etalab'
     TYPE_OSM = 'osm'
     TYPE_SDIS = 'sdis'
-    TYPE_MUNICIPAL = 'municipal administration'
+    TYPE_MUNICIPAL = 'municipal_administration'
     TYPE_ADMIN = 'admin'
     TYPE_DEV = 'develop'
     TYPE_INSEE = 'insee'
@@ -223,11 +223,12 @@ class Token(db.Model):
         if len(client.contributor_types) == 0:
             return None, 'Client has none contributor types'
         contributor_type = client.contributor_types[0]
+        if data.get('contributor_type'):
+            if data.get('contributor_type') not in client.contributor_types:
+                return None, 'wrong contributor type : must be in the list {}'.format(client.contributor_types)
         if len(client.contributor_types) > 1:
             if not data.get('contributor_type'):
                 return None, 'Contributor type missing'
-            if data.get('contributor_type') not in client.contributor_types:
-                return None, 'wrong contributor type : must be in the list {}'.format(client.contributor_types)
             contributor_type = data.get('contributor_type')
 
         session_data = {
@@ -239,6 +240,7 @@ class Token(db.Model):
         session = Session.create(**session_data)  # get or create?
         data['session'] = session.pk
         data['scopes'] = client.scopes
+        data['contributor_type'] = session.contributor_type
         if session.contributor_type == Client.TYPE_VIEWER:
             data['scopes'] = None
         return Token.create(**data), None

@@ -149,6 +149,18 @@ def test_cannot_create_token_with_wrong_contributor_type(client):
     assert resp.status_code == 400
 
 
+def test_cannot_create_token_with_contributor_type_dgfip_ign(client):
+    c = ClientFactory(contributor_types=["dgfip"])
+    resp = client.post('/token', data={
+        'grant_type': 'client_credentials',
+        'client_id': str(c.client_id),
+        'client_secret': c.client_secret,
+        'ip': '1.2.3.4',
+        'contributor_type': 'ign'
+    })
+    assert resp.status_code == 400
+
+
 def test_token_viewer_should_not_have_scopes(client):
     c = ClientFactory(contributor_types=["viewer"], scopes=["municipality_write"])
     resp = client.post('/token', data={
