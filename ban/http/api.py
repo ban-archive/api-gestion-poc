@@ -622,40 +622,41 @@ class Group(VersionedModelEndpoint):
 class HouseNumber(VersionedModelEndpoint):
     endpoint = '/housenumber'
     model = models.HouseNumber
-    filters = ['parent', 'postcode', 'ancestors', 'group', 'number','ordinal']
+    filters = ['number','ordinal', 'parent', 'postcode', 'ancestors', 'group']
     order_by = [peewee.SQL('number ASC NULLS FIRST'),
                 peewee.SQL('ordinal ASC NULLS FIRST')]
 
-    def filter_ancestors_and_group_and_hn_and_ordinal(self, qs):
+
+    def filter_group(self, qs):
+        values = request.args.getlist('group')
+        if values:
+            field = getattr(self.model, 'parent')
+            try:
+                values = list(map(field.coerce, values))
+            except ValueError:
+                abort(400, error='Invalid value for filter {}'.format('group'))
+            except peewee.DoesNotExist:
+                # Return an empty collection as the fk is not found.
+                return None
+            qs = qs.where(field << values)
+            return qs
+
+    def filter_ancestors(self, qs):
         # ancestors is a m2m so we cannot use the basic filtering
         # from self.filters.
         ancestors = request.args.getlist('ancestors')
-        group = request.args.getlist('group')  # Means parent + ancestors.
-        values = group or ancestors
-        values = list(map(self.model.ancestors.coerce, values))
-        number = request.args.get('number')
-        if number is not None:
-            qs = qs.where(self.model.number == number)
-        ordinal = request.args.get('ordinal')
-        if ordinal is not None:
-           qs = qs.where(self.model.ordinal == ordinal)
-        parent_qs = qs.where(self.model.parent << values) if group else None
+        values = list(map(self.model.ancestors.coerce, ancestors))
         if values:
             m2m = self.model.ancestors.get_through_model()
-            qs = (qs.join(m2m, on=(m2m.housenumber == self.model.pk))
-                    .where(m2m.group << values))
-            if parent_qs:
-                qs = (parent_qs | qs)
+            qs = (qs.join(m2m, on=(m2m.housenumber == self.model.pk)))
             # We evaluate the qs ourselves here, because it's a CompoundSelect
             # that does not know about our SelectQuery custom methods (like
             # `serialize`), and CompoundSelect is hardcoded in peewee
             # SelectQuery, and we'd need to copy-paste code to be able to use
             # a custom CompoundQuery class instead.
-            mask = self.get_collection_mask()
-            qs = [h.serialize(mask) for h in qs.order_by(*self.order_by)]
+        mask = self.get_collection_mask()
+        qs = [h.serialize(mask) for h in qs.order_by(*self.order_by)]
         return qs
-
-    filter_ancestors = filter_group = filter_number = filter_ordinal = filter_ancestors_and_group_and_hn_and_ordinal
 
     def get_queryset(self):
         qs = super().get_queryset()
