@@ -116,7 +116,10 @@ class ModelEndpoint(CollectionEndpoint):
                 except peewee.DoesNotExist:
                     # Return an empty collection as the fk is not found.
                     return None
-                qs = qs.where(field << values)
+                if values == [None]:
+                    qs = qs.where(field.is_null())
+                else:
+                    qs = qs.where(field << values)
         return qs
 
     def get_mask(self):
