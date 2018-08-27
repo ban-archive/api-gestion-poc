@@ -22,9 +22,13 @@ class ResourceValidator:
         self.instance = instance
         self.data = {}
         for name, field in self.model._meta.fields.items():
-            if (name in self.model.readonly_fields
-               or name not in self.model.resource_fields):
-                continue
+            if not instance:
+                if (name in self.model.readonly_fields
+                or name not in self.model.resource_fields):
+                    continue
+            else:
+                if name in self.model.readonly_fields:
+                    continue
             # We want to check for version even in update mode.
             if self.update and name not in data and name is not 'version':
                 continue
