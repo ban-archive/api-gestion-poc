@@ -841,6 +841,7 @@ def bbox():
             LEFT JOIN postcode as po 
             on (h.postcode_id = po.pk) 
             WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)
+            AND p.deleted_at is not null AND h.deleted_at is not null and g.deleted_at is not null
             limit %(limit)s""",
         {
             "limit": limit,
