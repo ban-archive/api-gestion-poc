@@ -109,6 +109,8 @@ def createclient(name=None, user=None, scopes=[], contributor_types=[], **kwargs
     for ct in contributor_types:
         if ct not in Client.CONTRIBUTOR_TYPE:
             return reporter.error('{} not in {}'.format(ct, str(Client.CONTRIBUTOR_TYPE)), contributor_types)
+    if contributor_types != ['viewer']:
+        contributor_types.append('viewer')
     validator = Client.validator(name=name, user=user_inst, scopes=scopes, contributor_types=contributor_types)
     if validator.errors:
         return reporter.error('Errored', validator.errors)

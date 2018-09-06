@@ -116,7 +116,10 @@ class ModelEndpoint(CollectionEndpoint):
                 except peewee.DoesNotExist:
                     # Return an empty collection as the fk is not found.
                     return None
-                qs = qs.where(field << values)
+                if values == [None]:
+                    qs = qs.where(field.is_null())
+                else:
+                    qs = qs.where(field << values)
         return qs
 
     def get_mask(self):
@@ -838,6 +841,7 @@ def bbox():
             LEFT JOIN postcode as po 
             on (h.postcode_id = po.pk) 
             WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)
+            AND p.deleted_at is null AND h.deleted_at is null and g.deleted_at is null
             limit %(limit)s""",
         {
             "limit": limit,
