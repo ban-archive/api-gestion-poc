@@ -95,7 +95,7 @@ def test_create_client_with_contributor_types(monkeypatch):
     user = factories.UserFactory()
     createclient(name='test client', user=user.username, scopes=['test'])
     client = amodels.Client.first()
-    assert client.contributor_types == ['ign', 'laposte']
+    assert client.contributor_types == ['ign', 'laposte', 'viewer']
 
 
 def test_create_client_without_contributor_types(monkeypatch):
