@@ -68,10 +68,15 @@ def grantgetter(client_id, code):
     return models.Grant.first(models.Grant.client.client_id == client_id,
                               models.Grant.code == code)
 
+#Necessaire pour OAuthLib
+@auth.grantsetter
+def grantsetter():
+    pass
+
 
 @app.route('/token', methods=['POST'])
 @json_to_form
 @auth.token_handler
-def authorize():
+def authorize(*args, **kwargs):
     """Get a token to use the API."""
     return None

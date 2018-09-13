@@ -1,7 +1,7 @@
 import pytest
 
 from ban.auth import models
-from ..factories import ClientFactory, UserFactory
+from ban.tests.factories import ClientFactory, UserFactory
 
 
 def test_access_token_with_client_credentials_and_ip(client):
