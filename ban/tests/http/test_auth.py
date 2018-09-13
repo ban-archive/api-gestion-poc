@@ -62,19 +62,6 @@ def test_access_token_with_client_credentials_invalid_uuid(client):
     assert resp.status_code == 401
 
 
-@pytest.mark.xfail
-def test_access_token_with_password(client):
-    # TODO: We want a simple access for developers.
-    user = UserFactory(password='password')
-    resp = client.post('/token', data={
-        'grant_type': 'password',
-        'username': user.username,
-        'password': 'password',
-    })
-    assert resp.status_code == 200
-    assert 'access_token' in resp.json
-
-
 def test_can_request_token_with_json_enoded_body(client):
     c = ClientFactory()
     resp = client.post('/token', data={

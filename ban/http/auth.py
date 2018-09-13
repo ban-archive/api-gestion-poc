@@ -30,15 +30,15 @@ def clientgetter(client_id):
 
 
 @auth.usergetter
-def usergetter(username, password, client, req):
+def usergetter(username):
     user = models.User.first(models.User.username == username)
-    if user and user.check_password(password):
+    if user:
         return user
     return None
 
 
 @auth.tokengetter
-def tokengetter(access_token=None, refresh_token=None):
+def tokengetter(access_token=None):
     if access_token:
         token = models.Token.first(models.Token.access_token == access_token)
         if token:
@@ -52,7 +52,7 @@ def tokengetter(access_token=None, refresh_token=None):
 
 
 @auth.tokensetter
-def tokensetter(metadata, req, *args, **kwargs):
+def tokensetter(metadata, req):
     # req: oauthlib.Request (not Flask one).
     metadata.update(dict(req.decoded_body))
     metadata['client'] = req.client_id
@@ -69,15 +69,9 @@ def grantgetter(client_id, code):
                               models.Grant.code == code)
 
 
-@auth.grantsetter
-def grantsetter(client_id, code, request, *args, **kwargs):
-    # Needed by flask-oauthlib, but not used by client_crendentials flow.
-    pass
-
-
 @app.route('/token', methods=['POST'])
 @json_to_form
 @auth.token_handler
-def authorize(*args, **kwargs):
+def authorize():
     """Get a token to use the API."""
     return None

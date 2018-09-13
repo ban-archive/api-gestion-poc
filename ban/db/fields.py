@@ -5,7 +5,6 @@ import re
 import peewee
 
 from playhouse import postgres_ext, fields
-from playhouse.fields import PasswordField as PWDField
 from postgis import Point
 from psycopg2.extras import DateTimeTZRange
 
@@ -15,7 +14,7 @@ from . import cache
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
            'BooleanField', 'BinaryJSONField', 'FantoirField',
-           'ManyToManyField', 'PasswordField', 'DateRangeField', 'TextField',
+           'ManyToManyField', 'DateRangeField', 'TextField',
            'CachedForeignKeyField', 'NameField']
 
 
@@ -285,14 +284,6 @@ class ManyToManyField(fields.ManyToManyField):
         # https://github.com/coleifer/peewee/issues/794
         model_class._meta.fields[name] = self
         super().add_to_class(model_class, name)
-
-
-class PasswordField(PWDField):
-
-    def python_value(self, value):
-        if value is None:
-            return value
-        return super().python_value(value)
 
 
 class NameField(CharField):
