@@ -452,16 +452,6 @@ def test_cannot_change_deleted_at_with_put(put):
 
 
 @authorize
-def test_authorized_responses_contain_sessions_data(get):
-    municipality = MunicipalityFactory(name="Cabour")
-    resp = get('/municipality/{}'.format(municipality.id))
-    assert resp.status_code == 200
-    session = context.get('session')
-    assert resp.headers['Session-Client'] == session.client.id
-    assert resp.headers['Session-User'] == session.user.id
-
-
-@authorize
 def test_get_municipality_without_scopes(get):
     municipality = MunicipalityFactory(name="Cabour")
     resp = get('/municipality/{}'.format(municipality.id))
