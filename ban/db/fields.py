@@ -298,7 +298,7 @@ class PasswordField(PWDField):
 class NameField(CharField):
     def search(self, **kwargs):
         ponctuation = '[\.\(\)\[\]\"\'\-,;:\/]'
-        articles = '(^| )(LA|L|LE|LES)($| )'
+        articles = '(^| )((LA|L|LE|LES|DU|DE|DES|D|ET|A|AU) )*'
         if kwargs['type'] is None or kwargs['search'] is None:
             raise ValueError('None value for search.')
         if kwargs['type'] == 'strict':
@@ -339,30 +339,76 @@ class NameField(CharField):
                         "^{} ".format(abbrev[1]), "{} ".format(abbrev[0]), 'g'))
         elif kwargs['type'] == 'libelle':
             import csv
-            abbrev = []
+            abbrev = '^('
             with open('../../abbrev_type_voie.csv', newline='') as csvfile:
                 csv = csv.reader(csvfile, delimiter=';')
                 for row in csv:
-                    if re.match(r"^{} ".format(row[1]),
-                                re.sub(ponctuation, ' ', kwargs['search'].upper())) is not None \
-                            or re.match(r"^{} ".format(row[0]),
-                                        re.sub(ponctuation, ' ', kwargs['search'].upper())) is not None:
-                        abbrev = row
-                        break
-                if not abbrev:
-                    return peewee.Expression(
-                        peewee.fn.regexp_replace(peewee.fn.unaccent(self), ponctuation, ' ', 'g'),
-                        peewee.OP.ILIKE,
-                        peewee.fn.regexp_replace(peewee.fn.unaccent(kwargs['search']), ponctuation, ' ', 'g'))
+                    abbrev = '{}|{}|{}'.format(abbrev, row[0], row[1])
+                abbrev = '{})( |$)'.format(abbrev)
                 return peewee.Expression(
                     peewee.fn.regexp_replace(
                         peewee.fn.regexp_replace(
                             peewee.fn.unaccent(peewee.fn.upper(self)), ponctuation, ' ', 'g'),
-                        "^({}|{}) ".format(abbrev[1], abbrev[0]), "", 'g'),
-                    peewee.OP.REGEXP,
+                        abbrev, "", 'g'),
+                    peewee.OP.ILIKE,
                     peewee.fn.regexp_replace(
                         peewee.fn.regexp_replace(
                             peewee.fn.unaccent(peewee.fn.upper(kwargs['search'])), ponctuation, ' ', 'g'),
-                        "^({}|{}) ".format(abbrev[1], abbrev[0]), "", 'g'))
+                        abbrev, "", 'g'))
+        elif kwargs['type'] == 'direct':
+            import csv
+            abbrev = '^('
+            with open('../../abbrev_type_voie.csv', newline='') as csvfile:
+                csv = csv.reader(csvfile, delimiter=';')
+                for row in csv:
+                    abbrev = '{}|{}|{}'.format(abbrev, row[0], row[1])
+                abbrev = '{})( |$)'.format(abbrev)
+                return peewee.Expression(
+                    peewee.fn.trim(
+                        peewee.fn.regexp_replace(
+                            peewee.fn.regexp_replace(
+                                peewee.fn.regexp_replace(
+                                    peewee.fn.unaccent(peewee.fn.upper(self)),
+                                    ponctuation, ' ', 'g'),
+                                abbrev, "", 'g'),
+                            articles, ' ', 'g')),
+                    peewee.OP.ILIKE,
+                    peewee.fn.trim(
+                        peewee.fn.regexp_replace(
+                            peewee.fn.regexp_replace(
+                                peewee.fn.regexp_replace(
+                                    peewee.fn.unaccent(peewee.fn.upper(kwargs['search'])),
+                                    ponctuation, ' ', 'g'),
+                                abbrev, "", 'g'),
+                            articles, ' ', 'g')))
+        elif kwargs['type'] == 'approx':
+            import csv
+            abbrev = '^('
+            with open('../../abbrev_type_voie.csv', newline='') as csvfile:
+                csv = csv.reader(csvfile, delimiter=';')
+                for row in csv:
+                    abbrev = '{}|{}|{}'.format(abbrev, row[0], row[1])
+                abbrev = '{})( |$)'.format(abbrev)
+                return peewee.Expression(
+                    peewee.fn.levenshtein(
+                        peewee.fn.trim(
+                            peewee.fn.regexp_replace(
+                                peewee.fn.regexp_replace(
+                                    peewee.fn.regexp_replace(
+                                        peewee.fn.unaccent(peewee.fn.upper(self)),
+                                    ponctuation, ' ', 'g'),
+                                abbrev, "", 'g'),
+                            articles, ' ', 'g')),
+                        peewee.fn.trim(
+                            peewee.fn.regexp_replace(
+                                peewee.fn.regexp_replace(
+                                    peewee.fn.regexp_replace(
+                                        peewee.fn.unaccent(peewee.fn.upper(kwargs['search'])),
+                                        ponctuation, ' ', 'g'),
+                                    abbrev, "", 'g'),
+                                articles, ' ', 'g'))
+                    ),
+                    peewee.OP.LTE,
+                    2)
         else:
             raise ValueError('Search type {} is unknown'.format(kwargs['type']))

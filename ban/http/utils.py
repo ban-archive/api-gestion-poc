@@ -31,7 +31,7 @@ def get_bbox(args):
 
 
 def get_search_params(args):
-    enum_types = ['strict', 'case', 'abbrev', 'libelle', 'ponctuation']
+    enum_types = ['strict', 'case', 'abbrev', 'libelle', 'ponctuation', 'direct', 'approx']
     type = args.get('searchType') if args.get('searchType') is not None else 'strict'
     search = args.get('searchName')
     if type not in enum_types and search is not None:
