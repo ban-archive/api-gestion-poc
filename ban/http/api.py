@@ -829,7 +829,7 @@ def bbox():
     response = {"collection": [], "total": cur.fetchone()["count"]}
     cur.execute(
         """SELECT
-            p.id as pos_id, st_x(center) as pos_x, st_y(center) as pos_y, p.kind as pos_kind, p.positioning as pos_positioning, p.source as pos_source, p.source_kind as pos_source_kind, p.version as pos_version,
+            p.id as pos_id, p.name as pos_name, st_x(center) as pos_x, st_y(center) as pos_y, p.kind as pos_kind, p.positioning as pos_positioning, p.source as pos_source, p.source_kind as pos_source_kind, p.version as pos_version,
             h.id as hn_id, h.number as hn_number, h.ordinal as hn_ordinal, h.version as hn_version, 
             po.id as post_id, po.name as post_name, po.code as post_code,
             g.id as group_id, g.addressing as group_addressing, g.alias as group_alias, g.fantoir as group_fantoir, g.ign as group_ign, g.kind as group_kind, g.laposte as group_laposte, g.name as group_name
@@ -854,6 +854,7 @@ def bbox():
     for row in cur:
         occ = {
             "id": row["pos_id"],
+            "name": row["pos_name"],
             "center": {
                 "type": "Point",
                 "coordinates": [row["pos_x"], row["pos_y"]]
