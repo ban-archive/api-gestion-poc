@@ -33,11 +33,9 @@ class Client(ResourceModel):
     identifiers = ['client_id']
     resource_fields = ['name', 'user', 'scopes', 'contributor_types']
 
-    GRANT_AUTHORIZATION_CODE = 'authorization_code'
-    GRANT_IMPLICIT = 'implicit'
     GRANT_CLIENT_CREDENTIALS = 'client_credentials'
     GRANT_TYPES = (
-        (GRANT_CLIENT_CREDENTIALS, _('Client credentials'))
+        (GRANT_CLIENT_CREDENTIALS, _('Client credentials')),
     )
     TYPE_IGN = 'ign'
     TYPE_LAPOSTE = 'laposte'
