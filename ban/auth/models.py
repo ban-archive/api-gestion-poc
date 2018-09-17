@@ -79,10 +79,9 @@ class Client(ResourceModel):
     def allowed_grant_types(self):
         return [id for id, name in self.GRANT_TYPES]
 
+    #Necessaire pour OAuth
     @property
     def default_scopes(self):
-        # Flask-Oauthlib needs default_scopes attribute, but let's keep a more
-        # intuitive name for internal use.
         return self.scopes
 
     def save(self, *args, **kwargs):

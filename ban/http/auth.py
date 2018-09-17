@@ -53,7 +53,6 @@ def tokengetter(access_token=None):
 
 @auth.tokensetter
 def tokensetter(metadata, req):
-    # req: oauthlib.Request (not Flask one).
     metadata.update(dict(req.decoded_body))
     metadata['client'] = req.client_id
     token, error = models.Token.create_with_session(**metadata)
