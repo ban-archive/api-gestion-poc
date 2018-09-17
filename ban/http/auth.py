@@ -53,7 +53,14 @@ def tokengetter(access_token=None):
 
 @auth.tokensetter
 def tokensetter(metadata, req):
-    metadata.update(dict(req.decoded_body))
+    body = dict(req.decoded_body)
+    data = {'client_secret': body.get('client_secret'),
+            'contributor_type': body.get('contributor_type'),
+            'grant_type': body.get('grant_type'),
+            'client_id': body.get('client_id'),
+            'ip': body.get('ip'),
+            'email': body.get('email')}
+    metadata.update(data)
     metadata['client'] = req.client_id
     token, error = models.Token.create_with_session(**metadata)
     if not token:

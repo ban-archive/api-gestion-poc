@@ -159,3 +159,17 @@ def test_token_viewer_should_not_have_scopes(client):
     assert resp.status_code == 200
     token = models.Token.first()
     assert token.scopes == []
+
+
+def test_cannot_modify_access_token(client):
+    c = ClientFactory(contributor_types=["viewer"], scopes=[])
+    resp = client.post('/token', data={
+        'grant_type': 'client_credentials',
+        'client_id': str(c.client_id),
+        'client_secret': c.client_secret,
+        'ip': '1.2.3.4',
+        'access_token': 'toto'
+    })
+    assert resp.status_code == 200
+    token = models.Token.first()
+    assert token.access_token != 'toto'
