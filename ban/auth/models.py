@@ -20,9 +20,6 @@ class User(ResourceModel):
     username = db.CharField(max_length=100, index=True)
     email = db.CharField(max_length=100, unique=True)
     company = db.CharField(max_length=100, null=True)
-    # Allow null, because password is not a resource field, and thus cannot be
-    # passed to validators.
-    password = db.PasswordField(null=True)
     is_staff = db.BooleanField(default=False, index=True)
 
     class Meta:
@@ -31,26 +28,13 @@ class User(ResourceModel):
     def __str__(self):
         return self.username
 
-    def set_password(self, password):
-        self.password = password
-        self.save()
-
-    def check_password(self, password):
-        return self.password.check_password(password)
-
 
 class Client(ResourceModel):
     identifiers = ['client_id']
     resource_fields = ['name', 'user', 'scopes', 'contributor_types']
 
-    GRANT_AUTHORIZATION_CODE = 'authorization_code'
-    GRANT_IMPLICIT = 'implicit'
-    GRANT_PASSWORD = 'password'
     GRANT_CLIENT_CREDENTIALS = 'client_credentials'
     GRANT_TYPES = (
-        # (GRANT_AUTHORIZATION_CODE, _('Authorization code')),
-        # (GRANT_IMPLICIT, _('Implicit')),
-        (GRANT_PASSWORD, _('Resource owner password-based')),
         (GRANT_CLIENT_CREDENTIALS, _('Client credentials')),
     )
     TYPE_IGN = 'ign'
@@ -95,10 +79,9 @@ class Client(ResourceModel):
     def allowed_grant_types(self):
         return [id for id, name in self.GRANT_TYPES]
 
+    #Necessaire pour OAuth
     @property
     def default_scopes(self):
-        # Flask-Oauthlib needs default_scopes attribute, but let's keep a more
-        # intuitive name for internal use.
         return self.scopes
 
     def save(self, *args, **kwargs):

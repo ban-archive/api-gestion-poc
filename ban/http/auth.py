@@ -30,15 +30,15 @@ def clientgetter(client_id):
 
 
 @auth.usergetter
-def usergetter(username, password, client, req):
+def usergetter(username):
     user = models.User.first(models.User.username == username)
-    if user and user.check_password(password):
+    if user:
         return user
     return None
 
 
 @auth.tokengetter
-def tokengetter(access_token=None, refresh_token=None):
+def tokengetter(access_token=None):
     if access_token:
         token = models.Token.first(models.Token.access_token == access_token)
         if token:
@@ -52,9 +52,15 @@ def tokengetter(access_token=None, refresh_token=None):
 
 
 @auth.tokensetter
-def tokensetter(metadata, req, *args, **kwargs):
-    # req: oauthlib.Request (not Flask one).
-    metadata.update(dict(req.decoded_body))
+def tokensetter(metadata, req):
+    body = dict(req.decoded_body)
+    data = {'client_secret': body.get('client_secret'),
+            'contributor_type': body.get('contributor_type'),
+            'grant_type': body.get('grant_type'),
+            'client_id': body.get('client_id'),
+            'ip': body.get('ip'),
+            'email': body.get('email')}
+    metadata.update(data)
     metadata['client'] = req.client_id
     token, error = models.Token.create_with_session(**metadata)
     if not token:
@@ -68,10 +74,9 @@ def grantgetter(client_id, code):
     return models.Grant.first(models.Grant.client.client_id == client_id,
                               models.Grant.code == code)
 
-
+#Necessaire pour OAuthLib
 @auth.grantsetter
-def grantsetter(client_id, code, request, *args, **kwargs):
-    # Needed by flask-oauthlib, but not used by client_crendentials flow.
+def grantsetter():
     pass
 
 
