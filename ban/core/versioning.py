@@ -121,7 +121,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
 
     def update_meta(self):
         session = context.get('session')
-        if session:  # TODO remove this if, session should be mandatory.
+        if session:
             if not self.created_by:
                 self.created_by = session
             self.modified_by = session
