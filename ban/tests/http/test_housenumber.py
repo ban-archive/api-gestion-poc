@@ -164,6 +164,15 @@ def test_get_housenumber_with_bad_ordinal(get):
     assert resp.json['total'] == 0
 
 @authorize
+def test_get_housenumber_with_no_ordinal(get):
+    group = GroupFactory()
+    housenumber = HouseNumberFactory(number='1', ordinal=None, parent=group)
+    resp = get('/housenumber?parent={}&number=1&ordinal=null'.format(group.id))
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
+
+
+@authorize
 def test_get_housenumber_with_number_ordinal(get):
     housenumber = HouseNumberFactory(number="22", ordinal="BIS")
     resp = get('/housenumber?number=22&ordinal=BIS')

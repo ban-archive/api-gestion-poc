@@ -116,7 +116,7 @@ class ModelEndpoint(CollectionEndpoint):
                 except peewee.DoesNotExist:
                     # Return an empty collection as the fk is not found.
                     return None
-                if values == [None]:
+                if values == ['null']:
                     qs = qs.where(field.is_null())
                 else:
                     qs = qs.where(field << values)
