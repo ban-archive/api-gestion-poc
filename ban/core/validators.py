@@ -116,8 +116,12 @@ class ResourceValidator:
             where = []
             for name in names:
                 field = getattr(self.model, name)
+
                 if name in self.data:
                     where.append(field == self.data.get(name))
+                else:
+                    if self.instance:
+                        where.append(field == getattr(self.instance, name))
             if where != []:
                 qs = self.model.select().where(*where)
             else:

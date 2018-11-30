@@ -428,6 +428,18 @@ def test_patch_housenumber_doublon_number_ordinal_parent(client):
     resp = client.patch(uri, data=data)
     assert resp.status_code == 422
 
+@authorize('housenumber_write')
+def test_patch_housenumber_vidage_ign(client):
+    group = GroupFactory()
+    housenumber1 = HouseNumberFactory(number='1', ign= 'ADRNIVX_0000000', parent=group)
+    housenumber2 = HouseNumberFactory(number='2', parent=group)
+    data = {
+        "version": 2,
+        "ign": "",
+    }
+    uri = '/housenumber/{}'.format(housenumber1.id)
+    resp = client.patch(uri, data=data)
+    assert resp.status_code == 200
 
 @authorize('housenumber_write')
 def test_patch_housenumber_with_postcode(client):

@@ -155,8 +155,8 @@ class HouseNumber(Model):
 
     @cached_property
     def municipality(self):
-        return Municipality.select().join(
-           Group, on=Municipality.pk == self.parent.municipality.pk).first()
+        return Municipality.select().where(
+           Municipality.pk == self.parent.municipality.pk).first()
 
     @property
     def as_export(self):
@@ -238,10 +238,7 @@ class Position(Model):
 
     @cached_property
     def municipality(self):
-        return Municipality.select().join(
-               Group, on=Municipality.pk == Group.municipality).join(
-               HouseNumber, on=Group.pk == self.housenumber.parent.pk).first()
-
+        return Municipality.select().where(Municipality.pk == self.housenumber.parent.municipality.pk).first()
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
