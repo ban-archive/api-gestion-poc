@@ -294,6 +294,30 @@ def test_get_housenumber_positions(get):
     assert resp.json['total'] == 3
 
 
+@authorize
+def test_get_housenumber_deleted(get):
+    housenumber = HouseNumberFactory()
+    housenumber.mark_deleted()
+    resp = get('/housenumber/{}'.format(housenumber.id))
+    assert resp.status_code == 410
+    assert resp.json['id'] == housenumber.id
+    assert len(housenumber.versions) == 2
+    assert resp.json['status'] == 'deleted'
+
+
+@authorize
+def test_get_housenumber_deleted_on_group_deleted(client):
+    group = GroupFactory()
+    housenumber = HouseNumberFactory(number='1', ordinal='bis', parent=group)
+    housenumber.mark_deleted()
+    group.mark_deleted()
+    resp = client.get('/housenumber/{}'.format(housenumber.id))
+    assert resp.status_code == 410
+    assert resp.json['id'] == housenumber.id
+    assert len(housenumber.versions) == 2
+    assert resp.json['status'] == 'deleted'
+
+
 @authorize('housenumber_write')
 def test_create_housenumber(client):
     street = GroupFactory(name="Rue de Bonbons")
@@ -351,6 +375,38 @@ def test_create_housenumber_with_postcode_id(client):
     assert resp.status_code == 201
     assert models.HouseNumber.select().count() == 1
     assert models.HouseNumber.first().postcode == postcode
+
+
+@authorize('housenumber_write')
+def test_create_housenumber_on_deleted_group(client):
+    deleted = GroupFactory()
+    deleted.mark_deleted()
+    assert not models.HouseNumber.select().count()
+    data = {
+        "number": 20,
+        "parent": deleted.id,
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 422
+    assert resp.json['errors']['parent'] == (
+        'Resource `group` with id `{}` is deleted'.format(deleted.id))
+
+
+@authorize('housenumber_write')
+def test_create_housenumber_on_deleted_ancestor(client):
+    group = GroupFactory()
+    deleted = GroupFactory()
+    deleted.mark_deleted()
+    assert not models.HouseNumber.select().count()
+    data = {
+        "number": 20,
+        "parent": group.id,
+        "ancestors": [deleted.id],
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 422
+    assert resp.json['errors']['ancestors'] == (
+        'Resource `group` with id `{}` is deleted'.format(deleted.id))
 
 
 @authorize('housenumber_write')
@@ -463,7 +519,7 @@ def test_delete_housenumber(client):
     resp = client.delete(uri)
     assert resp.status_code == 200
     assert resp.json['resource_id'] == housenumber.id
-    assert not models.HouseNumber.select().count()
+    assert models.HouseNumber.select().count() == 1
     assert models.HouseNumber.raw_select().where(
                     models.HouseNumber.pk == housenumber.pk).get().deleted_at
 

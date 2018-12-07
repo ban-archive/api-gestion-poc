@@ -8,7 +8,7 @@ from playhouse import postgres_ext, fields
 from postgis import Point
 from psycopg2.extras import DateTimeTZRange
 
-from ban.core.exceptions import ValidationError
+from ban.core.exceptions import ValidationError, IsDeletedError
 from . import cache
 
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
@@ -123,7 +123,7 @@ class ForeignKeyField(peewee.ForeignKeyField):
     __data_type__ = int
     __schema_type__ = 'integer'
 
-    def coerce(self, value):
+    def coerce(self, value, deleted=True):
         if not value:
             return None
         if isinstance(value, dict):
@@ -132,6 +132,8 @@ class ForeignKeyField(peewee.ForeignKeyField):
         if hasattr(self.rel_model, 'coerce'):
             value = self.rel_model.coerce(value)
         if isinstance(value, peewee.Model):
+            if deleted is False and value.deleted_at:
+                raise IsDeletedError(value)
             value = value.pk
         return super().coerce(value)
 
@@ -272,12 +274,16 @@ class ManyToManyField(fields.ManyToManyField):
         self.index = False
         super().__init__(*args, **kwargs)
 
-    def coerce(self, value):
+    def coerce(self, value, deleted=True):
         if not value:
             return []
         if not isinstance(value, (tuple, list, peewee.SelectQuery)):
             value = [value]
         value = [self.rel_model.coerce(item) for item in value]
+        for elem in value:
+            if isinstance(elem, peewee.Model):
+                if deleted is False and elem.deleted_at:
+                    raise IsDeletedError(elem)
         return super().coerce(value)
 
     def add_to_class(self, model_class, name):

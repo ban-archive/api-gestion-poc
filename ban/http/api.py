@@ -82,10 +82,12 @@ class ModelEndpoint(CollectionEndpoint):
                 link(headers, uri, 'alternate')
                 choices.append(uri)
             abort(300, headers=headers, choices=choices)
-        except IsDeletedError as err:
-            if request.method not in ['GET', 'PUT']:
-                abort(410, error='Resource `{}` is deleted'.format(identifier))
-            instance = err.instance
+#        except IsDeletedError as err:
+#            if request.method not in ['GET', 'PUT']:
+#                abort(410, error='Resource `{}` is deleted'.format(identifier))
+#            instance = err.instance
+        if instance.deleted_at and request.method not in ['GET', 'PUT']:
+            abort(410, error='Resource `{}` is deleted'.format(identifier))
         return instance
 
     def save_object(self, instance=None, update=False, json=None):
@@ -159,6 +161,7 @@ class ModelEndpoint(CollectionEndpoint):
         if qs is None:
             return self.collection([])
         if not isinstance(qs, list):
+            qs = qs.where(qs.model_class.deleted_at.is_null())
             order_by = (self.order_by if self.order_by is not None
                         else [self.model.pk])
             qs = qs.order_by(*order_by).serialize(self.get_collection_mask())
@@ -818,7 +821,7 @@ def bbox():
     conn = psycopg2.connect(connectString)
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(
-        """SELECT count(*) FROM position WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)""",
+        """SELECT count(*) FROM position WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s) and deleted_at is null""",
         {
             "west": bbox["west"],
             "south": bbox["south"],

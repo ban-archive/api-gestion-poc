@@ -1,8 +1,10 @@
 import peewee
 
 from ban import db
+#from ban.core import models
+from ban import core
 from ban.utils import make_diff
-from .exceptions import RedirectError, MultipleRedirectsError, ValidationError
+from .exceptions import RedirectError, MultipleRedirectsError, ValidationError, IsDeletedError
 
 
 class ResourceValidator:
@@ -21,6 +23,7 @@ class ResourceValidator:
         self.errors = {}
         self.instance = instance
         self.data = {}
+
         for name, field in self.model._meta.fields.items():
             if not instance:
                 if (name in self.model.readonly_fields
@@ -47,7 +50,11 @@ class ResourceValidator:
 
     def validate_field(self, field, value):
         try:
-            value = field.coerce(value)
+            if isinstance(field, db.ForeignKeyField) or isinstance(field, db.ManyToManyField):
+                value = field.coerce(value, False)
+            else:
+                value = field.coerce(value)
+
         except (RedirectError, MultipleRedirectsError) as e:
             raise ValueError(e)
         except ValidationError:

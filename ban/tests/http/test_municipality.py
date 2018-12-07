@@ -6,8 +6,8 @@ from ban.core.encoder import dumps
 from ban.core.versioning import Version, Redirect
 from ban.utils import utcnow
 
-from ..factories import MunicipalityFactory, PostCodeFactory, GroupFactory
-from .utils import authorize
+from ban.tests.factories import MunicipalityFactory, PostCodeFactory, GroupFactory
+from ban.tests.http.utils import authorize
 
 
 @authorize
@@ -271,9 +271,19 @@ def test_delete_municipality(client):
     resp = client.delete('/municipality/{}'.format(municipality.id))
     assert resp.status_code == 200
     assert resp.json['resource_id'] == municipality.id
-    assert not models.Municipality.select().count()
+    assert models.Municipality.select().count() == 1
     assert models.Municipality.raw_select().where(
                 models.Municipality.pk == municipality.pk).first().deleted_at
+
+@authorize
+def test_get_collection_without_deleted(get):
+    municipality1 = MunicipalityFactory()
+    municipality2 = MunicipalityFactory()
+    municipality2.mark_deleted()
+    resp = get('/municipality')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
+    assert resp.json['collection'][0]['id'] == municipality1.id
 
 
 def test_cannot_delete_municipality_if_not_authorized(client):
@@ -566,4 +576,6 @@ def test_delete_municipality_with_scopes(client):
     municipality = MunicipalityFactory()
     resp = client.delete('/municipality/{}'.format(municipality.id))
     assert resp.status_code == 200
-    assert not models.Municipality.select().count()
+    assert models.Municipality.select().count() == 1
+    assert models.Municipality.raw_select().where(
+                    models.Municipality.pk == municipality.pk).get().deleted_at

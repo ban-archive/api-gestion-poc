@@ -134,7 +134,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     @classmethod
     def select(cls, *selection):
-        return super().select(*selection).where(cls.deleted_at.is_null())
+        # return super().select(*selection).where(cls.deleted_at.is_null())
+        return super().select(*selection)
 
     @classmethod
     def raw_select(cls, *selection):
@@ -150,7 +151,10 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     def ensure_no_reverse_relation(self):
         for name, field in self._meta.reverse_rel.items():
-            if getattr(self, name).count():
+            select = getattr(self, name)
+            if getattr(select.model_class,'deleted_at', None):
+                select = select.where(select.model_class.deleted_at.is_null())
+            if select.count():
                 raise ResourceLinkedError(
                     'Resource still linked by `{}`'.format(name))
 
@@ -182,6 +186,6 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                         raise MultipleRedirectsError(identifier, id, redirects)
                     raise RedirectError(identifier, id, redirects[0])
                 raise
-        if instance.deleted_at:
-            raise IsDeletedError(instance)
+#        if instance.deleted_at:
+#            raise IsDeletedError(instance)
         return instance
