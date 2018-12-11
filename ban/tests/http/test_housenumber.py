@@ -33,7 +33,7 @@ def test_get_housenumber(get):
         'ign': None,
         'laposte': None,
         'ordinal': 'bis',
-        'positions': [],
+        # 'positions': [],
         'postcode': None,
         'status': 'active',
     }
@@ -77,21 +77,6 @@ def test_get_housenumber_with_filtered_municipality_fields(get):
                 'name': housenumber.parent.municipality.name
             }
         }
-    }
-
-
-@authorize
-def test_get_housenumber_with_filtered_position_fields(get):
-    housenumber = HouseNumberFactory(number="22")
-    PositionFactory(housenumber=housenumber, name='bâtiment A')
-    fields = 'id,positions.name'
-    resp = get('/housenumber/{}?fields={}'.format(housenumber.id, fields))
-    assert resp.status_code == 200
-    assert resp.json == {
-        'id': housenumber.id,
-        'positions': [{
-            'name': 'bâtiment A',
-        }]
     }
 
 
@@ -268,13 +253,6 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get):
     assert resp.json['total'] == 1
 
 
-@authorize
-def test_get_housenumber_with_position(get):
-    housenumber = HouseNumberFactory()
-    position = PositionFactory(housenumber=housenumber, center=(1, 1))
-    resp = get('/housenumber/{}'.format(housenumber.id))
-    assert resp.json['positions'] == [position.id]
-
 
 @authorize
 def test_get_housenumber_with_postcode(get):
@@ -324,7 +302,7 @@ def test_create_housenumber(client):
     assert not models.HouseNumber.select().count()
     data = {
         "number": 20,
-        "parent": street.id,
+        "parent": street.id
     }
     resp = client.post('/housenumber', data)
     assert resp.status_code == 201

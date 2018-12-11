@@ -7,6 +7,8 @@ from postgis import Point
 from ban import db
 from ban.utils import utcnow
 
+
+
 from .exceptions import (IsDeletedError, MultipleRedirectsError, RedirectError,
                          ResourceLinkedError)
 from .validators import ResourceValidator
@@ -159,7 +161,12 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                     'Resource still linked by `{}`'.format(name))
 
     @classmethod
-    def coerce(cls, id, identifier=None):
+    def coerce(cls, id, identifier=None, level1=0):
+
+        # if not hasattr(cls, 'auth'):
+        #    if level1 != 1:
+        #        return cls.get().pk
+
         if isinstance(id, db.Model):
             instance = id
         else:
@@ -175,8 +182,14 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 elif isinstance(id, int):
                     identifier = 'pk'
             try:
-                instance = cls.raw_select().where(
-                    getattr(cls, identifier) == id).get()
+
+                if not hasattr(cls, 'auth') and level1 != 1:
+                    instance = cls.raw_select(cls._meta.model_class.pk).where(
+                        getattr(cls, identifier) == id).get()
+                else:
+                    instance = cls.raw_select().where(
+                        getattr(cls, identifier) == id).get()
+
             except cls.DoesNotExist:
                 # Is it an old identifier?
                 from .versioning import Redirect

@@ -150,7 +150,7 @@ def test_housenumber_as_version():
         'created_at': hn.created_at.isoformat(),
         'parent': street.id,
         'modified_by': hn.modified_by.serialize(),
-        'positions': [],
+        # "'positions': [],
         'attributes': None,
         'status': 'active',
     }

@@ -20,17 +20,6 @@ def test_get_municipality(get):
 
 
 @authorize
-def test_get_municipality_with_postcodes(get):
-    municipality = MunicipalityFactory(name="Cabour")
-    postcode = PostCodeFactory(code="33000", municipality=municipality)
-    resp = get('/municipality/{}'.format(municipality.id))
-    assert resp.status_code == 200
-    assert resp.json['id']
-    assert resp.json['name'] == 'Cabour'
-    assert resp.json['postcodes'] == [postcode.id]
-
-
-@authorize
 def test_get_municipality_without_explicit_identifier(get):
     municipality = MunicipalityFactory(name="Cabour")
     resp = get('/municipality/{}'.format(municipality.id))

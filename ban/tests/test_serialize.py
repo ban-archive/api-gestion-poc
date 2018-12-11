@@ -127,7 +127,7 @@ def test_serialize_with_double_wildcard():
         'cia': '93031_1491_1_BIS',
         'ign': None,
         'attributes': None,
-        'positions': [],
+        # 'positions': [],
         'status': 'active',
         'parent': {
             'name': 'Rue de la Banatouille',

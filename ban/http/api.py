@@ -67,7 +67,7 @@ class ModelEndpoint(CollectionEndpoint):
     def get_object(self, identifier):
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         try:
-            instance = self.model.coerce(identifier)
+            instance = self.model.coerce(identifier, None, 1)
         except self.model.DoesNotExist:
             abort(404, error='Resource with identifier `{}` does not exist.'
                   .format(identifier))
@@ -892,6 +892,77 @@ def bbox():
         response["collection"].append(occ)
 
     return response
+
+
+@app.route('/test/<identifier>', methods=['GET'])
+@auth.require_oauth()
+@app.jsonify
+def test(identifier):
+
+    dbname = config.DB_NAME
+    user = config.get('DB_USER')
+    password = config.get('DB_PASSWORD')
+    host = config.get('DB_HOST')
+    if (host is None):
+        host = "localhost"
+    port = config.get('DB_PORT')
+
+    connectString = "dbname='{}' user='{}' password='{}' host='{}' port='{}'".format(dbname,user,password,host,port)
+    conn = psycopg2.connect(connectString)
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        """SELECT
+            h.*, g.id as parent, po.id as postcode
+            FROM housenumber as h 
+            LEFT JOIN "group" as g on (h.parent_id = g.pk) 
+            LEFT JOIN postcode as po on (h.postcode_id = po.pk) 
+            WHERE h.id = %(id)s""",
+        {
+            "id": identifier
+        })
+
+    for row in cur:
+        occ = {
+            "id": row["id"],
+            "number": row["number"],
+            "ordinal": row["ordinal"],
+            "postcode": row["postcode"],
+            "parent": row["parent"],
+            "version": row["version"]
+        }
+
+    return occ
+
+@app.route('/getid/<resource>/<identifier>', methods=['GET'])
+@auth.require_oauth()
+#@app.jsonify
+def getid(resource,identifier):
+
+    dbname = config.DB_NAME
+    user = config.get('DB_USER')
+    password = config.get('DB_PASSWORD')
+    host = config.get('DB_HOST')
+    if (host is None):
+        host = "localhost"
+    port = config.get('DB_PORT')
+
+    connectString = "dbname='{}' user='{}' password='{}' host='{}' port='{}'".format(dbname, user, password, host, port)
+    conn = psycopg2.connect(connectString)
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        """SELECT id,deleted_at FROM housenumber WHERE id = %(id)s""",
+        {
+            "id": identifier
+        })
+
+    for row in cur:
+
+        if row["deleted_at"] is None:
+            abort(200, error=str('OK'))
+        abort(410, error=str('gone'))
+
+    abort(400, error=str('not found'))
+
 
 @app.route('/openapi', methods=['GET'])
 @app.jsonify

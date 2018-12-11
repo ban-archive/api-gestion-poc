@@ -47,7 +47,8 @@ class NamedModel(Model):
 class Municipality(NamedModel):
     INSEE_FORMAT = '(2[AB]|\d{2})\d{3}'
     identifiers = ['siren', 'insee']
-    resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
+    # resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
+    resource_fields = ['name', 'alias', 'insee', 'siren']
     exclude_for_version = ['postcodes']
 
     insee = db.CharField(length=5, unique=True, format=INSEE_FORMAT)
@@ -122,8 +123,9 @@ class HouseNumber(Model):
     # (like 0/O, 1/I…)) from La Poste.
     CEA_FORMAT = Municipality.INSEE_FORMAT + '[234679ABCEGHILMNPRSTUVXYZ]{5}'
     identifiers = ['cia', 'laposte', 'ign']
-    resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
-                       'ancestors', 'positions', 'ign', 'postcode']
+    # resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
+    #                  'ancestors', 'positions', 'ign', 'postcode']
+    resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte', 'ancestors', 'ign', 'postcode']
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)

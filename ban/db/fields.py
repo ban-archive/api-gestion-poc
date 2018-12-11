@@ -123,14 +123,14 @@ class ForeignKeyField(peewee.ForeignKeyField):
     __data_type__ = int
     __schema_type__ = 'integer'
 
-    def coerce(self, value, deleted=True):
+    def coerce(self, value, deleted=True, level1=0):
         if not value:
             return None
         if isinstance(value, dict):
             # We have a resource dict.
             value = value['id']
         if hasattr(self.rel_model, 'coerce'):
-            value = self.rel_model.coerce(value)
+            value = self.rel_model.coerce(value, None, level1)
         if isinstance(value, peewee.Model):
             if deleted is False and value.deleted_at:
                 raise IsDeletedError(value)
@@ -274,12 +274,12 @@ class ManyToManyField(fields.ManyToManyField):
         self.index = False
         super().__init__(*args, **kwargs)
 
-    def coerce(self, value, deleted=True):
+    def coerce(self, value, deleted=True, level1=0):
         if not value:
             return []
         if not isinstance(value, (tuple, list, peewee.SelectQuery)):
             value = [value]
-        value = [self.rel_model.coerce(item) for item in value]
+        value = [self.rel_model.coerce(item, None, level1) for item in value]
         for elem in value:
             if isinstance(elem, peewee.Model):
                 if deleted is False and elem.deleted_at:

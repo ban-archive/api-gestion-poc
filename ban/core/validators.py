@@ -51,7 +51,7 @@ class ResourceValidator:
     def validate_field(self, field, value):
         try:
             if isinstance(field, db.ForeignKeyField) or isinstance(field, db.ManyToManyField):
-                value = field.coerce(value, False)
+                value = field.coerce(value, False, 1)
             else:
                 value = field.coerce(value)
 
