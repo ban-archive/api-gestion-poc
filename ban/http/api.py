@@ -15,7 +15,7 @@ from ban.http.auth import auth
 from ban.http.wsgi import app
 from ban.utils import parse_mask
 
-from .utils import abort, get_bbox, link
+from .utils import abort, get_bbox, link, get_search_params
 
 
 class CollectionEndpoint:
@@ -88,9 +88,9 @@ class ModelEndpoint(CollectionEndpoint):
             instance = err.instance
         return instance
 
-    def save_object(self, instance=None, update=False):
+    def save_object(self, instance=None, update=False, json=None):
         validator = self.model.validator(update=update, instance=instance,
-                                         **request.json or {})
+                                         **json or {})
         if validator.errors:
             abort(422, error='Invalid data', errors=validator.errors)
         try:
@@ -116,7 +116,10 @@ class ModelEndpoint(CollectionEndpoint):
                 except peewee.DoesNotExist:
                     # Return an empty collection as the fk is not found.
                     return None
-                qs = qs.where(field << values)
+                if values == [None]:
+                    qs = qs.where(field.is_null())
+                else:
+                    qs = qs.where(field << values)
         return qs
 
     def get_mask(self):
@@ -192,7 +195,7 @@ class ModelEndpoint(CollectionEndpoint):
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['POST'])
-    def post_resource(self, identifier):
+    def post_resource(self, identifier, json=None):
         """Post {resource} with 'identifier'.
 
         parameters:
@@ -224,13 +227,15 @@ class ModelEndpoint(CollectionEndpoint):
             422:
                 $ref: '#/responses/422'
         """
+        if not json:
+            json = request.json
         instance = self.get_object(identifier)
-        instance = self.save_object(instance, update=True)
+        instance = self.save_object(instance, update=True, json=json)
         return instance.as_resource
 
     @app.jsonify
     @app.endpoint(methods=['POST'])
-    def post(self):
+    def post(self, json=None):
         """Create {resource}.
 
         parameters:
@@ -259,14 +264,16 @@ class ModelEndpoint(CollectionEndpoint):
             422:
                 $ref: '#/responses/422'
         """
-        instance = self.save_object()
+        if not json:
+            json = request.json
+        instance = self.save_object(json=json)
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         headers = {'Location': url_for(endpoint, identifier=instance.id)}
         return instance.as_resource, 201, headers
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
-    def patch(self, identifier):
+    def patch(self, identifier, json=None):
         """Patch {resource} with 'identifier'.
 
         parameters:
@@ -298,13 +305,15 @@ class ModelEndpoint(CollectionEndpoint):
             422:
                 $ref: '#/responses/422'
         """
+        if not json:
+            json = request.json
         instance = self.get_object(identifier)
-        instance = self.save_object(instance, update=True)
+        instance = self.save_object(instance, update=True, json=json)
         return instance.as_resource
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
-    def put(self, identifier):
+    def put(self, identifier, json=None):
         """Replace or restore {resource} with 'identifier'.
 
         parameters:
@@ -336,13 +345,15 @@ class ModelEndpoint(CollectionEndpoint):
             422:
                 $ref: '#/responses/422'
         """
+        if not json:
+            json = request.json
         instance = self.get_object(identifier)
         if instance.deleted_at:
             # We want to create only one new version for a restore. Change the
             # property here, but let the save_object do the actual save
             # if the data is valid.
             instance.deleted_at = None
-        instance = self.save_object(instance)
+        instance = self.save_object(instance, json=json)
         return instance.as_resource
 
     @app.jsonify
@@ -573,6 +584,13 @@ class Municipality(VersionedModelEndpoint):
     model = models.Municipality
     order_by = [model.insee]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search_params = get_search_params(request.args)
+        if search_params['search'] is not None:
+            qs = (qs.where(models.Municipality.name.search(**search_params)))
+        return qs
+
 
 @app.resource
 class PostCode(VersionedModelEndpoint):
@@ -581,6 +599,13 @@ class PostCode(VersionedModelEndpoint):
     order_by = [model.code, model.municipality]
     filters = ['code', 'municipality']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search_params = get_search_params(request.args)
+        if search_params['search'] is not None:
+            qs = (qs.where(models.PostCode.name.search(**search_params)))
+        return qs
+
 
 @app.resource
 class Group(VersionedModelEndpoint):
@@ -588,39 +613,53 @@ class Group(VersionedModelEndpoint):
     model = models.Group
     filters = ['municipality']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search_params = get_search_params(request.args)
+        if search_params['search'] is not None:
+            qs = (qs.where(models.Group.name.search(**search_params)))
+        return qs
+
 
 @app.resource
 class HouseNumber(VersionedModelEndpoint):
     endpoint = '/housenumber'
     model = models.HouseNumber
-    filters = ['parent', 'postcode', 'ancestors', 'group']
+    filters = ['number','ordinal', 'parent', 'postcode', 'ancestors', 'group']
     order_by = [peewee.SQL('number ASC NULLS FIRST'),
                 peewee.SQL('ordinal ASC NULLS FIRST')]
 
-    def filter_ancestors_and_group(self, qs):
+
+    def filter_group(self, qs):
+        values = request.args.getlist('group')
+        if values:
+            field = getattr(self.model, 'parent')
+            try:
+                values = list(map(field.coerce, values))
+            except ValueError:
+                abort(400, error='Invalid value for filter {}'.format('group'))
+            except peewee.DoesNotExist:
+                # Return an empty collection as the fk is not found.
+                return None
+            qs = qs.where(field << values)
+            return qs
+
+    def filter_ancestors(self, qs):
         # ancestors is a m2m so we cannot use the basic filtering
         # from self.filters.
         ancestors = request.args.getlist('ancestors')
-        group = request.args.getlist('group')  # Means parent + ancestors.
-        values = group or ancestors
-        values = list(map(self.model.ancestors.coerce, values))
-        parent_qs = qs.where(self.model.parent << values) if group else None
+        values = list(map(self.model.ancestors.coerce, ancestors))
         if values:
             m2m = self.model.ancestors.get_through_model()
-            qs = (qs.join(m2m, on=(m2m.housenumber == self.model.pk))
-                    .where(m2m.group << values))
-            if parent_qs:
-                qs = (parent_qs | qs)
+            qs = (qs.join(m2m, on=(m2m.housenumber == self.model.pk)))
             # We evaluate the qs ourselves here, because it's a CompoundSelect
             # that does not know about our SelectQuery custom methods (like
             # `serialize`), and CompoundSelect is hardcoded in peewee
             # SelectQuery, and we'd need to copy-paste code to be able to use
             # a custom CompoundQuery class instead.
-            mask = self.get_collection_mask()
-            qs = [h.serialize(mask) for h in qs.order_by(*self.order_by)]
+        mask = self.get_collection_mask()
+        qs = [h.serialize(mask) for h in qs.order_by(*self.order_by)]
         return qs
-
-    filter_ancestors = filter_group = filter_ancestors_and_group
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -647,12 +686,6 @@ class Position(VersionedModelEndpoint):
         return qs
 
 
-@app.resource
-class User(ModelEndpoint):
-    endpoint = '/user'
-    model = amodels.User
-
-
 @app.route('/import/bal', methods=['POST'])
 @auth.require_oauth('bal')
 def bal_post():
@@ -661,6 +694,62 @@ def bal_post():
     bal(StringIO(data.read().decode('utf-8-sig')))
     reporter = context.get('reporter')
     return dumps({'report': reporter})
+
+
+@app.route('/batch', methods=['POST'])
+@auth.require_oauth()
+def batch():
+    """
+    Execute multiple requests, submitted as a batch.
+    :statuscode 207: Multi status
+    """
+    try:
+        req = request.json
+        if req == []:
+            raise ValueError
+    except ValueError as e:
+        abort(400, error=str(e))
+    db = models.Municipality._meta.database
+    with db.atomic():
+        for index, re in enumerate(req):
+            method = re.get('method')
+            if method is None:
+                abort(422, error="No method given")
+            path = re.get('path')
+            if path is None:
+                abort(422, error="No path given")
+            body = re.get('body') or {}
+            if body == {} and method != 'DELETE':
+                abort(422, error='No body given')
+            if path[:13] == Municipality.endpoint:
+                self = Municipality()
+            elif path[:9] == PostCode.endpoint:
+                self = PostCode()
+            elif path[:6] == Group.endpoint:
+                self = Group()
+            elif path[:12] == HouseNumber.endpoint:
+                self = HouseNumber()
+            elif path[:9] == Position.endpoint:
+                self = Position()
+            else:
+                abort(422, error="Wrong resource {}".format(path))
+            scopes = '{}_write'.format(self.__class__.__name__.lower())
+            if scopes not in request.oauth.access_token.scopes:
+                abort(401)
+            if method == 'POST':
+                rep = self.post(json=body)
+            elif method == 'PUT':
+                identifier = path.split('/')[2]
+                rep = self.put(identifier=identifier, json=body)
+            elif method == 'PATCH':
+                identifier = path.split('/')[2]
+                rep = self.patch(identifier=identifier, json=body)
+            elif method == 'DELETE':
+                identifier = path.split('/')[2]
+                rep = self.delete(identifier=identifier)
+            else:
+                abort(422, error="Wrong request {}".format(method))
+    return rep
 
 
 @app.resource
@@ -729,91 +818,52 @@ def bbox():
     connectString = "dbname='{}' user='{}' password='{}' host='{}' port='{}'".format(dbname,user,password,host,port)
     conn = psycopg2.connect(connectString)
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    if unique:
-        cur.execute(
-            """SELECT count(distinct housenumber_id) 
-            FROM position
-            WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s) 
-            """,
-            {
-                "west": bbox["west"],
-                "south": bbox["south"],
-                "east": bbox["east"],
-                "north": bbox["north"]
-            }
-        )
-        response = {"collection": [], "total": cur.fetchone()["count"]}
-        cur.execute(
-            """SELECT
-                p.id as pos_id, st_x(center) as pos_x, st_y(center) as pos_y, p.kind as pos_kind, p.positioning as pos_positioning, p.version as pos_version,
-                h.id as hn_id, h.number as hn_number, h.ordinal as hn_ordinal, h.version as hn_version, 
-                po.id as post_id, po.name as post_name, po.code as post_code,
-                g.id as group_id, g.addressing as group_addressing, g.alias as group_alias, g.fantoir as group_fantoir, g.ign as group_ign, g.kind as group_kind, g.laposte as group_laposte, g.name as group_name
-                FROM position as p 
-                LEFT JOIN housenumber as h 
-                on (h.pk = p.housenumber_id) 
-                LEFT JOIN "group" as g 
-                on (h.parent_id = g.pk) 
-                LEFT JOIN postcode as po 
-                on (h.postcode_id = po.pk) 
-                WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)
-                AND p.modified_at = (select max(modified_at) from position where housenumber_id=h.pk)
-                limit %(limit)s""",
-            {
-                "limit": limit,
-                "west": bbox["west"],
-                "south": bbox["south"],
-                "east": bbox["east"],
-                "north": bbox["north"]
-            })
-    else:
-        cur.execute(
-            """SELECT count(*) 
-            FROM position 
-            WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)""",
-            {
-                "west": bbox["west"],
-                "south": bbox["south"],
-                "east": bbox["east"],
-                "north": bbox["north"]
-            }
-        )
-        response = {"collection": [], "total": cur.fetchone()["count"]}
-        cur.execute(
-            """SELECT
-                p.id as pos_id, st_x(center) as pos_x, st_y(center) as pos_y,
-                p.kind as pos_kind, p.positioning as pos_positioning, p.version as pos_version,
-                h.id as hn_id, h.number as hn_number, h.ordinal as hn_ordinal, h.version as hn_version, 
-                po.id as post_id, po.name as post_name, po.code as post_code,
-                g.id as group_id, g.addressing as group_addressing, g.alias as group_alias, 
-                g.fantoir as group_fantoir, g.ign as group_ign, g.kind as group_kind, g.laposte as group_laposte,
-                g.name as group_name
-                FROM position as p 
-                LEFT JOIN housenumber as h 
-                on (h.pk = p.housenumber_id) 
-                LEFT JOIN "group" as g 
-                on (h.parent_id = g.pk) 
-                LEFT JOIN postcode as po 
-                on (h.postcode_id = po.pk) 
-                WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)
-                limit %(limit)s""",
-            {
-                "limit": limit,
-                "west": bbox["west"],
-                "south": bbox["south"],
-                "east": bbox["east"],
-                "north": bbox["north"]
-            })
+    cur.execute(
+        """SELECT count(*) FROM position WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)""",
+        {
+            "west": bbox["west"],
+            "south": bbox["south"],
+            "east": bbox["east"],
+            "north": bbox["north"]
+        }
+    )
+    response = {"collection": [], "total": cur.fetchone()["count"]}
+    cur.execute(
+        """SELECT
+            p.id as pos_id, p.name as pos_name, st_x(center) as pos_x, st_y(center) as pos_y, p.kind as pos_kind, p.positioning as pos_positioning, p.source as pos_source, p.source_kind as pos_source_kind, p.version as pos_version,
+            h.id as hn_id, h.number as hn_number, h.ordinal as hn_ordinal, h.version as hn_version, 
+            po.id as post_id, po.name as post_name, po.code as post_code,
+            g.id as group_id, g.addressing as group_addressing, g.alias as group_alias, g.fantoir as group_fantoir, g.ign as group_ign, g.kind as group_kind, g.laposte as group_laposte, g.name as group_name
+            FROM position as p 
+            LEFT JOIN housenumber as h 
+            on (h.pk = p.housenumber_id) 
+            LEFT JOIN "group" as g 
+            on (h.parent_id = g.pk) 
+            LEFT JOIN postcode as po 
+            on (h.postcode_id = po.pk) 
+            WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)
+            AND p.deleted_at is null AND h.deleted_at is null and g.deleted_at is null
+            limit %(limit)s""",
+        {
+            "limit": limit,
+            "west": bbox["west"],
+            "south": bbox["south"],
+            "east": bbox["east"],
+            "north": bbox["north"]
+        })
 
     for row in cur:
         occ = {
             "id": row["pos_id"],
+            "name": row["pos_name"],
             "center": {
                 "type": "Point",
                 "coordinates": [row["pos_x"], row["pos_y"]]
             },
             "kind": row["pos_kind"],
             "positioning": row["pos_positioning"],
+            "source": row["pos_source"],
+            "source_kind": row["pos_source_kind"],
             "version": row["pos_version"],
             "housenumber": {
                 "id": row["hn_id"],

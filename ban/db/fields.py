@@ -5,7 +5,6 @@ import re
 import peewee
 
 from playhouse import postgres_ext, fields
-from playhouse.fields import PasswordField as PWDField
 from postgis import Point
 from psycopg2.extras import DateTimeTZRange
 
@@ -15,8 +14,8 @@ from . import cache
 __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
            'HStoreField', 'UUIDField', 'ArrayField', 'DateTimeField',
            'BooleanField', 'BinaryJSONField', 'FantoirField',
-           'ManyToManyField', 'PasswordField', 'DateRangeField', 'TextField',
-           'CachedForeignKeyField']
+           'ManyToManyField', 'DateRangeField', 'TextField',
+           'CachedForeignKeyField', 'NameField']
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
@@ -63,6 +62,9 @@ class PointField(peewee.Field, postgres_ext.IndexedFieldMixin):
             if search:
                 value = (float(search.group('lon')),
                          float(search.group('lat')))
+            else:
+                if not value[0].isdigit() or not value[1].isdigit():
+                    raise ValueError
         return Point(value[0], value[1], srid=self.srid)
 
     def contained(self, geom):
@@ -284,9 +286,120 @@ class ManyToManyField(fields.ManyToManyField):
         super().add_to_class(model_class, name)
 
 
-class PasswordField(PWDField):
-
-    def python_value(self, value):
-        if value is None:
-            return value
-        return super().python_value(value)
+class NameField(CharField):
+    def search(self, **kwargs):
+        ponctuation = '[\.\(\)\[\]\"\'\-,;:\/]'
+        articles = '(^| )((LA|L|LE|LES|DU|DE|DES|D|ET|A|AU) )*'
+        if kwargs['type'] is None or kwargs['search'] is None:
+            raise ValueError('None value for search.')
+        if kwargs['type'] == 'strict':
+            return peewee.Expression(self, peewee.OP.EQ, kwargs['search'])
+        elif kwargs['type'] == 'case':
+            return peewee.Expression(peewee.fn.unaccent(self), peewee.OP.ILIKE, peewee.fn.unaccent(kwargs['search']))
+        elif kwargs['type'] == 'ponctuation':
+            return peewee.Expression(
+                peewee.fn.regexp_replace(peewee.fn.unaccent(self), ponctuation, ' ', 'g'),
+                peewee.OP.ILIKE,
+                peewee.fn.regexp_replace(peewee.fn.unaccent(kwargs['search']), ponctuation, ' ', 'g'))
+        elif kwargs['type'] == 'abbrev':
+            import csv
+            abbrev = []
+            with open('../../abbrev_type_voie.csv', newline='') as csvfile:
+                csv = csv.reader(csvfile, delimiter=';')
+                for row in csv:
+                    if re.match(r"^{} ".format(row[1]),
+                                re.sub(ponctuation, ' ', kwargs['search'].upper())) is not None \
+                            or re.match(r"^{} ".format(row[0]),
+                                        re.sub(ponctuation, ' ', kwargs['search'].upper())) is not None:
+                        abbrev = row
+                        break
+                if not abbrev:
+                    return peewee.Expression(
+                        peewee.fn.regexp_replace(peewee.fn.unaccent(self), ponctuation, ' ', 'g'),
+                        peewee.OP.ILIKE,
+                        peewee.fn.regexp_replace(peewee.fn.unaccent(kwargs['search']), ponctuation, ' ', 'g'))
+                return peewee.Expression(
+                    peewee.fn.regexp_replace(
+                        peewee.fn.regexp_replace(
+                            peewee.fn.unaccent(peewee.fn.upper(self)), ponctuation, ' ', 'g'),
+                        "^{} ".format(abbrev[1]), "{} ".format(abbrev[0]), 'g'),
+                    peewee.OP.REGEXP,
+                    peewee.fn.regexp_replace(
+                        peewee.fn.regexp_replace(
+                            peewee.fn.unaccent(peewee.fn.upper(kwargs['search'])), ponctuation, ' ', 'g'),
+                        "^{} ".format(abbrev[1]), "{} ".format(abbrev[0]), 'g'))
+        elif kwargs['type'] == 'libelle':
+            import csv
+            abbrev = '^('
+            with open('../../abbrev_type_voie.csv', newline='') as csvfile:
+                csv = csv.reader(csvfile, delimiter=';')
+                for row in csv:
+                    abbrev = '{}|{}|{}'.format(abbrev, row[0], row[1])
+                abbrev = '{})( |$)'.format(abbrev)
+                return peewee.Expression(
+                    peewee.fn.regexp_replace(
+                        peewee.fn.regexp_replace(
+                            peewee.fn.unaccent(peewee.fn.upper(self)), ponctuation, ' ', 'g'),
+                        abbrev, "", 'g'),
+                    peewee.OP.ILIKE,
+                    peewee.fn.regexp_replace(
+                        peewee.fn.regexp_replace(
+                            peewee.fn.unaccent(peewee.fn.upper(kwargs['search'])), ponctuation, ' ', 'g'),
+                        abbrev, "", 'g'))
+        elif kwargs['type'] == 'direct':
+            import csv
+            abbrev = '^('
+            with open('../../abbrev_type_voie.csv', newline='') as csvfile:
+                csv = csv.reader(csvfile, delimiter=';')
+                for row in csv:
+                    abbrev = '{}|{}|{}'.format(abbrev, row[0], row[1])
+                abbrev = '{})( |$)'.format(abbrev)
+                return peewee.Expression(
+                    peewee.fn.trim(
+                        peewee.fn.regexp_replace(
+                            peewee.fn.regexp_replace(
+                                peewee.fn.regexp_replace(
+                                    peewee.fn.unaccent(peewee.fn.upper(self)),
+                                    ponctuation, ' ', 'g'),
+                                abbrev, "", 'g'),
+                            articles, ' ', 'g')),
+                    peewee.OP.ILIKE,
+                    peewee.fn.trim(
+                        peewee.fn.regexp_replace(
+                            peewee.fn.regexp_replace(
+                                peewee.fn.regexp_replace(
+                                    peewee.fn.unaccent(peewee.fn.upper(kwargs['search'])),
+                                    ponctuation, ' ', 'g'),
+                                abbrev, "", 'g'),
+                            articles, ' ', 'g')))
+        elif kwargs['type'] == 'approx':
+            import csv
+            abbrev = '^('
+            with open('../../abbrev_type_voie.csv', newline='') as csvfile:
+                csv = csv.reader(csvfile, delimiter=';')
+                for row in csv:
+                    abbrev = '{}|{}|{}'.format(abbrev, row[0], row[1])
+                abbrev = '{})( |$)'.format(abbrev)
+                return peewee.Expression(
+                    peewee.fn.levenshtein(
+                        peewee.fn.trim(
+                            peewee.fn.regexp_replace(
+                                peewee.fn.regexp_replace(
+                                    peewee.fn.regexp_replace(
+                                        peewee.fn.unaccent(peewee.fn.upper(self)),
+                                    ponctuation, ' ', 'g'),
+                                abbrev, "", 'g'),
+                            articles, ' ', 'g')),
+                        peewee.fn.trim(
+                            peewee.fn.regexp_replace(
+                                peewee.fn.regexp_replace(
+                                    peewee.fn.regexp_replace(
+                                        peewee.fn.unaccent(peewee.fn.upper(kwargs['search'])),
+                                        ponctuation, ' ', 'g'),
+                                    abbrev, "", 'g'),
+                                articles, ' ', 'g'))
+                    ),
+                    peewee.OP.LTE,
+                    2)
+        else:
+            raise ValueError('Search type {} is unknown'.format(kwargs['type']))

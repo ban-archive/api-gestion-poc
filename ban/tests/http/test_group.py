@@ -94,6 +94,35 @@ def test_get_group_housenumbers(get):
     }))
 
 
+@authorize
+def test_get_group_name_search_invalid_type(get):
+    street = GroupFactory(name="Rue des Boulets")
+    resp = get('/group?searchName=Rue+des+Boulets&searchType=wrong')
+    assert resp.status_code == 400
+
+
+@authorize
+def test_get_group_name_search_case_sensitive(get):
+    street = GroupFactory(name="Rue des Boulets")
+    resp = get('/group?searchName=Rue+des+Boulets')
+    assert resp.status_code == 200
+    assert resp.json['collection'][0]['name'] == "Rue des Boulets"
+
+
+@authorize
+def test_get_group_name_search_case_insensitive(get):
+    street = GroupFactory(name="Rue des Boulets")
+    resp = get('/group?searchName=RUE+DES+BOULETS&searchType=case')
+    assert resp.status_code == 200
+    assert resp.json['collection'][0]['name'] == "Rue des Boulets"
+
+@authorize
+def test_get_group_name_search_case_insensitive_accent(get):
+    street = GroupFactory(name="Rue de la boulangère")
+    resp = get('/group?searchName=RUE+DE+LA+BOULANGERE&searchType=case')
+    assert resp.status_code == 200
+    assert resp.json['collection'][0]['name'] == "Rue de la boulangère"
+
 @authorize('group_write')
 def test_create_group(client):
     municipality = MunicipalityFactory(name="Cabour")

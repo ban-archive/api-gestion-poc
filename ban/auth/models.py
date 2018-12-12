@@ -20,9 +20,6 @@ class User(ResourceModel):
     username = db.CharField(max_length=100, index=True)
     email = db.CharField(max_length=100, unique=True)
     company = db.CharField(max_length=100, null=True)
-    # Allow null, because password is not a resource field, and thus cannot be
-    # passed to validators.
-    password = db.PasswordField(null=True)
     is_staff = db.BooleanField(default=False, index=True)
 
     class Meta:
@@ -31,30 +28,38 @@ class User(ResourceModel):
     def __str__(self):
         return self.username
 
-    def set_password(self, password):
-        self.password = password
-        self.save()
-
-    def check_password(self, password):
-        return self.password.check_password(password)
-
 
 class Client(ResourceModel):
     identifiers = ['client_id']
-    resource_fields = ['name', 'user', 'scopes']
+    resource_fields = ['name', 'user', 'scopes', 'contributor_types']
 
-    GRANT_AUTHORIZATION_CODE = 'authorization_code'
-    GRANT_IMPLICIT = 'implicit'
-    GRANT_PASSWORD = 'password'
     GRANT_CLIENT_CREDENTIALS = 'client_credentials'
     GRANT_TYPES = (
-        # (GRANT_AUTHORIZATION_CODE, _('Authorization code')),
-        # (GRANT_IMPLICIT, _('Implicit')),
-        (GRANT_PASSWORD, _('Resource owner password-based')),
         (GRANT_CLIENT_CREDENTIALS, _('Client credentials')),
     )
-    FLAGS = ['ign', 'laposte', 'local_authority']
-    FLAG_IDS = tuple((i, i) for i in FLAGS) + (None, 'None')
+    TYPE_IGN = 'ign'
+    TYPE_LAPOSTE = 'laposte'
+    TYPE_DGFIP = 'dgfip'
+    TYPE_ETALAB = 'etalab'
+    TYPE_OSM = 'osm'
+    TYPE_SDIS = 'sdis'
+    TYPE_MUNICIPAL = 'municipal_administration'
+    TYPE_ADMIN = 'admin'
+    TYPE_DEV = 'develop'
+    TYPE_INSEE = 'insee'
+    TYPE_VIEWER = 'viewer'
+    CONTRIBUTOR_TYPE = (
+        TYPE_SDIS,
+        TYPE_OSM,
+        TYPE_LAPOSTE,
+        TYPE_IGN,
+        TYPE_DGFIP,
+        TYPE_ETALAB,
+        TYPE_MUNICIPAL,
+        TYPE_ADMIN,
+        TYPE_INSEE,
+        TYPE_DEV,
+        TYPE_VIEWER)
 
     client_id = db.UUIDField(unique=True, default=uuid.uuid4)
     name = db.CharField(max_length=100)
@@ -63,7 +68,7 @@ class Client(ResourceModel):
     redirect_uris = db.ArrayField(db.CharField)
     grant_type = db.CharField(choices=GRANT_TYPES)
     is_confidential = db.BooleanField(default=False)
-    flag_id = db.CharField(choices=FLAG_IDS, default=None, null=True)
+    contributor_types = db.ArrayField(db.CharField, default=[TYPE_VIEWER], null=True)
     scopes = db.ArrayField(db.CharField, default=[], null=True)
 
     @property
@@ -74,10 +79,9 @@ class Client(ResourceModel):
     def allowed_grant_types(self):
         return [id for id, name in self.GRANT_TYPES]
 
+    #Necessaire pour OAuth
     @property
     def default_scopes(self):
-        # Flask-Oauthlib needs default_scopes attribute, but let's keep a more
-        # intuitive name for internal use.
         return self.scopes
 
     def save(self, *args, **kwargs):
@@ -85,6 +89,8 @@ class Client(ResourceModel):
             self.client_secret = generate_secret()
             self.redirect_uris = ['http://localhost/authorize']  # FIXME
             self.grant_type = self.GRANT_CLIENT_CREDENTIALS
+        if not self.contributor_types:
+            self.contributor_types = ['viewer']
         super().save(*args, **kwargs)
 
 
@@ -125,7 +131,7 @@ class Session(db.Model):
     client = db.CachedForeignKeyField(Client, null=True)
     ip = db.CharField(null=True)  # TODO IPField
     email = db.CharField(null=True)  # TODO EmailField
-    attributes = db.HStoreField(null=True)
+    contributor_type = db.CharField(null=True)
 
     def serialize(self, *args):
         # Pretend to be a resource for created_by/modified_by values in
@@ -135,12 +141,14 @@ class Session(db.Model):
             'id': self.pk,
             'client': self.client.name if self.client else None,
             'user': self.user.username if self.user else None,
-            'attributes': self.attributes if self.attributes else None
+            'contributor_type': self.contributor_type if self.contributor_type else None
         }
 
     def save(self, **kwargs):
         if not self.user and not self.client:
             raise ValueError('Session must have either a client or a user')
+        if not self.contributor_type:
+            raise ValueError('Session must have a contributor type')
         super().save(**kwargs)
 
 
@@ -151,9 +159,10 @@ class Token(db.Model):
     refresh_token = db.CharField(max_length=255, null=True)
     scopes = db.ArrayField(db.CharField, default=[], null=True)
     expires = db.DateTimeField()
+    contributor_type = db.CharField(choices=Client.CONTRIBUTOR_TYPE, null=True)
 
     def __init__(self, **kwargs):
-        expires_in = kwargs.pop('expires_in', 60 * 60)
+        expires_in = kwargs.pop('expires_in', 60 * 60 )
         kwargs['expires'] = utcnow() + timedelta(seconds=expires_in)
         super().__init__(**kwargs)
 
@@ -190,17 +199,31 @@ class Token(db.Model):
     @classmethod
     def create_with_session(cls, **data):
         if not data.get('ip') and not data.get('email'):
-            return None
+            return None, None
         if not data.get('client_id'):
-            return None
+            return None, 'Client id missing'
         client = Client.first(Client.client_id == data['client_id'])
+        if len(client.contributor_types) == 0:
+            return None, 'Client has none contributor types'
+        contributor_type = client.contributor_types[0]
+        if data.get('contributor_type'):
+            if data.get('contributor_type') not in client.contributor_types:
+                return None, 'wrong contributor type : must be in the list {}'.format(client.contributor_types)
+        if len(client.contributor_types) > 1:
+            if not data.get('contributor_type'):
+                return None, 'Contributor type missing'
+            contributor_type = data.get('contributor_type')
+
         session_data = {
             "email": data.get('email'),
             "ip": data.get('ip'),
-            "attributes": data.get('attributes'),
+            "contributor_type": contributor_type,
             "client": client
         }
         session = Session.create(**session_data)  # get or create?
         data['session'] = session.pk
         data['scopes'] = client.scopes
-        return Token.create(**data)
+        data['contributor_type'] = session.contributor_type
+        if session.contributor_type == Client.TYPE_VIEWER:
+            data['scopes'] = None
+        return Token.create(**data), None
