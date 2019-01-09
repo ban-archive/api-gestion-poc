@@ -415,6 +415,7 @@ def test_patch_housenumber_with_districts(client):
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
     assert district in hn.ancestors
 
+
 @authorize('housenumber_write')
 def test_patch_housenumber_doublon_number_ordinal_parent(client):
     group = GroupFactory()
@@ -428,18 +429,20 @@ def test_patch_housenumber_doublon_number_ordinal_parent(client):
     resp = client.patch(uri, data=data)
     assert resp.status_code == 422
 
+
 @authorize('housenumber_write')
 def test_patch_housenumber_vidage_ign(client):
     group = GroupFactory()
-    housenumber1 = HouseNumberFactory(number='1', ign= 'ADRNIVX_0000000', parent=group)
-    housenumber2 = HouseNumberFactory(number='2', parent=group)
+    housenumber1 = HouseNumberFactory(number='1', ordinal=None, parent=group)
+    housenumber2 = HouseNumberFactory(number='2', ordinal=None, parent=group)
     data = {
         "version": 2,
-        "ign": "",
+        "number": "3",
     }
     uri = '/housenumber/{}'.format(housenumber1.id)
     resp = client.patch(uri, data=data)
     assert resp.status_code == 200
+
 
 @authorize('housenumber_write')
 def test_patch_housenumber_with_postcode(client):

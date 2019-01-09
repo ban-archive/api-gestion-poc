@@ -7,7 +7,8 @@ from ban import db
 from ban.auth.models import Client, Session
 from ban.utils import make_diff, utcnow
 
-from . import context
+from . import context, resource
+from .exceptions import (IsDeletedError, MultipleRedirectsError, RedirectError)
 
 
 @decorator.decorator
@@ -212,6 +213,36 @@ class Version(db.Model):
         self.period = [self.period.lower, bound]
         self.save()
 
+    @classmethod
+    def raw_select(cls, *selection):
+        return super().select(*selection)
+
+    @classmethod
+    def coerce(cls, id, identifier=None):
+        if isinstance(id, db.Model):
+            instance = id
+        else:
+            if not identifier:
+                identifier = 'sequential'  # BAN id by default.
+                if isinstance(id, str):
+                    *extra, id = id.split(':')
+                    if extra:
+                        identifier = extra[0]
+                elif isinstance(id, int):
+                    identifier = 'pk'
+            try:
+                instance = cls.raw_select().where(
+                    getattr(cls, identifier) == id).get()
+            except cls.DoesNotExist:
+                # Is it an old identifier?
+                redirects = Redirect.follow(cls.__name__, identifier, id)
+                if redirects:
+                    if len(redirects) > 1:
+                        raise MultipleRedirectsError(identifier, id, redirects)
+                    raise RedirectError(identifier, id, redirects[0])
+                raise
+        return instance
+
 
 class Diff(db.Model):
 
@@ -400,3 +431,32 @@ class Flag(db.Model):
             'at': self.created_at,
             'by': self.session.contributor_type
         }
+
+
+class Anomaly(resource.ResourceModel):
+
+    __openapi__ = """
+            properties:
+                identifier:
+                    type: string
+                    description:
+                        key/value pair for identifier.
+                            . key = identifier name. e.g., 'id'.
+                            . value = identifier value.
+                            . key and value are separated by a ':'
+            """
+
+    resource_fields = ['versions', 'kind', 'insee', 'created_at']
+    readonly_fields = (resource.ResourceModel.readonly_fields + ['created_at'])
+    versions = db.ManyToManyField(Version, related_name='_anomalies')
+    kind = db.CharField()
+    insee = db.CharField(length=5)
+    created_at = db.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.created_at:
+            self.created_at = utcnow()
+        return super().save(*args, **kwargs)
+
+    def mark_deleted(self):
+        self.delete().execute()

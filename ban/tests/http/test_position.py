@@ -433,3 +433,12 @@ def test_check_position_center(post):
     }
     resp = post('/position', data)
     assert resp.status_code == 422
+
+@authorize
+def test_bbox_unique(get):
+    h = HouseNumberFactory()
+    p1 = PositionFactory(housenumber=h, center=(1, 1))
+    p2 = PositionFactory(housenumber=h, center=(2, 2))
+    resp = get('/bbox?west=0&east=3&south=0&north=3&unique=false')
+    assert resp.status_code == 200
+    assert resp.json["total"] == 1

@@ -1,7 +1,7 @@
 from ban.auth import models as amodels
 from ban.commands import command, reporter
 from ban.core import models as cmodels
-from ban.core.versioning import Diff, Version, Redirect, Flag
+from ban.core.versioning import Diff, Version, Redirect, Flag, Anomaly
 
 from . import helpers
 
@@ -9,7 +9,7 @@ models = [Version, Diff, Redirect, amodels.User, amodels.Client,
           amodels.Grant, amodels.Session, amodels.Token, cmodels.Municipality,
           cmodels.PostCode, cmodels.Group, cmodels.HouseNumber,
           cmodels.HouseNumber.ancestors.get_through_model(),
-          cmodels.Position, Flag]
+          cmodels.Position, Flag, Anomaly, Anomaly.versions.get_through_model()]
 
 
 @command

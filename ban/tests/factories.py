@@ -6,7 +6,7 @@ from factory.fuzzy import FuzzyAttribute, FuzzyInteger, FuzzyText
 from factory_peewee import PeeweeModelFactory
 
 from ban.auth import models as auth_models
-from ban.core import models
+from ban.core import models, versioning
 from ban.utils import utcnow
 
 
@@ -134,3 +134,31 @@ class PositionFactory(BaseFactory):
 
     class Meta:
         model = models.Position
+
+
+class VersionFactory(BaseTestModel):
+    model_name = 'resource'
+    model_pk = FuzzyInteger(1, 97000)
+    sequential = 1
+    data = '{"nom":"factory"}'
+    period = [utcnow(),]
+
+
+    class Meta:
+        model = versioning.Version
+
+
+class AnomalyFactory(BaseTestModel):
+    kind = 'doublon hn'
+    insee = '33544'
+    version = factory.SubFactory(VersionFactory)
+
+    @factory.post_generation
+    def versions(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            self.versions.add(extracted)
+
+    class Meta:
+        model = versioning.Anomaly

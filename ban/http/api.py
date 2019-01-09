@@ -380,6 +380,8 @@ class ModelEndpoint(CollectionEndpoint):
                 $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
+        if self.__class__.__name__.lower() == 'anomaly':
+            self.delete_join(instance)
         try:
             instance.mark_deleted()
         except ResourceLinkedError as e:
@@ -487,7 +489,6 @@ class VersionedModelEndpoint(ModelEndpoint):
             version.unflag()
         else:
             abort(400, error='Body should contain a `status` boolean key')
-
 
     @auth.require_oauth()
     @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT'])
@@ -799,6 +800,78 @@ class Diff(CollectionEndpoint):
             qs = qs.where(versioning.Diff.pk > increment)
         return self.collection(qs.serialize())
 
+
+@app.resource
+class Anomaly(ModelEndpoint):
+    endpoint = '/anomaly'
+    model = versioning.Anomaly
+    filters = ['kind', 'versions']
+    order_by = [peewee.SQL('pk ASC')]
+
+    def filter_versions(self, qs):
+        # versions is a m2m so we cannot use the basic filtering
+        # from self.filters.
+        version = request.args.getlist('version')
+        values = list(map(self.model.versions.coerce, version))
+        if values:
+            m2m = self.model.versions.get_through_model()
+            qs = (qs.join(m2m, on=(m2m.anomaly == self.model.pk)))
+            # We evaluate the qs ourselves here, because it's a CompoundSelect
+            # that does not know about our SelectQuery custom methods (like
+            # `serialize`), and CompoundSelect is hardcoded in peewee
+            # SelectQuery, and we'd need to copy-paste code to be able to use
+            # a custom CompoundQuery class instead.
+        mask = self.get_collection_mask()
+        qs = [h.serialize(mask) for h in qs.order_by(*self.order_by)]
+        return qs
+
+    def delete_join(self, instance):
+        m2m = self.model.versions.get_through_model()
+        m2m.delete().where(m2m.anomaly == instance.pk).execute()
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        version = request.args.get('version')
+        resource = request.args.get('resource')
+        if version is not None and resource is not None:
+            qs = self.filter_versions(qs)
+        return qs
+
+    def save_object(self, instance=None, update=False, json=None):
+        versions = json.get('versions')
+        if not update:
+            if not versions:
+                abort(422, error='No versions given')
+            for i in range(len(versions)):
+                version = versions[i]
+                resource = version.get('resource')
+                if resource == 'municipality':
+                    re = Municipality.get_object(Municipality, version.get('id'))
+                elif resource == 'postcode':
+                    re = PostCode.get_object(PostCode, version.get('id'))
+                elif resource == 'group':
+                    re = Group.get_object(Group, version.get('id'))
+                elif resource == 'housenumber':
+                    re = HouseNumber.get_object(HouseNumber, version.get('id'))
+                elif resource == 'position':
+                    re = Position.get_object(Position, version.get('id'))
+                else:
+                    abort(422, error='Invalid resource in versions')
+                v = re.load_version(version.get('version'))
+                if not v:
+                    abort(422, error='Wrong version number')
+                json['versions'][i] = v.pk
+        validator = self.model.validator(update=update, instance=instance,
+                                         **json or {})
+        if validator.errors:
+            abort(422, error='Invalid data', errors=validator.errors)
+        try:
+            instance = validator.save()
+        except models.Model.ForcedVersionError as e:
+            abort(409, error=str(e))
+        return instance
+
+
 @app.route('/bbox', methods=['GET'])
 @auth.require_oauth()
 @app.jsonify
@@ -818,7 +891,7 @@ def bbox():
     connectString = "dbname='{}' user='{}' password='{}' host='{}' port='{}'".format(dbname,user,password,host,port)
     conn = psycopg2.connect(connectString)
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    if unique == 'true':
+    if unique == 1:
         cur.execute(
             """SELECT count(distinct housenumber_id) FROM position WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)""",
             {

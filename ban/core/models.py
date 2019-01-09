@@ -6,7 +6,7 @@ from werkzeug.utils import cached_property
 
 from ban import db
 from ban.utils import compute_cia
-from .versioning import Versioned, BaseVersioned
+from .versioning import Versioned, BaseVersioned, Version
 from .resource import ResourceModel, BaseResource
 from .validators import VersionedResourceValidator
 
@@ -124,6 +124,7 @@ class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'positions', 'ign', 'postcode']
+    exclude_for_collection = ['ancestors']
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
