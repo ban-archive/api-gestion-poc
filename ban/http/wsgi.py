@@ -21,7 +21,7 @@ class App(Flask):
         @wraps(func)
         def wrapper(*args, **kwargs):
             rv = func(*args, **kwargs)
-            if not isinstance(rv, tuple):
+            if not isinstance(rv, (tuple,list)):
                 rv = [rv]
             else:
                 rv = list(rv)
