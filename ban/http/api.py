@@ -384,7 +384,7 @@ class ModelEndpoint(CollectionEndpoint):
             instance.mark_deleted()
         except ResourceLinkedError as e:
             abort(409, error=str(e))
-        return {'resource_id': identifier}, 204
+        return instance.as_resource, 204
 
 
 class VersionedModelEndpoint(ModelEndpoint):
