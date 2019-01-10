@@ -1,15 +1,18 @@
+import pytest
+
 import json
 from unittest.mock import Mock
 from pathlib import Path
 
 from ban.auth import models as amodels
 from ban.commands.auth import (createclient, createuser, dummytoken,
-                               listclients, listusers)
+                               listclients, listusers, invalidatetoken)
 from ban.commands.db import truncate
 from ban.commands.export import resources
 from ban.core import models
 from ban.core.encoder import dumps
 from ban.tests import factories
+from ban.utils import utcnow
 
 
 def test_create_user_is_not_staff_by_default(monkeypatch):
@@ -35,6 +38,7 @@ def test_listusers(capsys):
     listusers()
     out, err = capsys.readouterr()
     assert user.username in out
+    assert user.id in out
 
 
 def test_listusers_with_invoke(capsys):
@@ -47,7 +51,7 @@ def test_listusers_with_invoke(capsys):
 def test_create_client_should_accept_username():
     user = factories.UserFactory()
     assert not amodels.Client.select().count()
-    createclient(name='test client', user=user.username)
+    createclient(name='test client', user=user.username, scopes=['test'], contributor_types=['develop'])
     assert amodels.Client.select().count() == 1
     client = amodels.Client.first()
     assert client.user == user
@@ -56,7 +60,7 @@ def test_create_client_should_accept_username():
 def test_create_client_should_accept_email():
     user = factories.UserFactory()
     assert not amodels.Client.select().count()
-    createclient(name='test client', user=user.email)
+    createclient(name='test client', user=user.email, scopes=['test'], contributor_types=['develop'])
     assert amodels.Client.select().count() == 1
     client = amodels.Client.first()
     assert client.user == user
@@ -70,6 +74,38 @@ def test_create_client_should_not_crash_on_non_existing_user(capsys):
     assert 'User not found' in out
 
 
+def test_create_client_with_scopes(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt',
+                        lambda *x, **wk: 'municipality_write group_write')
+    user = factories.UserFactory()
+    createclient(name='test client', user=user.username, contributor_types=['develop'])
+    client = amodels.Client.first()
+    assert client.scopes == ['municipality_write', 'group_write']
+
+
+def test_create_client_without_scopes(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: '')
+    user = factories.UserFactory()
+    createclient(name='test client', user=user.username, contributor_types=['develop'])
+    client = amodels.Client.first()
+    assert client.scopes == []
+
+def test_create_client_with_contributor_types(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: 'ign laposte')
+    user = factories.UserFactory()
+    createclient(name='test client', user=user.username, scopes=['test'])
+    client = amodels.Client.first()
+    assert client.contributor_types == ['ign', 'laposte', 'viewer']
+
+
+def test_create_client_without_contributor_types(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: '')
+    user = factories.UserFactory()
+    createclient(name='test client', user=user.username, scopes=['test'])
+    client = amodels.Client.first()
+    assert client.contributor_types == ['viewer']
+
+
 def test_listclients(capsys):
     client = factories.ClientFactory()
     listclients()
@@ -77,6 +113,9 @@ def test_listclients(capsys):
     assert client.name in out
     assert str(client.client_id) in out
     assert client.client_secret in out
+    assert client.id in out
+    assert ''.join(client.scopes) in out
+    assert ''.join(client.contributor_types) in out
 
 
 def test_truncate_should_truncate_all_tables_by_default(monkeypatch):
@@ -103,25 +142,83 @@ def test_truncate_should_not_ask_for_confirm_in_force_mode(monkeypatch):
     assert not models.Municipality.select().count()
 
 
-def test_export_resources():
+def test_export_municipality():
     mun = factories.MunicipalityFactory()
-    street = factories.GroupFactory(municipality=mun)
-    hn = factories.HouseNumberFactory(parent=street)
-    factories.PositionFactory(housenumber=hn)
-    deleted = factories.PositionFactory(housenumber=hn)
-    deleted.mark_deleted()
-    path = Path(__file__).parent / 'data/export.sjson'
-    resources(path)
+    path = Path(__file__).parent / 'data'
+    resources('Municipality', path)
 
-    with path.open() as f:
+    filepath = path.joinpath('municipality.ndjson')
+    with filepath.open() as f:
         lines = f.readlines()
-        assert len(lines) == 3
+        assert len(lines) == 1
         # loads/dumps to compare string dates to string dates.
-        assert json.loads(lines[0]) == json.loads(dumps(mun.as_resource))
-        assert json.loads(lines[1]) == json.loads(dumps(street.as_resource))
+        assert json.loads(lines[0]) == json.loads(dumps(mun.as_export))
+    filepath.unlink()
+
+
+def test_export_group():
+    street = factories.GroupFactory()
+    path = Path(__file__).parent / 'data'
+    resources('Group', path)
+
+    filepath = path.joinpath('group.ndjson')
+    with filepath.open() as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        # loads/dumps to compare string dates to string dates.
+        assert json.loads(lines[0]) == json.loads(dumps(street.as_export))
+    filepath.unlink()
+
+
+def test_export_housenumber():
+    hn = factories.HouseNumberFactory(number='1')
+    path = Path(__file__).parent / 'data'
+    resources('HouseNumber', path)
+
+    filepath = path.joinpath('housenumber.ndjson')
+    with filepath.open() as f:
+        lines = f.readlines()
+        assert len(lines) == 1
         # Plus, JSON transform internals tuples to lists.
-        assert json.loads(lines[2]) == json.loads(dumps(hn.as_resource))
-    path.unlink()
+        assert json.loads(lines[0]) == json.loads(dumps(hn.as_export))
+    filepath.unlink()
+
+
+def test_export_position():
+    position = factories.PositionFactory()
+    deleted = factories.PositionFactory()
+    deleted.mark_deleted()
+    path = Path(__file__).parent / 'data'
+    resources('Position', path)
+
+    filepath = path.joinpath('position.ndjson')
+    with filepath.open() as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        # Plus, JSON transform internals tuples to lists.
+        assert json.loads(lines[0]) == json.loads(dumps(position.as_export))
+    filepath.unlink()
+
+
+def test_export_postcode():
+    pc = factories.PostCodeFactory()
+    path = Path(__file__).parent / 'data'
+    resources('PostCode', path)
+
+    filepath = path.joinpath('postcode.ndjson')
+    with filepath.open() as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        # Plus, JSON transform internals tuples to lists.
+        assert json.loads(lines[0]) == json.loads(dumps(pc.as_export))
+    filepath.unlink()
+
+
+def test_cannot_export_wrong_resource():
+    pc = factories.PostCodeFactory()
+    path = Path(__file__).parent / 'data'
+    with pytest.raises(SystemExit):
+        resources('toto', path)
 
 
 def test_dummytoken():
@@ -143,3 +240,35 @@ def test_report_to(tmpdir, config):
     dummytoken.invoke(args)
     with report_to.open() as f:
         assert 'Created token' in f.read()
+
+
+def test_invalidate_token_with_user(capsys):
+    user = factories.UserFactory()
+    session = factories.SessionFactory(user=user)
+    token = factories.TokenFactory(session=session)
+    invalidatetoken(user=user.email)
+
+    out, err = capsys.readouterr()
+    assert 'Invalidate 1 token' in out
+    updated_token = amodels.Token.first(amodels.Token.pk == token.pk)
+    assert updated_token.is_expired
+
+
+def test_invalidate_token_with_client(capsys):
+    client = factories.ClientFactory()
+    session = factories.SessionFactory(client=client)
+    valid_client = factories.ClientFactory()
+    valid_session = factories.SessionFactory(client=valid_client)
+    token = factories.TokenFactory(session=session)
+    valid_token = factories.TokenFactory(session=valid_session)
+    invalidatetoken(client=client.client_id)
+
+    out, err = capsys.readouterr()
+    assert 'Invalidate 1 token' in out
+    updated_token = amodels.Token.first(amodels.Token.pk == token.pk)
+    updated_valid_token = amodels.Token.first(
+        amodels.Token.pk == valid_token.pk
+    )
+    assert utcnow().date() >= updated_token.expires.date()
+    assert updated_token.is_expired
+    assert updated_valid_token.is_valid()

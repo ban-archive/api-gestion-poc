@@ -45,8 +45,6 @@ def test_get_municipality_groups_collection(get):
     street = GroupFactory(municipality=municipality, name="Rue de la Plage")
     resp = get('/group?municipality={}'.format(municipality.id))
     assert resp.status_code == 200
-    # loads/dumps to compare date strings to date strings.
-    assert resp.json['collection'][0] == json.loads(dumps(street.as_relation))
     assert resp.json['total'] == 1
 
 
@@ -158,6 +156,14 @@ def test_get_municipality_version(get):
 
 
 @authorize
+def test_get_municipality_name_search(get):
+    municipality = MunicipalityFactory(name="MARTIGUES")
+    resp = get('/municipality?searchName=MARTIGUES')
+    assert resp.status_code == 200
+    assert resp.json['collection'][0]['name'] == "MARTIGUES"
+
+
+@authorize
 def test_old_insee_should_redirect(get):
     municipality = MunicipalityFactory(insee="12345")
     # This should create a redirect.
@@ -185,7 +191,7 @@ def test_multiple_redirects_should_return_300(get):
     assert '/municipality/{}'.format(municipality2.id) in resp.json['choices']
 
 
-@authorize
+@authorize('municipality_write')
 def test_create_municipality(post):
     assert not models.Municipality.select().count()
     data = {
@@ -202,7 +208,7 @@ def test_create_municipality(post):
     assert resp.headers['Location'] == uri
 
 
-@authorize
+@authorize('municipality_write')
 def test_cannot_duplicate_municipality(post):
     MunicipalityFactory(insee="12345")
     data = {
@@ -217,7 +223,7 @@ def test_cannot_duplicate_municipality(post):
     assert '12345' in resp.json['errors']['insee']
 
 
-@authorize
+@authorize('municipality_write')
 def test_create_municipality_with_one_alias(post):
     data = {
         "name": "Orvane",
@@ -231,7 +237,7 @@ def test_create_municipality_with_one_alias(post):
     assert 'Moret-sur-Loing' in municipality.alias
 
 
-@authorize
+@authorize('municipality_write')
 def test_create_municipality_with_list_of_aliases(post):
     data = {
         "name": "Orvane",
@@ -246,7 +252,7 @@ def test_create_municipality_with_list_of_aliases(post):
     assert 'Another-Name' in municipality.alias
 
 
-@authorize
+@authorize('municipality_write')
 def test_patch_municipality_with_alias(patch):
     municipality = MunicipalityFactory()
     data = {
@@ -259,7 +265,7 @@ def test_patch_municipality_with_alias(patch):
     assert 'Moret-sur-Loing' in municipality.alias
 
 
-@authorize
+@authorize('municipality_write')
 def test_delete_municipality(client):
     municipality = MunicipalityFactory()
     resp = client.delete('/municipality/{}'.format(municipality.id))
@@ -277,7 +283,15 @@ def test_cannot_delete_municipality_if_not_authorized(client):
     assert models.Municipality.get(models.Municipality.id == municipality.id)
 
 
-@authorize
+@authorize('foo_bar')
+def test_cannot_delete_municipality_without_write_access(client):
+    municipality = MunicipalityFactory()
+    resp = client.delete('/municipality/{}'.format(municipality.id))
+    assert resp.status_code == 401
+    assert models.Municipality.get(models.Municipality.id == municipality.id)
+
+
+@authorize('municipality_write')
 def test_cannot_delete_municipality_if_linked_to_street(client):
     municipality = MunicipalityFactory()
     GroupFactory(municipality=municipality)
@@ -287,13 +301,13 @@ def test_cannot_delete_municipality_if_linked_to_street(client):
     assert models.Municipality.get(models.Municipality.id == municipality.id)
 
 
-@authorize
+@authorize('municipality_write')
 def test_delete_unknown_municipality_should_return_not_found(client):
     resp = client.delete('/municipality/11')
     assert resp.status_code == 404
 
 
-@authorize
+@authorize('municipality_write')
 def test_can_get_deleted_municipality(get):
     municipality = MunicipalityFactory()
     municipality.mark_deleted()
@@ -328,7 +342,7 @@ def test_can_get_deleted_municipality_version(get):
     assert resp.json['data']['name'] == 'Cabour2'
 
 
-@authorize
+@authorize('municipality_write')
 def test_cannot_post_on_deleted_municipality(post):
     municipality = MunicipalityFactory()
     municipality.mark_deleted()
@@ -336,7 +350,7 @@ def test_cannot_post_on_deleted_municipality(post):
     assert resp.status_code == 410
 
 
-@authorize
+@authorize('municipality_write')
 def test_cannot_patch_on_deleted_municipality(patch):
     municipality = MunicipalityFactory()
     municipality.mark_deleted()
@@ -344,7 +358,7 @@ def test_cannot_patch_on_deleted_municipality(patch):
     assert resp.status_code == 410
 
 
-@authorize
+@authorize('municipality_write')
 def test_can_restore_municipality(client):
     municipality = MunicipalityFactory()
     municipality.mark_deleted()
@@ -357,7 +371,7 @@ def test_can_restore_municipality(client):
     assert len(municipality.versions) == 3
 
 
-@authorize
+@authorize('municipality_write')
 def test_cannot_restore_municipality_without_changing_version(client):
     municipality = MunicipalityFactory()
     municipality.mark_deleted()
@@ -368,7 +382,7 @@ def test_cannot_restore_municipality_without_changing_version(client):
         models.Municipality.pk == municipality.pk).get().deleted_at
 
 
-@authorize
+@authorize('municipality_write')
 def test_cannot_restore_municipality_with_invalid_data(client):
     municipality = MunicipalityFactory()
     municipality.mark_deleted()
@@ -391,7 +405,7 @@ def test_municipality_select_use_default_orderby(get):
     assert resp.json['collection'][0]['insee'] == '90001'
 
 
-@authorize
+@authorize('municipality_write')
 def test_status_is_readonly(post):
     municipality = MunicipalityFactory()
     data = municipality.serialize({'*': {}})
@@ -401,7 +415,7 @@ def test_status_is_readonly(post):
     assert resp.status_code == 200
 
 
-@authorize
+@authorize('municipality_write')
 def test_cannot_change_deleted_at_with_post(post):
     municipality = MunicipalityFactory()
     data = municipality.serialize({'*': {}})
@@ -413,7 +427,7 @@ def test_cannot_change_deleted_at_with_post(post):
         models.Municipality.pk == municipality.pk).deleted_at
 
 
-@authorize
+@authorize('municipality_write')
 def test_cannot_change_deleted_at_with_patch(patch):
     municipality = MunicipalityFactory()
     data = municipality.serialize({'*': {}})
@@ -425,7 +439,7 @@ def test_cannot_change_deleted_at_with_patch(patch):
         models.Municipality.pk == municipality.pk).deleted_at
 
 
-@authorize
+@authorize('municipality_write')
 def test_cannot_change_deleted_at_with_put(put):
     municipality = MunicipalityFactory()
     data = municipality.serialize({'*': {}})
@@ -438,10 +452,118 @@ def test_cannot_change_deleted_at_with_put(put):
 
 
 @authorize
-def test_authorized_responses_contain_sessions_data(get):
+def test_get_municipality_without_scopes(get):
     municipality = MunicipalityFactory(name="Cabour")
     resp = get('/municipality/{}'.format(municipality.id))
     assert resp.status_code == 200
-    session = context.get('session')
-    assert resp.headers['Session-Client'] == session.client.id
-    assert resp.headers['Session-User'] == session.user.id
+    assert resp.json['id']
+    assert resp.json['name'] == 'Cabour'
+
+
+@authorize('foo_bar')
+def test_post_municipality_without_scopes(post):
+    data = {
+        "name": "Fornex",
+        "insee": "12345",
+        "siren": '123456789',
+    }
+    resp = post('/municipality', data)
+    assert resp.status_code == 401
+
+
+@authorize('municipality_write')
+def test_post_municipality_with_scopes(post):
+    data = {
+        "name": "Fornex",
+        "insee": "12345",
+        "siren": '123456789',
+    }
+    resp = post('/municipality', data)
+    assert resp.status_code == 201
+    assert resp.json['id']
+    assert resp.json['name'] == 'Fornex'
+    assert models.Municipality.select().count() == 1
+
+
+@authorize('postcode_write')
+def test_cannot_post_municipality_with_postcode_scope(post):
+    data = {
+        "name": "Fornex",
+        "insee": "12345",
+        "siren": '123456789',
+    }
+    resp = post('/municipality', data)
+    assert resp.status_code == 401
+    assert models.Municipality.select().count() == 0
+
+
+@authorize('whatever_but_municipality_write')
+def test_cannot_patch_municipality_without_scopes(patch):
+    municipality = MunicipalityFactory()
+    data = {
+        "version": 2,
+        "alias": ["Martigues"]
+    }
+    resp = patch('/municipality/{}'.format(municipality.id), data)
+    assert resp.status_code == 401
+    municipality = models.Municipality.first()
+    assert municipality.alias == []
+
+
+@authorize('municipality_write')
+def test_patch_municipality_with_scopes(patch):
+    municipality = MunicipalityFactory()
+    data = {
+        "version": 2,
+        "alias": ["Martigues"]
+    }
+    resp = patch('/municipality/{}'.format(municipality.id), data)
+    assert resp.status_code == 200
+    municipality = models.Municipality.first()
+    assert 'Martigues' in municipality.alias
+
+
+@authorize('foo_bar')
+def test_cannot_put_municipality_without_scopes(put):
+    municipality = MunicipalityFactory(name="SuperVille")
+    data = {
+        "name": "Martigues",
+        "insee": "13500",
+        "siren": '123456789',
+        "version": 2
+    }
+    resp = put('/municipality/{}'.format(municipality.id), data)
+    assert resp.status_code == 401
+    municipality = models.Municipality.first()
+    assert 'SuperVille' == municipality.name
+
+
+@authorize('municipality_write')
+def test_put_municipality_with_scopes(put):
+    municipality = MunicipalityFactory(name="SuperVille")
+    data = {
+        "name": "Martigues",
+        "insee": "13500",
+        "siren": '123456789',
+        "version": 2
+    }
+    resp = put('/municipality/{}'.format(municipality.id), data)
+    assert resp.status_code == 200
+    municipality = models.Municipality.first()
+    assert 'Martigues' == municipality.name
+
+
+@authorize('foo_bar')
+def test_cannot_delete_municipality_without_scopes(client):
+    municipality = MunicipalityFactory()
+    resp = client.delete('/municipality/{}'.format(municipality.id))
+    assert resp.status_code == 401
+    assert models.Municipality.select().count() == 1
+
+
+@authorize('municipality_write')
+def test_delete_municipality_with_scopes(client):
+    municipality = MunicipalityFactory()
+    resp = client.delete('/municipality/{}'.format(municipality.id))
+    assert resp.status_code == 200
+    assert not models.Municipality.select().count()

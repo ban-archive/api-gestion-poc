@@ -37,8 +37,8 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
 
 
 class NamedModel(Model):
-    name = db.CharField(max_length=200)
-    alias = db.ArrayField(db.CharField, null=True)
+    name = db.NameField(max_length=200)
+    alias = db.ArrayField(db.CharField, default=[], null=True)
 
     def __str__(self):
         return self.name
@@ -63,7 +63,8 @@ class PostCode(NamedModel):
 
     complement = db.CharField(max_length=38, null=True)
     code = db.CharField(index=True, format='\d*', length=5)
-    municipality = db.ForeignKeyField(Municipality, related_name='postcodes')
+    municipality = db.CachedForeignKeyField(Municipality,
+                                            related_name='postcodes')
 
     class Meta:
         indexes = (
@@ -105,15 +106,9 @@ class Group(NamedModel):
     fantoir = db.FantoirField(null=True, unique=True)
     laposte = db.CharField(max_length=8, null=True, unique=True, format='\d*')
     ign = db.CharField(max_length=24, null=True, unique=True)
-    municipality = db.ForeignKeyField(Municipality, related_name='groups')
+    municipality = db.CachedForeignKeyField(Municipality,
+                                            related_name='groups')
 
-    @property
-    def tmp_fantoir(self):
-        return '#' + re.sub(r'[\W]', '', unidecode(self.name)).upper()
-
-    def get_fantoir(self):
-        # Without INSEE code.
-        return self.fantoir[5:] if self.fantoir else self.tmp_fantoir
 
     @property
     def housenumbers(self):
@@ -129,7 +124,6 @@ class HouseNumber(Model):
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
                        'ancestors', 'positions', 'ign', 'postcode']
-    readonly_fields = Model.readonly_fields + ['cia']
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
@@ -139,7 +133,7 @@ class HouseNumber(Model):
                            format=CEA_FORMAT)
     ign = db.CharField(max_length=24, null=True, unique=True)
     ancestors = db.ManyToManyField(Group, related_name='_housenumbers')
-    postcode = db.ForeignKeyField(PostCode, null=True)
+    postcode = db.CachedForeignKeyField(PostCode, null=True)
 
     class Meta:
         indexes = (
@@ -155,14 +149,20 @@ class HouseNumber(Model):
         self._clean_called = False
 
     def compute_cia(self):
-        return compute_cia(str(self.parent.municipality.insee),
-                           self.parent.get_fantoir(),
-                           self.number, self.ordinal)
+        return compute_cia(self.parent.fantoir[:5],
+                           self.parent.fantoir[5:],
+                           self.number, self.ordinal) if self.parent.fantoir else None
 
     @cached_property
     def municipality(self):
-        return Municipality.select().join(
-           Group, on=Municipality.pk == self.parent.municipality.pk).first()
+        return Municipality.select().where(
+           Municipality.pk == self.parent.municipality.pk).first()
+
+    @property
+    def as_export(self):
+        """Resources plus relation references without metadata."""
+        mask = {f: {} for f in self.resource_fields}
+        return self.serialize(mask)
 
 
 class Position(Model):
@@ -207,7 +207,8 @@ class Position(Model):
 
     identifiers = ['laposte', 'ign']
     resource_fields = ['center', 'source', 'housenumber', 'kind', 'comment',
-                       'parent', 'positioning', 'name', 'ign', 'laposte']
+                       'parent', 'positioning', 'name', 'ign', 'laposte', 'source_kind']
+    readonly_fields = Model.readonly_fields + ['source_kind']
 
     name = db.CharField(max_length=200, null=True)
     center = db.PointField(verbose_name=_("center"), null=True, index=True)
@@ -220,6 +221,7 @@ class Position(Model):
     laposte = db.CharField(length=10, null=True, unique=True,
                            format=HouseNumber.CEA_FORMAT)
     comment = db.TextField(null=True)
+    source_kind = db.CharField()
 
     @classmethod
     def validate(cls, validator, document, instance):
@@ -236,6 +238,8 @@ class Position(Model):
 
     @cached_property
     def municipality(self):
-        return Municipality.select().join(
-               Group, on=Municipality.pk == Group.municipality).join(
-               HouseNumber, on=Group.pk == self.housenumber.parent.pk).first()
+        return Municipality.select().where(Municipality.pk == self.housenumber.parent.municipality.pk).first()
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self._clean_called = False

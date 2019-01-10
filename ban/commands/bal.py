@@ -20,7 +20,8 @@ def bal(path, limit=0, **kwargs):
     rows = list(helpers.load_csv(path, encoding='utf-8-sig'))
     if limit:
         rows = rows[:limit]
-    helpers.batch(process_rows, rows, total=len(rows))
+    # Use `all` to force generator evaluation.
+    all(helpers.batch(process_rows, rows, total=len(rows)))
 
 
 @helpers.session

@@ -6,3 +6,4 @@ tmp/
 .coverage
 ban/tests/commands/data/balwithbom.csv
 htmlcov/
+*.pyc

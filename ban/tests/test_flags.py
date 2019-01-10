@@ -3,6 +3,7 @@ import pytest
 from ban.core import context
 
 from .factories import GroupFactory, SessionFactory
+from ban.auth import models as auth_models
 
 
 def test_can_flag_current_version(session):
@@ -66,9 +67,16 @@ def test_cannot_flag_if_session_has_no_client(session):
         group.load_version().flag()
 
 
-def test_cannot_flag_if_session_client_has_no_flag_id(session):
+def test_cannot_flag_if_session_has_no_contributor_type(session):
     group = GroupFactory()
-    session.client.flag_id = None
+    session.contributor_type = None
+    with pytest.raises(ValueError):
+        group.load_version().flag()
+
+
+def test_cannot_flag_with_contributor_type_viewer(session):
+    group = GroupFactory()
+    session.contributor_type = auth_models.Client.TYPE_VIEWER
     with pytest.raises(ValueError):
         group.load_version().flag()
 

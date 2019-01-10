@@ -37,7 +37,7 @@ def test_serialize_with_wildcard():
         'municipality': group.municipality.id,
         'kind': 'way',
         'fantoir': '930311491',
-        'alias': None,
+        'alias': [],
         'ign': None,
         'name': 'Rue de la Banatouille',
         'attributes': None,
@@ -51,11 +51,13 @@ def test_serialize_with_wildcard():
             'client': group.created_by.client.name,
             'user': group.created_by.user.username,
             'id': group.created_by.pk,
+            'contributor_type': group.created_by.contributor_type
         },
         'modified_by': {
             'client': group.modified_by.client.name,
             'user': group.modified_by.user.username,
             'id': group.modified_by.pk,
+            'contributor_type': group.modified_by.contributor_type
         },
     }
 
@@ -70,7 +72,7 @@ def test_serialize_with_wildcard_in_relation():
             'municipality': group.municipality.id,
             'kind': 'way',
             'fantoir': '930311491',
-            'alias': None,
+            'alias': [],
             'ign': None,
             'name': 'Rue de la Banatouille',
             'attributes': None,
@@ -84,11 +86,13 @@ def test_serialize_with_wildcard_in_relation():
                 'client': group.created_by.client.name,
                 'user': group.created_by.user.username,
                 'id': group.created_by.pk,
+                'contributor_type': group.created_by.contributor_type
             },
             'modified_by': {
                 'client': group.modified_by.client.name,
                 'user': group.modified_by.user.username,
                 'id': group.modified_by.pk,
+                'contributor_type': group.modified_by.contributor_type
             },
         }
     }
@@ -108,11 +112,13 @@ def test_serialize_with_double_wildcard():
             'client': housenumber.created_by.client.name,
             'user': housenumber.created_by.user.username,
             'id': housenumber.created_by.pk,
+            'contributor_type': housenumber.created_by.contributor_type
         },
         'modified_by': {
             'client': housenumber.modified_by.client.name,
             'user': housenumber.modified_by.user.username,
             'id': housenumber.modified_by.pk,
+            'contributor_type': housenumber.modified_by.contributor_type
         },
         'version': 1,
         'postcode': None,
@@ -129,7 +135,7 @@ def test_serialize_with_double_wildcard():
             'municipality': group.municipality.id,
             'kind': 'way',
             'fantoir': '930311491',
-            'alias': None,
+            'alias': [],
             'ign': None,
             'name': 'Rue de la Banatouille',
             'attributes': None,
@@ -143,11 +149,13 @@ def test_serialize_with_double_wildcard():
                 'client': group.created_by.client.name,
                 'user': group.created_by.user.username,
                 'id': group.created_by.pk,
+                'contributor_type': group.created_by.contributor_type
             },
             'modified_by': {
                 'client': group.modified_by.client.name,
                 'user': group.modified_by.user.username,
                 'id': group.modified_by.pk,
+                'contributor_type': group.modified_by.contributor_type
             },
         }
     }
