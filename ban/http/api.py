@@ -693,7 +693,7 @@ def bal_post():
     data = request.files['data']
     bal(StringIO(data.read().decode('utf-8-sig')))
     reporter = context.get('reporter')
-    return dumps({'report': reporter})
+    return reporter, 200
 
 
 @app.route('/batch', methods=['POST'])
