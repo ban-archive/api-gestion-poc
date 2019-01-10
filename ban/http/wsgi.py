@@ -21,12 +21,12 @@ class App(Flask):
         @wraps(func)
         def wrapper(*args, **kwargs):
             rv = func(*args, **kwargs)
-            if not isinstance(rv, (tuple,list)):
+            if not isinstance(rv, tuple):
                 rv = [rv]
             else:
                 rv = list(rv)
             rv[0] = dumps(rv[0], sort_keys=True)
-            resp = make_response(tuple(rv))
+            resp = make_response(rv)
             resp.mimetype = 'application/json'
             return resp
         return wrapper
