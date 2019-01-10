@@ -55,17 +55,6 @@ def test_municipality_as_resource():
     assert municipality.as_resource['postcodes'] == [postcode.id]
 
 
-def test_municipality_as_relation():
-    municipality = MunicipalityFactory(name="Montbrun-Bocage", insee="31365",
-                                       siren="210100566")
-    PostCodeFactory(code="31310", municipality=municipality)
-    assert municipality.as_relation['name'] == "Montbrun-Bocage"
-    assert municipality.as_relation['insee'] == "31365"
-    assert municipality.as_relation['siren'] == "210100566"
-    assert municipality.as_relation['id'] == municipality.id
-    assert 'postcodes' not in municipality.as_relation
-
-
 def test_municipality_str():
     municipality = MunicipalityFactory(name="Salsein")
     assert str(municipality) == 'Salsein'
@@ -109,13 +98,6 @@ def test_should_not_allow_deleting_street_linked_to_housenumber():
     assert models.Group.get(models.Group.id == street.id)
 
 
-def test_tmp_fantoir_should_use_name():
-    municipality = MunicipalityFactory(insee='93031')
-    street = GroupFactory(municipality=municipality, fantoir='',
-                          name="Rue des Pêchers")
-    assert street.tmp_fantoir == '#RUEDESPECHERS'
-
-
 def test_compute_cia_should_consider_insee_fantoir_number_and_ordinal():
     municipality = MunicipalityFactory(insee='93031')
     street = GroupFactory(municipality=municipality, fantoir='930311491')
@@ -136,27 +118,6 @@ def test_compute_cia_should_use_locality_if_no_street():
     street = GroupFactory(municipality=municipality, fantoir='930311491')
     hn = HouseNumberFactory(parent=street, number="84", ordinal="")
     assert hn.compute_cia() == '93031_1491_84_'
-
-
-def test_group_as_relation():
-    municipality = MunicipalityFactory()
-    street = GroupFactory(municipality=municipality, name="Rue des Fleurs",
-                          fantoir="930311491")
-    data = street.as_relation
-    assert data == {
-        'id': street.id,
-        'municipality': municipality.id,
-        'kind': 'way',
-        'fantoir': '930311491',
-        'alias': [],
-        'ign': None,
-        'name': 'Rue des Fleurs',
-        'resource': 'group',
-        'attributes': None,
-        'laposte': None,
-        'addressing': None,
-        'version': 1,
-    }
 
 
 def test_can_create_group_with_fantoir_equal_to_9_chars(get):
@@ -253,7 +214,7 @@ def test_can_create_two_housenumbers_with_same_number_but_different_streets():
 def test_housenumber_positions():
     housenumber = HouseNumberFactory()
     position = PositionFactory(housenumber=housenumber)
-    assert housenumber.positions == [position.as_relation]
+    assert housenumber.positions == [position]
 
 
 def test_housenumber_positions_without_linked_positions():
@@ -326,26 +287,6 @@ def test_housenumber_as_resource():
         'modified_by': housenumber.modified_by.serialize(),
         'modified_at': housenumber.modified_at.isoformat(),
         'status': 'active',
-    }
-
-
-def test_housenumber_as_relation():
-    housenumber = HouseNumberFactory(number="90", ordinal="bis",
-                                     attributes={"source": "openbar"},
-                                     parent__municipality__insee="21892",
-                                     parent__fantoir="218921234")
-    assert housenumber.as_relation == {
-        'cia': '21892_1234_90_BIS',
-        'parent': housenumber.parent.id,
-        'laposte': None,
-        'ign': None,
-        'attributes': {'source': 'openbar'},
-        'id': housenumber.id,
-        'number': '90',
-        'postcode': None,
-        'ordinal': 'bis',
-        'resource': 'housenumber',
-        'version': 1,
     }
 
 
