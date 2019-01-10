@@ -6,19 +6,22 @@ from ban.commands import command, reporter
 from ban.core.models import (Group, HouseNumber, Municipality, Position,
                              PostCode)
 from ban.db import database
-from ban.utils import compute_cia
+from ban.core import context
+from ban.http.auth import auth
 
 from . import helpers
 
 __namespace__ = 'import'
 
-
 @command
 @helpers.nodiff
-def init(*paths, limit=0, **kwargs):
+def init(clientname, contributor_type, *paths, limit=0, **kwargs):
     """Initial import for real™.
-
+    clientname Name of the client
+    contributor_type Contributor type of the session
     paths   Paths to json files."""
+    context.set('clientname', clientname)
+    context.set('contributor_type', contributor_type)
     for path in paths:
         print('Processing', path)
         rows = helpers.iter_file(path, formatter=json.loads)
@@ -39,7 +42,7 @@ def init(*paths, limit=0, **kwargs):
         all(helpers.batch(process_rows, rows, chunksize=100, total=total))
 
 
-@helpers.session
+@helpers.session_client
 def process_rows(*rows):
     with database.atomic():
         for row in rows:
@@ -64,7 +67,9 @@ def process_row(row):
 
 
 def process_municipality(row):
-    row['attributes'] = {'source': row.pop('source')}
+    source = row.get('source')
+    if source:
+        row['attributes'] = {'source': row.pop('source')}
     validator = Municipality.validator(**row)
     if validator.errors:
         return reporter.error('Municipality errors', validator.errors)
@@ -85,14 +90,15 @@ def populate(keys, source, dest):
 
 def process_group(row):
     data = dict(version=1)
-    keys = ['name', ('group', 'kind'), 'laposte', 'ign', 'fantoir']
+    keys = ['name', ('group', 'kind'), 'laposte', 'ign', 'fantoir', 'alias']
     populate(keys, row, data)
     insee = row.get('municipality:insee')
     if insee:
         data['municipality'] = 'insee:{}'.format(insee)
     source = row.get('source')
     attributes = row.get('attributes', {})
-    attributes['source'] = source
+    if source:
+        attributes['source'] = source
     data['attributes'] = attributes
     if 'addressing' in row:
         if hasattr(Group, row['addressing'].upper()):
@@ -112,7 +118,7 @@ def process_group(row):
         return
     if instance:
         attributes = getattr(instance, 'attributes') or {}
-        if attributes.get('source') == source:
+        if attributes.get('source') and attributes.get('source') == source:
             # Reimporting same data?
             reporter.warning('Group already exist', fantoir)
             return
@@ -137,7 +143,10 @@ def process_group(row):
 def process_postcode(row):
     insee = row['municipality:insee']
     municipality = 'insee:{}'.format(insee)
-    attributes = {'source': row.pop('source')}
+    source = row.get('source')
+    attributes = {}
+    if source:
+        attributes = {'source': row.pop('source')}
     name = row.get('name')
     code = row.get('postcode')
     complement = row.get('complement')
@@ -165,22 +174,21 @@ def process_housenumber(row):
     cia = row.get('cia')
     insee = row.get('municipality:insee')
     computed_cia = None
-    if fantoir:
-        if not insee:
-            insee = fantoir[:5]
-        number = data.get('number')
-        ordinal = data.get('ordinal')
-        computed_cia = compute_cia(insee, fantoir[5:], number, ordinal)
-        if data.get('cia'):
-            data['cia'] = computed_cia
+    number = row.get('number')
+    ordinal = row.get('ordinal')
     source = row.get('source')
-    data['attributes'] = {'source': source}
+    attributes = row.get('attributes', {})
+    if source:
+        attributes['source'] = source
+    data['attributes'] = attributes
     # Only override if key is present (even if value is null).
     if 'postcode:code' in row:
         code = row.get('postcode:code')
+        complement = row.get('postcode:complement')
         postcode = PostCode.select().join(Municipality).where(
             PostCode.code == code,
-            Municipality.insee == insee).first()
+            Municipality.insee == insee,
+            PostCode.complement == complement).first()
         if not postcode:
             reporter.error('HouseNumber postcode not found', (cia, code))
         else:
@@ -206,27 +214,17 @@ def process_housenumber(row):
 
     update = False
     instance = None
-    ign = data.get('ign')
-    laposte = data.get('laposte')
+    ign = row.get('ign')
+    laposte = row.get('laposte')
     if cia:
         instance = HouseNumber.first(HouseNumber.cia == cia)
-        if instance and compute_cia:
-            if cia != computed_cia:
-                # Means new values are changing one of the four values of the
-                # cia (insee, fantoir, number, ordinal). Make sure we are not
-                # creating a duplicate.
-                duplicate = HouseNumber.first(HouseNumber.cia == computed_cia)
-                if duplicate:
-                    msg = 'Duplicate CIA'
-                    reporter.error(msg, (cia, computed_cia))
-                    return
     elif ign:
         instance = HouseNumber.first(HouseNumber.ign == ign)
     elif laposte:
         instance = HouseNumber.first(HouseNumber.laposte == laposte)
     if parent and not instance:
         # Data is not coerced yet, we want None for empty strings.
-        ordinal = data.get('ordinal') or None
+        ordinal = row.get('ordinal') or None
         instance = HouseNumber.first(HouseNumber.parent == parent,
                                      HouseNumber.number == data['number'],
                                      HouseNumber.ordinal == ordinal)
@@ -234,7 +232,7 @@ def process_housenumber(row):
         attributes = getattr(instance, 'attributes') or {}
         if attributes.get('source') == source:
             # Reimporting same data?
-            reporter.warning('HouseNumber already exists', instance.cia)
+            reporter.warning('HouseNumber already exists', (instance.cia, instance.ign, instance.laposte))
             return
         data['version'] = instance.version + 1
         update = True
@@ -259,7 +257,7 @@ def process_housenumber(row):
 
 
 def process_position(row):
-    positioning = row.get('positionning')  # two "n" in the data.
+    positioning = row.get('positioning')  
     if not positioning or not hasattr(Position, positioning.upper()):
         positioning = Position.OTHER
     source = row.get('source')
@@ -283,6 +281,7 @@ def process_position(row):
     data = dict(source=source, housenumber=housenumber,
                 positioning=positioning, version=version)
     kind = row.get('kind', '')
+    data['attributes'] = row.get('attributes',{})
     if hasattr(Position, kind.upper()):
         data['kind'] = kind
     elif not instance:
