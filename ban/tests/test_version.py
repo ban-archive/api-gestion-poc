@@ -196,4 +196,5 @@ def test_position_as_version():
         'laposte': None,
         'id': position.id,
         'status': 'active',
+        'source_kind': 'admin'
     }

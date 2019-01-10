@@ -26,6 +26,14 @@ def test_get_postcode(get):
     }
 
 
+@authorize
+def test_get_postcode_name_search(get):
+    postcode = PostCodeFactory(code="13800", name="ISTRES")
+    resp = get('/postcode?searchName=ISTRES')
+    assert resp.status_code == 200
+    assert resp.json['collection'][0]['name'] == "ISTRES"
+
+
 @authorize('postcode_write')
 def test_create_postcode(client):
     municipality = MunicipalityFactory()
