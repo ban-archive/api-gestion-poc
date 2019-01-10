@@ -31,7 +31,7 @@ def test_get_version_contain_flags(client, session):
     resp = client.get(uri)
     assert resp.status_code == 200
     assert 'flags' in resp.json
-    assert resp.json['flags'][0]['by'] == 'laposte'
+    assert resp.json['flags'][0]['by'] == 'admin'
 
 
 @authorize('group_write')
