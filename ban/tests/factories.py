@@ -30,6 +30,16 @@ class UserFactory(BaseTestModel):
     class Meta:
         model = auth_models.User
 
+class ClientFactory(BaseTestModel):
+    name = FuzzyText(length=12)
+    # Avoid running bcrypt crypting at each test.
+    # password = factory.PostGenerationMethodCall('set_password', 'password')
+    email = factory.LazyAttribute(lambda obj: '%s@example.com' % obj.username)
+
+    class Meta:
+        model = auth_models.User
+
+
 
 class ClientFactory(BaseTestModel):
     name = FuzzyText(length=54)
@@ -37,7 +47,7 @@ class ClientFactory(BaseTestModel):
     client_secret = FuzzyText(length=54)
     redirect_uris = ['http://localhost/authorize']
     grant_type = auth_models.Client.GRANT_CLIENT_CREDENTIALS
-    flag_id = 'laposte'
+    contributor_types = ['develop']
 
     class Meta:
         model = auth_models.Client
@@ -48,6 +58,7 @@ class SessionFactory(BaseTestModel):
     client = factory.SubFactory(ClientFactory)
     ip = '127.0.0.1'
     email = 'yeehoo@yay.com'
+    contributor_type = 'admin'
 
     class Meta:
         model = auth_models.Session
@@ -59,6 +70,7 @@ class TokenFactory(BaseTestModel):
     access_token = FuzzyText(length=50)
     refresh_token = FuzzyText(length=50)
     scope = 'contrib'
+    contributor_type = 'admin'
     expires = factory.LazyAttribute(
                             lambda x: utcnow() + timedelta(minutes=50))
 

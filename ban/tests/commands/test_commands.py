@@ -38,6 +38,7 @@ def test_listusers(capsys):
     listusers()
     out, err = capsys.readouterr()
     assert user.username in out
+    assert user.id in out
 
 
 def test_listusers_with_invoke(capsys):
@@ -50,7 +51,7 @@ def test_listusers_with_invoke(capsys):
 def test_create_client_should_accept_username():
     user = factories.UserFactory()
     assert not amodels.Client.select().count()
-    createclient(name='test client', user=user.username, scopes=['test'])
+    createclient(name='test client', user=user.username, scopes=['test'], contributor_types=['develop'])
     assert amodels.Client.select().count() == 1
     client = amodels.Client.first()
     assert client.user == user
@@ -59,7 +60,7 @@ def test_create_client_should_accept_username():
 def test_create_client_should_accept_email():
     user = factories.UserFactory()
     assert not amodels.Client.select().count()
-    createclient(name='test client', user=user.email, scopes=['test'])
+    createclient(name='test client', user=user.email, scopes=['test'], contributor_types=['develop'])
     assert amodels.Client.select().count() == 1
     client = amodels.Client.first()
     assert client.user == user
@@ -77,7 +78,7 @@ def test_create_client_with_scopes(monkeypatch):
     monkeypatch.setattr('ban.commands.helpers.prompt',
                         lambda *x, **wk: 'municipality_write group_write')
     user = factories.UserFactory()
-    createclient(name='test client', user=user.username)
+    createclient(name='test client', user=user.username, contributor_types=['develop'])
     client = amodels.Client.first()
     assert client.scopes == ['municipality_write', 'group_write']
 
@@ -85,9 +86,24 @@ def test_create_client_with_scopes(monkeypatch):
 def test_create_client_without_scopes(monkeypatch):
     monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: '')
     user = factories.UserFactory()
-    createclient(name='test client', user=user.username)
+    createclient(name='test client', user=user.username, contributor_types=['develop'])
     client = amodels.Client.first()
     assert client.scopes == []
+
+def test_create_client_with_contributor_types(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: 'ign laposte')
+    user = factories.UserFactory()
+    createclient(name='test client', user=user.username, scopes=['test'])
+    client = amodels.Client.first()
+    assert client.contributor_types == ['ign', 'laposte', 'viewer']
+
+
+def test_create_client_without_contributor_types(monkeypatch):
+    monkeypatch.setattr('ban.commands.helpers.prompt', lambda *x, **wk: '')
+    user = factories.UserFactory()
+    createclient(name='test client', user=user.username, scopes=['test'])
+    client = amodels.Client.first()
+    assert client.contributor_types == ['viewer']
 
 
 def test_listclients(capsys):
@@ -97,6 +113,9 @@ def test_listclients(capsys):
     assert client.name in out
     assert str(client.client_id) in out
     assert client.client_secret in out
+    assert client.id in out
+    assert ''.join(client.scopes) in out
+    assert ''.join(client.contributor_types) in out
 
 
 def test_truncate_should_truncate_all_tables_by_default(monkeypatch):

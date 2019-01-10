@@ -9,7 +9,10 @@ services:
 - postgresql
 
 addons:
-  postgresql: "9.4"
+  postgresql: "9.5"
+  apt:
+      packages:
+          - postgresql-9.5-postgis-2.3
 
 env:
   global:
@@ -29,8 +32,9 @@ install:
 
 before_script:
 - psql -U postgres -c "CREATE DATABASE test_ban;"
-- psql -U postgres -c "create extension postgis" -d test_ban
-- psql -U postgres -c "create extension hstore" -d test_ban
+- psql -U postgres -c "create extension postgis;" -d test_ban
+- psql -U postgres -c "create extension hstore;" -d test_ban
+- psql -U postgres -c "create extension unaccent;" -d test_ban
 
 after_success:
   - coveralls
