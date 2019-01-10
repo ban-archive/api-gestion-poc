@@ -808,6 +808,7 @@ class Diff(CollectionEndpoint):
 def bbox():
     limit = min(int(request.args.get('limit', CollectionEndpoint.DEFAULT_LIMIT)), CollectionEndpoint.MAX_LIMIT)
     bbox = get_bbox(request.args)
+    unique = request.args.get('unique')
 
     dbname = config.DB_NAME
     user = config.get('DB_USER')
@@ -820,39 +821,75 @@ def bbox():
     connectString = "dbname='{}' user='{}' password='{}' host='{}' port='{}'".format(dbname,user,password,host,port)
     conn = psycopg2.connect(connectString)
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute(
-        """SELECT count(*) FROM position WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s) and deleted_at is null""",
-        {
-            "west": bbox["west"],
-            "south": bbox["south"],
-            "east": bbox["east"],
-            "north": bbox["north"]
-        }
-    )
-    response = {"collection": [], "total": cur.fetchone()["count"]}
-    cur.execute(
-        """SELECT
-            p.id as pos_id, p.name as pos_name, st_x(center) as pos_x, st_y(center) as pos_y, p.kind as pos_kind, p.positioning as pos_positioning, p.source as pos_source, p.source_kind as pos_source_kind, p.version as pos_version,
-            h.id as hn_id, h.number as hn_number, h.ordinal as hn_ordinal, h.version as hn_version, 
-            po.id as post_id, po.name as post_name, po.code as post_code,
-            g.id as group_id, g.addressing as group_addressing, g.alias as group_alias, g.fantoir as group_fantoir, g.ign as group_ign, g.kind as group_kind, g.laposte as group_laposte, g.name as group_name
-            FROM position as p 
-            LEFT JOIN housenumber as h 
-            on (h.pk = p.housenumber_id) 
-            LEFT JOIN "group" as g 
-            on (h.parent_id = g.pk) 
-            LEFT JOIN postcode as po 
-            on (h.postcode_id = po.pk) 
-            WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)
-            AND p.deleted_at is null AND h.deleted_at is null and g.deleted_at is null
-            limit %(limit)s""",
-        {
-            "limit": limit,
-            "west": bbox["west"],
-            "south": bbox["south"],
-            "east": bbox["east"],
-            "north": bbox["north"]
-        })
+    if unique == 'true':
+        cur.execute(
+            """SELECT count(distinct housenumber_id) FROM position WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)""",
+            {
+                "west": bbox["west"],
+                "south": bbox["south"],
+                "east": bbox["east"],
+                "north": bbox["north"]
+            }
+        )
+        response = {"collection": [], "total": cur.fetchone()["count"]}
+        cur.execute(
+            """SELECT
+                p.id as pos_id, p.name as pos_name, st_x(center) as pos_x, st_y(center) as pos_y, p.kind as pos_kind, p.positioning as pos_positioning, p.source as pos_source, p.source_kind as pos_source_kind, p.version as pos_version,
+                h.id as hn_id, h.number as hn_number, h.ordinal as hn_ordinal, h.version as hn_version, 
+                po.id as post_id, po.name as post_name, po.code as post_code,
+                g.id as group_id, g.addressing as group_addressing, g.alias as group_alias, g.fantoir as group_fantoir, g.ign as group_ign, g.kind as group_kind, g.laposte as group_laposte, g.name as group_name
+                FROM position as p 
+                LEFT JOIN housenumber as h 
+                on (h.pk = p.housenumber_id) 
+                LEFT JOIN "group" as g 
+                on (h.parent_id = g.pk) 
+                LEFT JOIN postcode as po 
+                on (h.postcode_id = po.pk) 
+                WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)
+                AND p.deleted_at is null AND h.deleted_at is null and g.deleted_at is null
+                AND p.modified_at = (select max(modified_at) from position where housenumber_id=h.pk)
+                limit %(limit)s""",
+            {
+                "limit": limit,
+                "west": bbox["west"],
+                "south": bbox["south"],
+                "east": bbox["east"],
+                "north": bbox["north"]
+            })
+    else:
+        cur.execute(
+            """SELECT count(*) FROM position WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)""",
+            {
+                "west": bbox["west"],
+                "south": bbox["south"],
+                "east": bbox["east"],
+                "north": bbox["north"]
+            }
+        )
+        response = {"collection": [], "total": cur.fetchone()["count"]}
+        cur.execute(
+            """SELECT
+                p.id as pos_id, p.name as pos_name, st_x(center) as pos_x, st_y(center) as pos_y, p.kind as pos_kind, p.positioning as pos_positioning, p.source as pos_source, p.source_kind as pos_source_kind, p.version as pos_version,
+                h.id as hn_id, h.number as hn_number, h.ordinal as hn_ordinal, h.version as hn_version, 
+                po.id as post_id, po.name as post_name, po.code as post_code,
+                g.id as group_id, g.addressing as group_addressing, g.alias as group_alias, g.fantoir as group_fantoir, g.ign as group_ign, g.kind as group_kind, g.laposte as group_laposte, g.name as group_name
+                FROM position as p 
+                LEFT JOIN housenumber as h 
+                on (h.pk = p.housenumber_id) 
+                LEFT JOIN "group" as g 
+                on (h.parent_id = g.pk) 
+                LEFT JOIN postcode as po 
+                on (h.postcode_id = po.pk) 
+                WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)
+                AND p.deleted_at is null AND h.deleted_at is null and g.deleted_at is null
+                limit %(limit)s""",
+            {
+                "limit": limit,
+                "west": bbox["west"],
+                "south": bbox["south"],
+                "east": bbox["east"],
+                "north": bbox["north"]
+            })
 
     for row in cur:
         occ = {
