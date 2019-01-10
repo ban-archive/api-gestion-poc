@@ -483,8 +483,10 @@ class VersionedModelEndpoint(ModelEndpoint):
         status = request.json.get('status')
         if status is True:
             version.flag()
+            return '', 200
         elif status is False:
             version.unflag()
+            return '', 200
         else:
             abort(400, error='Body should contain a `status` boolean key')
 
