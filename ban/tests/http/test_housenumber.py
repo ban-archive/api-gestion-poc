@@ -119,6 +119,56 @@ def test_get_housenumber_with_cia(get):
     assert resp.status_code == 200
     assert resp.json['number'] == "22"
 
+@authorize
+def test_get_housenumber_with_number(get):
+    housenumber = HouseNumberFactory(number="22")
+    resp = get('/housenumber?number=22')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
+
+@authorize
+def test_get_housenumber_with_group_number(get):
+    municipality = MunicipalityFactory()
+    area = GroupFactory(municipality=municipality, kind=models.Group.AREA)
+    housenumber = HouseNumberFactory(parent=area, number="22")
+    resp = get('/housenumber?group={}&number=22'.format(area.id))
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
+
+@authorize
+def test_get_housenumber_with_bad_group(get):
+    housenumber = HouseNumberFactory(number="22")
+    resp = get('/housenumber?group=6666')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 0
+
+@authorize
+def test_get_housenumber_with_bad_number(get):
+    housenumber = HouseNumberFactory(number="22")
+    resp = get('/housenumber?number=23')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 0
+
+@authorize
+def test_get_housenumber_with_ordinal(get):
+    housenumber = HouseNumberFactory(ordinal="BIS")
+    resp = get('/housenumber?ordinal=BIS')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
+
+@authorize
+def test_get_housenumber_with_bad_ordinal(get):
+    housenumber = HouseNumberFactory(number="TER")
+    resp = get('/housenumber?ordinal=BIS')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 0
+
+@authorize
+def test_get_housenumber_with_number_ordinal(get):
+    housenumber = HouseNumberFactory(number="22", ordinal="BIS")
+    resp = get('/housenumber?number=22&ordinal=BIS')
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
 
 @authorize
 def test_get_housenumber_with_districts(get):
@@ -131,14 +181,31 @@ def test_get_housenumber_with_districts(get):
     assert 'ancestors' in resp.json
     assert resp.json['ancestors'][0] == district.id
 
+@authorize
+def test_get_housenumber_with_ancestors(get):
+    municipality = MunicipalityFactory()
+    ancestor = GroupFactory(municipality=municipality, kind=models.Group.AREA)
+    housenumber = HouseNumberFactory(ancestors=[ancestor],
+                                     parent__municipality=municipality)
+    resp = get('/housenumber?ancestors={}'.format(ancestor.id))
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
+
+@authorize
+def test_get_housenumber_with_ancestors(get):
+    municipality = MunicipalityFactory()
+    ancestor = GroupFactory(municipality=municipality, kind=models.Group.AREA)
+    housenumber = HouseNumberFactory(number="22", ancestors=[ancestor],
+                                     parent__municipality=municipality)
+    resp = get('/housenumber?ancestors={}&number=22'.format(ancestor.id))
+    assert resp.status_code == 200
+    assert resp.json['total'] == 1
 
 @authorize
 def test_get_housenumber_collection(get):
     objs = HouseNumberFactory.create_batch(5)
     resp = get('/housenumber')
     assert resp.json['total'] == 5
-    for obj in objs:
-        assert json.loads(dumps(obj.as_relation)) in resp.json['collection']
 
 
 @authorize
@@ -147,9 +214,6 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get):
     PositionFactory(center=(-1, -1))
     resp = get('/housenumber?north=2&south=0&west=0&east=2')
     assert resp.json['total'] == 1
-    # JSON transform internals tuples to lists.
-    resource = position.housenumber.as_relation
-    assert resp.json['collection'][0] == json.loads(dumps(resource))
 
 
 @authorize
@@ -202,9 +266,6 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get):
     PositionFactory(center=(1.1, 1.1), housenumber=position.housenumber)
     resp = get('/housenumber?north=2&south=0&west=0&east=2')
     assert resp.json['total'] == 1
-    # JSON transform internals tuples to lists.
-    data = json.loads(dumps(position.housenumber.as_relation))
-    assert resp.json['collection'][0] == data
 
 
 @authorize
@@ -231,16 +292,6 @@ def test_get_housenumber_positions(get):
     pos3 = PositionFactory(housenumber=housenumber, center=(3, 3))
     resp = get('/position?housenumber={}'.format(housenumber.id))
     assert resp.json['total'] == 3
-
-    def check(position):
-        data = position.as_relation
-        # postgis uses tuples for coordinates, while json does not know
-        # tuple and transforms everything to lists.
-        assert json.loads(dumps(data)) in resp.json['collection']
-
-    check(pos1)
-    check(pos2)
-    check(pos3)
 
 
 @authorize('housenumber_write')
@@ -364,6 +415,31 @@ def test_patch_housenumber_with_districts(client):
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
     assert district in hn.ancestors
 
+@authorize('housenumber_write')
+def test_patch_housenumber_doublon_number_ordinal_parent(client):
+    group = GroupFactory()
+    housenumber1 = HouseNumberFactory(number='1', ordinal='bis', parent=group)
+    housenumber2 = HouseNumberFactory(number='1', ordinal=None, parent=group)
+    data = {
+        "version": 2,
+        "ordinal": "",
+    }
+    uri = '/housenumber/{}'.format(housenumber1.id)
+    resp = client.patch(uri, data=data)
+    assert resp.status_code == 422
+
+@authorize('housenumber_write')
+def test_patch_housenumber_vidage_ign(client):
+    group = GroupFactory()
+    housenumber1 = HouseNumberFactory(number='1', ign= 'ADRNIVX_0000000', parent=group)
+    housenumber2 = HouseNumberFactory(number='2', parent=group)
+    data = {
+        "version": 2,
+        "ign": "",
+    }
+    uri = '/housenumber/{}'.format(housenumber1.id)
+    resp = client.patch(uri, data=data)
+    assert resp.status_code == 200
 
 @authorize('housenumber_write')
 def test_patch_housenumber_with_postcode(client):

@@ -45,8 +45,6 @@ def test_get_municipality_groups_collection(get):
     street = GroupFactory(municipality=municipality, name="Rue de la Plage")
     resp = get('/group?municipality={}'.format(municipality.id))
     assert resp.status_code == 200
-    # loads/dumps to compare date strings to date strings.
-    assert resp.json['collection'][0] == json.loads(dumps(street.as_relation))
     assert resp.json['total'] == 1
 
 
@@ -155,6 +153,14 @@ def test_get_municipality_version(get):
     assert resp.status_code == 200
     assert resp.json['data']['name'] == 'Cabour2'
     assert resp.json['data']['version'] == 2
+
+
+@authorize
+def test_get_municipality_name_search(get):
+    municipality = MunicipalityFactory(name="MARTIGUES")
+    resp = get('/municipality?searchName=MARTIGUES')
+    assert resp.status_code == 200
+    assert resp.json['collection'][0]['name'] == "MARTIGUES"
 
 
 @authorize
@@ -443,16 +449,6 @@ def test_cannot_change_deleted_at_with_put(put):
     assert resp.status_code == 200
     assert not models.Municipality.get(
         models.Municipality.pk == municipality.pk).deleted_at
-
-
-@authorize
-def test_authorized_responses_contain_sessions_data(get):
-    municipality = MunicipalityFactory(name="Cabour")
-    resp = get('/municipality/{}'.format(municipality.id))
-    assert resp.status_code == 200
-    session = context.get('session')
-    assert resp.headers['Session-Client'] == session.client.id
-    assert resp.headers['Session-User'] == session.user.id
 
 
 @authorize

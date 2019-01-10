@@ -126,35 +126,6 @@ def test_cannot_create_position_with_invalid_positioning(client):
 
 
 @authorize('position_write')
-def test_create_position_with_housenumber_cia(client):
-    housenumber = HouseNumberFactory(number="22")
-    assert not models.Position.select().count()
-    data = {
-        "center": "(3, 4)",
-        "kind": models.Position.ENTRANCE,
-        "positioning": models.Position.IMAGERY,
-        "housenumber": 'cia:{}'.format(housenumber.cia),
-    }
-    resp = client.post('/position', data)
-    assert resp.status_code == 201
-    assert models.Position.select().count() == 1
-
-
-@authorize('position_write')
-def test_create_position_with_bad_housenumber_cia_is_422(client):
-    HouseNumberFactory(number="22")
-    assert not models.Position.select().count()
-    data = {
-        "center": "(3, 4)",
-        "kind": models.Position.ENTRANCE,
-        "positioning": models.Position.IMAGERY,
-        "housenumber": 'cia:{}'.format('xxx'),
-    }
-    resp = client.post('/position', data)
-    assert resp.status_code == 422
-
-
-@authorize('position_write')
 def test_replace_position(client, url):
     position = PositionFactory(source="XXX", center=(1, 2))
     assert models.Position.select().count() == 1
@@ -171,23 +142,6 @@ def test_replace_position(client, url):
     assert resp.json['id'] == position.id
     assert resp.json['version'] == 2
     assert resp.json['center']['coordinates'] == [3, 4]
-    assert models.Position.select().count() == 1
-
-
-@authorize('position_write')
-def test_replace_position_with_housenumber_cia(client, url):
-    position = PositionFactory(source="XXX", center=(1, 2))
-    assert models.Position.select().count() == 1
-    uri = '/position/{}'.format(position.id)
-    data = {
-        "version": 2,
-        "center": (3, 4),
-        "kind": models.Position.ENTRANCE,
-        "positioning": models.Position.IMAGERY,
-        "housenumber": 'cia:{}'.format(position.housenumber.cia)
-    }
-    resp = client.put(uri, data=data)
-    assert resp.status_code == 200
     assert models.Position.select().count() == 1
 
 
@@ -239,21 +193,6 @@ def test_update_position(client, url):
     assert resp.status_code == 200
     assert resp.json['id'] == position.id
     assert resp.json['center']['coordinates'] == [3.4, 5.678]
-    assert models.Position.select().count() == 1
-
-
-@authorize('position_write')
-def test_update_position_with_cia(client, url):
-    position = PositionFactory(source="XXX", center=(1, 2))
-    assert models.Position.select().count() == 1
-    uri = '/position/{}'.format(position.id)
-    data = {
-        "version": 2,
-        "center": "(3.4, 5.678)",
-        "housenumber": 'cia:{}'.format(position.housenumber.cia)
-    }
-    resp = client.post(uri, data=data)
-    assert resp.status_code == 200
     assert models.Position.select().count() == 1
 
 
@@ -380,9 +319,6 @@ def test_get_position_collection_can_be_filtered_by_bbox(get, url):
     PositionFactory(center=(-1, -1))
     resp = get('/position?north=2&south=0&west=0&east=2')
     assert resp.json['total'] == 1
-    # JSON transforms internals tuples to lists.
-    resource = position.as_relation
-    assert resp.json['collection'][0] == json.loads(dumps(resource))
 
 
 @authorize
@@ -485,3 +421,15 @@ def test_can_get_position_from_laposte_id(get, url):
     resp = get('/position/laposte:123456789')
     assert resp.status_code == 200
     assert resp.json['laposte'] == '123456789'
+
+@authorize('position_write')
+def test_check_position_center(post):
+    housenumber = HouseNumberFactory()
+    data = {
+        "center": "fake",
+        "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
+        "housenumber": housenumber.id,
+    }
+    resp = post('/position', data)
+    assert resp.status_code == 422
