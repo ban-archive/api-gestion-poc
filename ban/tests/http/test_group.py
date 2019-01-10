@@ -262,7 +262,7 @@ def test_delete_street(client):
     street = GroupFactory()
     resp = client.delete('/group/{}'.format(street.id))
     assert resp.status_code == 204
-    assert resp.json['resource_id'] == street.id
+    assert resp.json['id'] == street.id
     assert not models.Group.select().count()
     assert models.Group.raw_select().where(
                                 models.Group.pk == street.pk).get().deleted_at
