@@ -309,7 +309,7 @@ class ModelEndpoint(CollectionEndpoint):
             json = request.json
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True, json=json)
-        return instance.as_resource, 200, headers
+        return instance.as_resource, 200
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
@@ -354,7 +354,7 @@ class ModelEndpoint(CollectionEndpoint):
             # if the data is valid.
             instance.deleted_at = None
         instance = self.save_object(instance, json=json)
-        return instance.as_resource, 200, headers
+        return instance.as_resource, 200
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['DELETE'])
