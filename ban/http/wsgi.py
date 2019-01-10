@@ -100,17 +100,6 @@ def method_not_allowed(error):
     return {'error': 'Method not allowed'}, 405
 
 
-@app.after_request
-def log_headers(resp):
-    session = context.get('session')
-    if session:
-        if session.client:
-            resp.headers.add('Session-Client', session.client.id)
-        if session.user:
-            resp.headers.add('Session-User', session.user.id)
-    return resp
-
-
 @app.before_request
 def connect_db():
     database.connect()

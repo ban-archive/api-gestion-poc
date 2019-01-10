@@ -6,19 +6,22 @@ from ban.commands import command, reporter
 from ban.core.models import (Group, HouseNumber, Municipality, Position,
                              PostCode)
 from ban.db import database
-from ban.utils import compute_cia
+from ban.core import context
+from ban.http.auth import auth
 
 from . import helpers
 
 __namespace__ = 'import'
 
-
 @command
 @helpers.nodiff
-def init(*paths, limit=0, **kwargs):
+def init(clientname, contributor_type, *paths, limit=0, **kwargs):
     """Initial import for real™.
-
+    clientname Name of the client
+    contributor_type Contributor type of the session
     paths   Paths to json files."""
+    context.set('clientname', clientname)
+    context.set('contributor_type', contributor_type)
     for path in paths:
         print('Processing', path)
         rows = helpers.iter_file(path, formatter=json.loads)
@@ -39,7 +42,7 @@ def init(*paths, limit=0, **kwargs):
         all(helpers.batch(process_rows, rows, chunksize=100, total=total))
 
 
-@helpers.session
+@helpers.session_client
 def process_rows(*rows):
     with database.atomic():
         for row in rows:
@@ -87,7 +90,7 @@ def populate(keys, source, dest):
 
 def process_group(row):
     data = dict(version=1)
-    keys = ['name', ('group', 'kind'), 'laposte', 'ign', 'fantoir']
+    keys = ['name', ('group', 'kind'), 'laposte', 'ign', 'fantoir', 'alias']
     populate(keys, row, data)
     insee = row.get('municipality:insee')
     if insee:
@@ -115,7 +118,7 @@ def process_group(row):
         return
     if instance:
         attributes = getattr(instance, 'attributes') or {}
-        if attributes.get('source') == source:
+        if attributes.get('source') and attributes.get('source') == source:
             # Reimporting same data?
             reporter.warning('Group already exist', fantoir)
             return
@@ -174,8 +177,10 @@ def process_housenumber(row):
     number = row.get('number')
     ordinal = row.get('ordinal')
     source = row.get('source')
+    attributes = row.get('attributes', {})
     if source:
-        data['attributes'] = {'source': source}
+        attributes['source'] = source
+    data['attributes'] = attributes
     # Only override if key is present (even if value is null).
     if 'postcode:code' in row:
         code = row.get('postcode:code')
@@ -252,7 +257,7 @@ def process_housenumber(row):
 
 
 def process_position(row):
-    positioning = row.get('positionning')  # two "n" in the data.
+    positioning = row.get('positioning')  
     if not positioning or not hasattr(Position, positioning.upper()):
         positioning = Position.OTHER
     source = row.get('source')
@@ -276,6 +281,7 @@ def process_position(row):
     data = dict(source=source, housenumber=housenumber,
                 positioning=positioning, version=version)
     kind = row.get('kind', '')
+    data['attributes'] = row.get('attributes',{})
     if hasattr(Position, kind.upper()):
         data['kind'] = kind
     elif not instance:

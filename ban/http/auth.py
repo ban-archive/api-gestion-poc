@@ -5,7 +5,8 @@ from werkzeug.datastructures import ImmutableMultiDict
 
 from ban.auth import models
 from ban.core import context
-from ban.utils import is_uuid4
+from ban.utils import is_uuid4, utcnow
+from datetime import timedelta
 
 from .wsgi import app
 
@@ -29,18 +30,21 @@ def clientgetter(client_id):
 
 
 @auth.usergetter
-def usergetter(username, password, client, req):
+def usergetter(username):
     user = models.User.first(models.User.username == username)
-    if user and user.check_password(password):
+    if user:
         return user
     return None
 
 
 @auth.tokengetter
-def tokengetter(access_token=None, refresh_token=None):
+def tokengetter(access_token=None):
     if access_token:
         token = models.Token.first(models.Token.access_token == access_token)
         if token:
+            if token.expires > utcnow() and token.expires < utcnow()+ timedelta(minutes=30):
+                token.expires = token.expires + timedelta(hours=1)
+                token.save()
             context.set('session', token.session)
             # We use TZ aware datetime while Flask Oauthlib wants naive ones.
             token.expires = token.expires.replace(tzinfo=None)
@@ -48,13 +52,19 @@ def tokengetter(access_token=None, refresh_token=None):
 
 
 @auth.tokensetter
-def tokensetter(metadata, req, *args, **kwargs):
-    # req: oauthlib.Request (not Flask one).
-    metadata.update(dict(req.decoded_body))
+def tokensetter(metadata, req):
+    body = dict(req.decoded_body)
+    data = {'client_secret': body.get('client_secret'),
+            'contributor_type': body.get('contributor_type'),
+            'grant_type': body.get('grant_type'),
+            'client_id': body.get('client_id'),
+            'ip': body.get('ip'),
+            'email': body.get('email')}
+    metadata.update(data)
     metadata['client'] = req.client_id
-    token = models.Token.create_with_session(**metadata)
+    token, error = models.Token.create_with_session(**metadata)
     if not token:
-        abort(400, error='Missing payload')
+        abort(400, error=error)
 
 
 @auth.grantgetter
@@ -64,14 +74,13 @@ def grantgetter(client_id, code):
     return models.Grant.first(models.Grant.client.client_id == client_id,
                               models.Grant.code == code)
 
-
+#Necessaire pour OAuthLib
 @auth.grantsetter
-def grantsetter(client_id, code, request, *args, **kwargs):
-    # Needed by flask-oauthlib, but not used by client_crendentials flow.
+def grantsetter():
     pass
 
 
-@app.route('/token/', methods=['POST'])
+@app.route('/token', methods=['POST'])
 @json_to_form
 @auth.token_handler
 def authorize(*args, **kwargs):

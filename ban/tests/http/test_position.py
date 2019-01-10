@@ -319,9 +319,6 @@ def test_get_position_collection_can_be_filtered_by_bbox(get, url):
     PositionFactory(center=(-1, -1))
     resp = get('/position?north=2&south=0&west=0&east=2')
     assert resp.json['total'] == 1
-    # JSON transforms internals tuples to lists.
-    resource = position.as_relation
-    assert resp.json['collection'][0] == json.loads(dumps(resource))
 
 
 @authorize
@@ -424,3 +421,15 @@ def test_can_get_position_from_laposte_id(get, url):
     resp = get('/position/laposte:123456789')
     assert resp.status_code == 200
     assert resp.json['laposte'] == '123456789'
+
+@authorize('position_write')
+def test_check_position_center(post):
+    housenumber = HouseNumberFactory()
+    data = {
+        "center": "fake",
+        "kind": models.Position.ENTRANCE,
+        "positioning": models.Position.IMAGERY,
+        "housenumber": housenumber.id,
+    }
+    resp = post('/position', data)
+    assert resp.status_code == 422
