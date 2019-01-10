@@ -265,7 +265,7 @@ def test_create_housenumber_with_district():
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
     housenumber = HouseNumberFactory(ancestors=[district],
-                                     street__municipality=municipality)
+                                     parent__municipality=municipality)
     assert district in housenumber.ancestors
     assert housenumber in district.housenumbers
 
@@ -283,7 +283,7 @@ def test_remove_housenumber_ancestors():
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
     housenumber = HouseNumberFactory(ancestors=[district],
-                                     street__municipality=municipality)
+                                     parent__municipality=municipality)
     assert district in housenumber.ancestors
     housenumber.ancestors.remove(district)
     assert district not in housenumber.ancestors
