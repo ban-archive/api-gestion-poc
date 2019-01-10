@@ -446,7 +446,7 @@ class VersionedModelEndpoint(ModelEndpoint):
         version = instance.load_version(ref)
         if not version:
             abort(404, error='Version reference `{}` not found'.format(ref))
-        return version.serialize()
+        return version.serialize(), 200
 
     @app.jsonify
     @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
