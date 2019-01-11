@@ -82,10 +82,6 @@ class ModelEndpoint(CollectionEndpoint):
                 link(headers, uri, 'alternate')
                 choices.append(uri)
             abort(300, headers=headers, choices=choices)
-#        except IsDeletedError as err:
-#            if request.method not in ['GET', 'PUT']:
-#                abort(410, error='Resource `{}` is deleted'.format(identifier))
-#            instance = err.instance
         if instance.deleted_at and request.method not in ['GET', 'PUT']:
             abort(410, error='Resource `{}` is deleted'.format(identifier))
         return instance
