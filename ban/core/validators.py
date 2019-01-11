@@ -1,7 +1,6 @@
 import peewee
 
 from ban import db
-#from ban.core import models
 from ban import core
 from ban.utils import make_diff
 from .exceptions import RedirectError, MultipleRedirectsError, ValidationError, IsDeletedError
