@@ -564,5 +564,5 @@ def test_cannot_delete_municipality_without_scopes(client):
 def test_delete_municipality_with_scopes(client):
     municipality = MunicipalityFactory()
     resp = client.delete('/municipality/{}'.format(municipality.id))
-    assert resp.status_code == 200
+    assert resp.status_code == 204
     assert not models.Municipality.select().count()
