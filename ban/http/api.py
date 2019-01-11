@@ -932,7 +932,7 @@ def bbox():
 @app.route('/openapi', methods=['GET'])
 @app.jsonify
 def openapi():
-    return app._schema
+    return app._schema, 200
 
 
 app._schema.register_model(amodels.Session)
