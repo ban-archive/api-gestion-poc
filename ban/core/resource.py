@@ -194,6 +194,4 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                         raise MultipleRedirectsError(identifier, id, redirects)
                     raise RedirectError(identifier, id, redirects[0])
                 raise
-#        if instance.deleted_at:
-#            raise IsDeletedError(instance)
         return instance
