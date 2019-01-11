@@ -7,7 +7,6 @@ def authorize(func, *scopes):
 
     if isinstance(func, str):
         def wrapper(f):
-#            scopes = ("housenumber_write","group_write")
             return authorize(f, func, *scopes)
         return wrapper
 
