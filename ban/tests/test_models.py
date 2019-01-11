@@ -42,7 +42,6 @@ def test_municipality_as_resource():
     assert municipality.as_resource['siren'] == "210100566"
     assert municipality.as_resource['version'] == 1
     assert municipality.as_resource['id'] == municipality.id
-    # assert municipality.as_resource['postcodes'] == [postcode.id]
 
 
 def test_municipality_str():
@@ -258,7 +257,6 @@ def test_housenumber_as_resource():
         'ancestors': [],
         'cia': '21892_1234_90_BIS',
         'parent': housenumber.parent.id,
-        # 'positions': [],
         'laposte': None,
         'ign': None,
         'attributes': {'source': 'openbar'},

@@ -163,10 +163,6 @@ class ResourceModel(db.Model, metaclass=BaseResource):
     @classmethod
     def coerce(cls, id, identifier=None, level1=0):
 
-        # if not hasattr(cls, 'auth'):
-        #    if level1 != 1:
-        #        return cls.get().pk
-
         if isinstance(id, db.Model):
             instance = id
         else:

@@ -33,7 +33,6 @@ def test_get_housenumber(get):
         'ign': None,
         'laposte': None,
         'ordinal': 'bis',
-        # 'positions': [],
         'postcode': None,
         'status': 'active',
     }

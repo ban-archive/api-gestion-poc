@@ -123,8 +123,6 @@ class HouseNumber(Model):
     # (like 0/O, 1/I…)) from La Poste.
     CEA_FORMAT = Municipality.INSEE_FORMAT + '[234679ABCEGHILMNPRSTUVXYZ]{5}'
     identifiers = ['cia', 'laposte', 'ign']
-    # resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
-    #                  'ancestors', 'positions', 'ign', 'postcode']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte', 'ancestors', 'ign', 'postcode']
 
     number = db.CharField(max_length=16, null=True)
