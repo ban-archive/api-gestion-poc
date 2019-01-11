@@ -219,6 +219,24 @@ def test_create_group_with_invalid_municipality_identifier(client):
 
 
 @authorize('group_write')
+def test_create_group_on_deleted_municipality(client):
+    municipality = MunicipalityFactory()
+    municipality.mark_deleted()
+    assert not models.Group.select().count()
+    data = {
+        "name": "Rue de la Plage",
+        "fantoir": "900010234",
+        "municipality": municipality.id,
+        "kind": models.Group.WAY,
+    }
+    resp = client.post('/group', data)
+    assert resp.status_code == 422
+    assert not models.Group.select().count()
+    assert resp.json['errors']['municipality'] == (
+        'Resource `municipality` with id `{}` is deleted'.format(municipality.id))
+
+
+@authorize('group_write')
 def test_get_group_versions(get):
     street = GroupFactory(name="Rue de la Paix")
     street.version = 2
@@ -262,7 +280,7 @@ def test_delete_street(client):
     street = GroupFactory()
     resp = client.delete('/group/{}'.format(street.id))
     assert resp.status_code == 204
-    assert not models.Group.select().count()
+    assert models.Group.select().count() == 1
     assert models.Group.raw_select().where(
                                 models.Group.pk == street.pk).get().deleted_at
 

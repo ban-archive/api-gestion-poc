@@ -7,6 +7,8 @@ from postgis import Point
 from ban import db
 from ban.utils import utcnow
 
+
+
 from .exceptions import (IsDeletedError, MultipleRedirectsError, RedirectError,
                          ResourceLinkedError)
 from .validators import ResourceValidator
@@ -134,7 +136,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     @classmethod
     def select(cls, *selection):
-        return super().select(*selection).where(cls.deleted_at.is_null())
+        return super().select(*selection)
 
     @classmethod
     def raw_select(cls, *selection):
@@ -150,12 +152,16 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     def ensure_no_reverse_relation(self):
         for name, field in self._meta.reverse_rel.items():
-            if getattr(self, name).count():
+            select = getattr(self, name)
+            if getattr(select.model_class,'deleted_at', None):
+                select = select.where(select.model_class.deleted_at.is_null())
+            if select.count():
                 raise ResourceLinkedError(
                     'Resource still linked by `{}`'.format(name))
 
     @classmethod
-    def coerce(cls, id, identifier=None):
+    def coerce(cls, id, identifier=None, level1=0):
+
         if isinstance(id, db.Model):
             instance = id
         else:
@@ -171,8 +177,14 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 elif isinstance(id, int):
                     identifier = 'pk'
             try:
-                instance = cls.raw_select().where(
-                    getattr(cls, identifier) == id).get()
+
+                if not hasattr(cls, 'auth') and level1 != 1:
+                    instance = cls.raw_select(cls._meta.model_class.pk).where(
+                        getattr(cls, identifier) == id).get()
+                else:
+                    instance = cls.raw_select().where(
+                        getattr(cls, identifier) == id).get()
+
             except cls.DoesNotExist:
                 # Is it an old identifier?
                 from .versioning import Redirect
@@ -182,6 +194,4 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                         raise MultipleRedirectsError(identifier, id, redirects)
                     raise RedirectError(identifier, id, redirects[0])
                 raise
-        if instance.deleted_at:
-            raise IsDeletedError(instance)
         return instance

@@ -209,7 +209,7 @@ def test_batch_delete_municipality(post):
     }]
     resp = post('/batch', data)
     assert resp.status_code == 204
-    assert not models.Municipality.select().count()
+    assert models.Municipality.select().count() == 1
     assert models.Municipality.raw_select().where(
                 models.Municipality.pk == municipality.pk).first().deleted_at
 
