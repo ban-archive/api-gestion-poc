@@ -29,7 +29,7 @@ def normalize_response(resp):
 
 @pytest.fixture
 def schema(get):
-    return load(get('/openapi').json)
+    return load(get('/openapi'))
 
 
 def validate_call(resp, schema):
