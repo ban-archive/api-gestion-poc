@@ -47,7 +47,6 @@ class NamedModel(Model):
 class Municipality(NamedModel):
     INSEE_FORMAT = '(2[AB]|\d{2})\d{3}'
     identifiers = ['siren', 'insee']
-    # resource_fields = ['name', 'alias', 'insee', 'siren', 'postcodes']
     resource_fields = ['name', 'alias', 'insee', 'siren']
     exclude_for_version = ['postcodes']
 
