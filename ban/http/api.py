@@ -234,7 +234,7 @@ class ModelEndpoint(CollectionEndpoint):
             json = request.json
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True, json=json)
-        return instance.as_resource
+        return instance.as_resource, 200
 
     @app.jsonify
     @app.endpoint(methods=['POST'])
@@ -312,7 +312,7 @@ class ModelEndpoint(CollectionEndpoint):
             json = request.json
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True, json=json)
-        return instance.as_resource
+        return instance.as_resource, 200
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PUT'])
@@ -357,7 +357,7 @@ class ModelEndpoint(CollectionEndpoint):
             # if the data is valid.
             instance.deleted_at = None
         instance = self.save_object(instance, json=json)
-        return instance.as_resource
+        return instance.as_resource, 200
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['DELETE'])
@@ -387,7 +387,7 @@ class ModelEndpoint(CollectionEndpoint):
             instance.mark_deleted()
         except ResourceLinkedError as e:
             abort(409, error=str(e))
-        return {'resource_id': identifier}
+        return instance.as_resource, 204
 
 
 class VersionedModelEndpoint(ModelEndpoint):
@@ -449,7 +449,7 @@ class VersionedModelEndpoint(ModelEndpoint):
         version = instance.load_version(ref)
         if not version:
             abort(404, error='Version reference `{}` not found'.format(ref))
-        return version.serialize()
+        return version.serialize(), 200
 
     @app.jsonify
     @app.endpoint('/<identifier>/versions/<int:ref>/flag', methods=['POST'])
@@ -486,8 +486,10 @@ class VersionedModelEndpoint(ModelEndpoint):
         status = request.json.get('status')
         if status is True:
             version.flag()
+            return '', 200
         elif status is False:
             version.unflag()
+            return '', 200
         else:
             abort(400, error='Body should contain a `status` boolean key')
 
@@ -934,7 +936,7 @@ def bbox():
 @app.route('/openapi', methods=['GET'])
 @app.jsonify
 def openapi():
-    return app._schema
+    return app._schema, 200
 
 
 app._schema.register_model(amodels.Session)

@@ -495,8 +495,7 @@ def test_delete_housenumber(client):
     housenumber = HouseNumberFactory()
     uri = '/housenumber/{}'.format(housenumber.id)
     resp = client.delete(uri)
-    assert resp.status_code == 200
-    assert resp.json['resource_id'] == housenumber.id
+    assert resp.status_code == 204
     assert models.HouseNumber.select().count() == 1
     assert models.HouseNumber.raw_select().where(
                     models.HouseNumber.pk == housenumber.pk).get().deleted_at

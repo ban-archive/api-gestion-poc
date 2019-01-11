@@ -279,8 +279,7 @@ def test_get_group_unknown_version_should_go_in_404(get):
 def test_delete_street(client):
     street = GroupFactory()
     resp = client.delete('/group/{}'.format(street.id))
-    assert resp.status_code == 200
-    assert resp.json['resource_id'] == street.id
+    assert resp.status_code == 204
     assert models.Group.select().count() == 1
     assert models.Group.raw_select().where(
                                 models.Group.pk == street.pk).get().deleted_at
