@@ -269,8 +269,7 @@ def test_patch_municipality_with_alias(patch):
 def test_delete_municipality(client):
     municipality = MunicipalityFactory()
     resp = client.delete('/municipality/{}'.format(municipality.id))
-    assert resp.status_code == 200
-    assert resp.json['resource_id'] == municipality.id
+    assert resp.status_code == 204
     assert not models.Municipality.select().count()
     assert models.Municipality.raw_select().where(
                 models.Municipality.pk == municipality.pk).first().deleted_at
