@@ -67,7 +67,7 @@ class ModelEndpoint(CollectionEndpoint):
     def get_object(self, identifier):
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         try:
-            instance = self.model.coerce(identifier)
+            instance = self.model.coerce(identifier, None, 1)
         except self.model.DoesNotExist:
             abort(404, error='Resource with identifier `{}` does not exist.'
                   .format(identifier))
@@ -82,10 +82,8 @@ class ModelEndpoint(CollectionEndpoint):
                 link(headers, uri, 'alternate')
                 choices.append(uri)
             abort(300, headers=headers, choices=choices)
-        except IsDeletedError as err:
-            if request.method not in ['GET', 'PUT']:
-                abort(410, error='Resource `{}` is deleted'.format(identifier))
-            instance = err.instance
+        if instance.deleted_at and request.method not in ['GET', 'PUT']:
+            abort(410, error='Resource `{}` is deleted'.format(identifier))
         return instance
 
     def save_object(self, instance=None, update=False, json=None):
@@ -159,6 +157,7 @@ class ModelEndpoint(CollectionEndpoint):
         if qs is None:
             return self.collection([])
         if not isinstance(qs, list):
+            qs = qs.where(qs.model_class.deleted_at.is_null())
             order_by = (self.order_by if self.order_by is not None
                         else [self.model.pk])
             qs = qs.order_by(*order_by).serialize(self.get_collection_mask())
@@ -1001,6 +1000,7 @@ def bbox():
         response["collection"].append(occ)
 
     return response
+
 
 @app.route('/openapi', methods=['GET'])
 @app.jsonify

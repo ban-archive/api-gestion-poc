@@ -22,6 +22,8 @@ class User(ResourceModel):
     company = db.CharField(max_length=100, null=True)
     is_staff = db.BooleanField(default=False, index=True)
 
+    auth = 1
+
     class Meta:
         database = db.database
 

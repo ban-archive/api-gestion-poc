@@ -290,7 +290,7 @@ def test_delete_position(client, url):
     uri = '/position/{}'.format(position.id)
     resp = client.delete(uri)
     assert resp.status_code == 204
-    assert not models.Position.select().count()
+    assert models.Position.select().count() == 1
     assert models.Position.raw_select().where(
                         models.Position.pk == position.pk).get().deleted_at
 
