@@ -136,7 +136,6 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     @classmethod
     def select(cls, *selection):
-        # return super().select(*selection).where(cls.deleted_at.is_null())
         return super().select(*selection)
 
     @classmethod
