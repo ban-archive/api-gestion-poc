@@ -538,13 +538,3 @@ def test_cannot_add_a_deleted_resource_as_fk():
                                        kind=models.Group.AREA)
     assert validator.errors['municipality'] == (
         'Resource `municipality` with id `{}` is deleted'.format(deleted.id))
-
-
-def test_cannot_add_a_deleted_resource_in_m2m():
-    housenumber = HouseNumberFactory()
-    deleted = GroupFactory()
-    deleted.mark_deleted()
-    validator = models.HouseNumber.validator(instance=housenumber, update=True,
-                                             ancestors=[deleted], version=2)
-    assert validator.errors['ancestors'] == (
-        'Resource `group` with id `{}` is deleted'.format(deleted.id))
