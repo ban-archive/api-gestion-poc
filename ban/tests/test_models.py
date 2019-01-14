@@ -270,6 +270,7 @@ def test_housenumber_as_resource():
         'modified_by': housenumber.modified_by.serialize(),
         'modified_at': housenumber.modified_at.isoformat(),
         'status': 'active',
+        'positions': []
     }
 
 
