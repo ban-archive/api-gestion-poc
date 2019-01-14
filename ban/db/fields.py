@@ -275,11 +275,16 @@ class ManyToManyField(fields.ManyToManyField):
         super().__init__(*args, **kwargs)
 
     def coerce(self, value, deleted=True, level1=0):
+        from ban.core.resource import ResourceModel
         if not value:
             return []
         if not isinstance(value, (tuple, list, peewee.SelectQuery)):
             value = [value]
         value = [self.rel_model.coerce(item, None, level1) for item in value]
+        for elem in value:
+            if isinstance(elem, ResourceModel):
+                if deleted is False and elem.deleted_at:
+                    raise IsDeletedError(elem)
         return super().coerce(value)
 
     def add_to_class(self, model_class, name):
