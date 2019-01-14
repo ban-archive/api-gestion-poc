@@ -218,7 +218,7 @@ class Version(db.Model):
         return super().select(*selection)
 
     @classmethod
-    def coerce(cls, id, identifier=None):
+    def coerce(cls, id, identifier=None, level1=0):
         if isinstance(id, db.Model):
             instance = id
         else:
