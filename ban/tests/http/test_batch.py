@@ -208,9 +208,8 @@ def test_batch_delete_municipality(post):
              "path": "/municipality/{}".format(municipality.id),
     }]
     resp = post('/batch', data)
-    assert resp.status_code == 200
-    assert resp.json['resource_id'] == municipality.id
-    assert not models.Municipality.select().count()
+    assert resp.status_code == 204
+    assert models.Municipality.select().count() == 1
     assert models.Municipality.raw_select().where(
                 models.Municipality.pk == municipality.pk).first().deleted_at
 

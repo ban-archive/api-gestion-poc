@@ -32,16 +32,6 @@ def test_municipality_is_created_with_version_1():
     assert municipality.version == 1
 
 
-def test_municipality_postcodes():
-    municipality = MunicipalityFactory(name="Paris")
-    postcode1 = PostCodeFactory(code="75010", municipality=municipality)
-    postcode2 = PostCodeFactory(code="75011", municipality=municipality)
-    postcodes = municipality.postcodes
-    assert len(postcodes) == 2
-    assert postcode1 in postcodes
-    assert postcode2 in postcodes
-
-
 def test_municipality_as_resource():
     municipality = MunicipalityFactory(name="Montbrun-Bocage", insee="31365",
                                        siren="210100566")
@@ -52,7 +42,6 @@ def test_municipality_as_resource():
     assert municipality.as_resource['siren'] == "210100566"
     assert municipality.as_resource['version'] == 1
     assert municipality.as_resource['id'] == municipality.id
-    assert municipality.as_resource['postcodes'] == [postcode.id]
 
 
 def test_municipality_str():
@@ -217,16 +206,11 @@ def test_housenumber_positions():
     assert housenumber.positions == [position]
 
 
-def test_housenumber_positions_without_linked_positions():
-    housenumber = HouseNumberFactory()
-    assert housenumber.positions == []
-
-
 def test_create_housenumber_with_district():
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
     housenumber = HouseNumberFactory(ancestors=[district],
-                                     street__municipality=municipality)
+                                     parent__municipality=municipality)
     assert district in housenumber.ancestors
     assert housenumber in district.housenumbers
 
@@ -244,7 +228,7 @@ def test_remove_housenumber_ancestors():
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)
     housenumber = HouseNumberFactory(ancestors=[district],
-                                     street__municipality=municipality)
+                                     parent__municipality=municipality)
     assert district in housenumber.ancestors
     housenumber.ancestors.remove(district)
     assert district not in housenumber.ancestors
@@ -273,7 +257,6 @@ def test_housenumber_as_resource():
         'ancestors': [],
         'cia': '21892_1234_90_BIS',
         'parent': housenumber.parent.id,
-        'positions': [],
         'laposte': None,
         'ign': None,
         'attributes': {'source': 'openbar'},
