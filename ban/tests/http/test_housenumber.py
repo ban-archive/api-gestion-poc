@@ -35,7 +35,7 @@ def test_get_housenumber(get):
         'ordinal': 'bis',
         'postcode': None,
         'status': 'active',
-        'position': []
+        'positions': []
     }
 
 
