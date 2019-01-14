@@ -892,7 +892,7 @@ def bbox():
     connectString = "dbname='{}' user='{}' password='{}' host='{}' port='{}'".format(dbname,user,password,host,port)
     conn = psycopg2.connect(connectString)
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    if unique == 1:
+    if unique == 'true':
         cur.execute(
             """SELECT count(distinct housenumber_id) FROM position WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)""",
             {
@@ -999,7 +999,7 @@ def bbox():
         }
         response["collection"].append(occ)
 
-    return response
+    return response, 200
 
 
 @app.route('/openapi', methods=['GET'])
