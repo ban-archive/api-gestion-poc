@@ -844,7 +844,7 @@ def bbox():
                 on (h.postcode_id = po.pk) 
                 WHERE center && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s)
                 AND p.deleted_at is null AND h.deleted_at is null and g.deleted_at is null
-                AND p.modified_at = (select max(modified_at) from position where housenumber_id=h.pk)
+                AND p.modified_at = (select max(modified_at) from position where housenumber_id=h.pk and deleted_at is null)
                 limit %(limit)s""",
             {
                 "limit": limit,
