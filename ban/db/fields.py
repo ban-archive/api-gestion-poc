@@ -280,10 +280,6 @@ class ManyToManyField(fields.ManyToManyField):
         if not isinstance(value, (tuple, list, peewee.SelectQuery)):
             value = [value]
         value = [self.rel_model.coerce(item, None, level1) for item in value]
-        for elem in value:
-            if isinstance(elem, peewee.Model):
-                if deleted is False and elem.deleted_at:
-                    raise IsDeletedError(elem)
         return super().coerce(value)
 
     def add_to_class(self, model_class, name):

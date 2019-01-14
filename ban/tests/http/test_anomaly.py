@@ -218,7 +218,7 @@ def test_delete_anomaly(client):
     v = VersionFactory(model_pk=h.pk, data='{"nom":"test"}')
     a = AnomalyFactory(versions = [v], kind="number vide")
     resp = client.delete('/anomaly/{}'.format(a.id))
-    assert resp.status_code == 200
+    assert resp.status_code == 204
     a2 = versioning.Anomaly.select().where(versioning.Anomaly.id==a.id).first()
     assert a2 is None
 
