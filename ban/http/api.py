@@ -733,6 +733,8 @@ def batch():
                 self = HouseNumber()
             elif path[:9] == Position.endpoint:
                 self = Position()
+            elif path[:8] == Anomaly.endpoint:
+                self = Anomaly()
             else:
                 abort(422, error="Wrong resource {}".format(path))
             scopes = '{}_write'.format(self.__class__.__name__.lower())
