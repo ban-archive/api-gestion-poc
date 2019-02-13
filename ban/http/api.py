@@ -385,6 +385,8 @@ class ModelEndpoint(CollectionEndpoint):
             instance.mark_deleted()
         except ResourceLinkedError as e:
             abort(409, error=str(e))
+        if self.__class__.__name__.lower() == 'anomaly':
+            return None, 204
         return instance.as_resource, 204
 
 

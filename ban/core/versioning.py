@@ -459,4 +459,4 @@ class Anomaly(resource.ResourceModel):
         return super().save(*args, **kwargs)
 
     def mark_deleted(self):
-        self.delete().execute()
+        self.delete_instance()

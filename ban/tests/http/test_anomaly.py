@@ -222,3 +222,19 @@ def test_delete_anomaly(client):
     a2 = versioning.Anomaly.select().where(versioning.Anomaly.id==a.id).first()
     assert a2 is None
 
+
+@authorize('anomaly_write')
+def test_delete_anomaly_with_other(client):
+    h = HouseNumberFactory()
+    v = VersionFactory(model_pk=h.pk, data='{"nom":"test"}')
+    a = AnomalyFactory(versions = [v], kind="number vide")
+    g = GroupFactory()
+    vg = VersionFactory(model_pk=g.pk, data='{"nom":"test"}')
+    ag = AnomalyFactory(versions = [vg], kind="nom vide")
+    resp = client.delete('/anomaly/{}'.format(a.id))
+    assert resp.status_code == 204
+    a2 = versioning.Anomaly.select().where(versioning.Anomaly.id==a.id).first()
+    assert a2 is None
+    a2 = versioning.Anomaly.select().where(versioning.Anomaly.id==ag.id).first()
+    assert a2.kind == 'nom vide'
+
