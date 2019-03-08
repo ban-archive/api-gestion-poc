@@ -810,22 +810,36 @@ class Diff(CollectionEndpoint):
 class Anomaly(ModelEndpoint):
     endpoint = '/anomaly'
     model = versioning.Anomaly
-    filters = ['kind', 'versions']
+    filters = ['kind', 'versions', 'insee']
     order_by = [peewee.SQL('pk ASC')]
 
     def filter_versions(self, qs):
         # versions is a m2m so we cannot use the basic filtering
         # from self.filters.
-        version = request.args.getlist('version')
-        values = list(map(self.model.versions.coerce, version))
-        if values:
+        versionParam = request.args.getlist('version')
+        resourceParam = request.args.getlist('resource')
+        if versionParam is not None and resourceParam is not None:
             m2m = self.model.versions.get_through_model()
+            version = models.Version
             qs = (qs.join(m2m, on=(m2m.anomaly == self.model.pk)))
-            # We evaluate the qs ourselves here, because it's a CompoundSelect
-            # that does not know about our SelectQuery custom methods (like
-            # `serialize`), and CompoundSelect is hardcoded in peewee
-            # SelectQuery, and we'd need to copy-paste code to be able to use
-            # a custom CompoundQuery class instead.
+            qs = (qs.join(version, on=(version.pk == m2m.version)))
+            qs = qs.where(version.sequential == versionParam)
+
+            model_name = ''
+            if "group" in resourceParam[0]:
+                qs = (qs.join(models.Group, on=(version.model_pk == models.Group.pk)))
+                qs = qs.where(models.Group.id == resourceParam)
+                model_name = "group"
+            if "housenumber" in resourceParam[0]:
+                qs = (qs.join(models.HouseNumber, on=(version.model_pk == models.HouseNumber.pk)))
+                qs = qs.where(models.HouseNumber.id == resourceParam)
+                model_name = "housenumber"
+            if "position" in resourceParam[0]:
+                qs = (qs.join(models.Position, on=(version.model_pk == models.Position.pk)))
+                qs = qs.where(models.Position.id == resourceParam)
+                model_name = "position"
+            qs = qs.where(version.model_name == model_name)
+
         mask = self.get_collection_mask()
         qs = [h.serialize(mask) for h in qs.order_by(*self.order_by)]
         return qs
@@ -840,6 +854,12 @@ class Anomaly(ModelEndpoint):
         resource = request.args.get('resource')
         if version is not None and resource is not None:
             qs = self.filter_versions(qs)
+        dep = request.args.get('dep')
+        if dep:
+            qs = qs.where(peewee.Expression(versioning.Anomaly.insee, peewee.OP.LIKE, dep + '%'))
+        insee = request.args.get('insee')
+        if insee:
+            qs = qs.where(versioning.Anomaly.insee == insee)
         return qs
 
     def save_object(self, instance=None, update=False, json=None):

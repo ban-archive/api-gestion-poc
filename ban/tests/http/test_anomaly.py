@@ -38,15 +38,23 @@ def test_get_anomalies_by_kind(get):
 
 
 @authorize
-def test_get_anomaly_by_version(get):
-    h = HouseNumberFactory()
-    v = VersionFactory(model_pk=h.pk, data='{"nom":"test"}')
-    a = AnomalyFactory(versions = [v])
-    a2 = AnomalyFactory()
-    resp = get('/anomaly?resource={}&version={}'.format(h.id, v.sequential))
+def test_get_anomalies_by_insee(get):
+    a1 = AnomalyFactory(insee="33001")
+    a2 = AnomalyFactory(insee="85001")
+    resp = get('/anomaly?insee=33001')
     assert resp.status_code == 200
     assert resp.json["total"] == 1
-    assert resp.json["collection"][0]["versions"][0]["data"]== '{"nom":"test"}'
+    assert resp.json["collection"][0]["id"] == a1.id
+
+
+@authorize
+def test_get_anomalies_by_dep(get):
+    a1 = AnomalyFactory(insee="33001")
+    a2 = AnomalyFactory(insee="85001")
+    resp = get('/anomaly?dep=85')
+    assert resp.status_code == 200
+    assert resp.json["total"] == 1
+    assert resp.json["collection"][0]["id"] == a2.id
 
 
 @authorize('anomaly_write')
@@ -63,6 +71,31 @@ def test_create_anomaly(client):
     assert resp.json['kind'] == 'nom vide'
     assert resp.json['insee'] == '33544'
     assert resp.json['versions'][0]['data']
+
+
+@authorize('anomaly_write')
+def test_get_anomaly_by_version(client):
+    street = GroupFactory()
+
+    hn1 = HouseNumberFactory(number="1", parent=street)
+    data1 = {
+        "kind": "'doublon hn'",
+        "insee": "33001",
+        "versions": [{"version":hn1.version, "id":hn1.id, "resource":"housenumber"}],
+    }
+    resp = client.post('/anomaly', data1)
+
+    hn2 = HouseNumberFactory(number="2", parent=street)
+    data2 = {
+        "kind": "'doublon hn'",
+        "insee": "33001",
+        "versions": [{"version": hn2.version, "id": hn2.id, "resource": "housenumber"}],
+    }
+
+    resp = client.get('/anomaly?resource={}&version={}'.format(hn1.id, 1))
+    assert resp.status_code == 200
+    assert resp.json["total"] == 1
+    assert resp.json["collection"][0]["versions"][0]["data"]["id"] == hn1.id
 
 
 @authorize
