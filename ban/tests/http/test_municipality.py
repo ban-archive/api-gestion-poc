@@ -567,3 +567,12 @@ def test_delete_municipality_with_scopes(client):
     assert models.Municipality.select().count() == 1
     assert models.Municipality.raw_select().where(
                     models.Municipality.pk == municipality.pk).get().deleted_at
+
+
+@authorize
+def test_authorized_responses_contain_sessions_data(get):
+    municipality = MunicipalityFactory(name="Cabour")
+    resp = get('/municipality/{}'.format(municipality.id))
+    assert resp.status_code == 200
+    session = context.get('session')
+    assert resp.headers['Session-Client'] == session.client.id
