@@ -259,6 +259,20 @@ def test_cannot_patch_anomaly_with_versions(client):
 
 
 @authorize('anomaly_write')
+def test_legitimize_anomaly(client):
+    h = HouseNumberFactory()
+    v = VersionFactory(model_pk=h.pk, data='{"nom":"test"}')
+    a = AnomalyFactory(versions=[v], kind="number vide")
+    assert a.legitimate == False
+    data = {
+        "legitimate": True
+    }
+    resp = client.patch('/anomaly/{}'.format(a.id), data)
+    a2 = versioning.Anomaly.get(versioning.Anomaly.id==a.id)
+    assert a2.legitimate == True
+
+
+@authorize('anomaly_write')
 def test_delete_anomaly(client):
     h = HouseNumberFactory()
     v = VersionFactory(model_pk=h.pk, data='{"nom":"test"}')

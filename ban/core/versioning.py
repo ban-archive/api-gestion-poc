@@ -452,6 +452,7 @@ class Anomaly(resource.ResourceModel):
     kind = db.CharField()
     insee = db.CharField(length=5)
     created_at = db.DateTimeField()
+    legitimate = db.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.created_at:
