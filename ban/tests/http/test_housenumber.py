@@ -327,6 +327,22 @@ def test_create_housenumber_with_street_fantoir(client):
 
 
 @authorize('housenumber_write')
+def create_housenumber_reactivation(client):
+    housenumber = HouseNumberFactory()
+    housenumber.mark_deleted()
+    data = {
+        "number": housenumber.number,
+        "ordinal": housenumber.ordinal,
+        "parent": housenumber.parent.id
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 200
+    assert resp.json['id'] == housenumber.id
+    assert resp.json['version'] == 3
+    assert resp.json['status'] == 'active'
+
+
+@authorize('housenumber_write')
 def test_create_housenumber_does_not_honour_version_field(client):
     street = GroupFactory(name="Rue de Bonbons")
     data = {

@@ -8,6 +8,7 @@ from .exceptions import RedirectError, MultipleRedirectsError, ValidationError, 
 
 class ResourceValidator:
     errors = None
+    foundDuplicate = None
 
     def __init__(self, model, update=False):
         self.model = model
@@ -113,6 +114,7 @@ class ResourceValidator:
         if self.instance:
             qs = qs.where(self.model.pk != self.instance.pk)
         if qs.exists():
+            self.foundDuplicate = qs.get()
             raise ValueError('`{}` already exists'.format(value))
 
     def validate_unique_indexes(self):
@@ -142,6 +144,7 @@ class ResourceValidator:
             if self.instance:
                 qs = qs.where(self.model.pk != self.instance.pk)
             if qs.exists():
+                self.foundDuplicate = qs.get()
                 msg = 'Duplicate entries: {}'.format(', '.join(names))
                 for name in names:
                     self.error(name, msg)

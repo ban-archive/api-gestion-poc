@@ -222,13 +222,13 @@ def test_put_anomaly(client):
     a = AnomalyFactory(versions = [v], kind="number vide")
     data = {
         "kind": "hn 5000",
-        "insee": "33544",
-        "versions": [{"version":h.version, "id":h.id, "resource":"housenumber"}],
+        "insee": "33544"
     }
     resp = client.put('/anomaly/{}'.format(a.id), data)
     assert resp.status_code == 200
     a2 = versioning.Anomaly.get(versioning.Anomaly.id==a.id)
     assert a2.kind == 'hn 5000'
+    assert a2.versions == a.versions
 
 
 @authorize('anomaly_write')
@@ -243,6 +243,19 @@ def test_patch_anomaly(client):
     assert resp.status_code == 200
     a2 = versioning.Anomaly.get(versioning.Anomaly.id==a.id)
     assert a2.kind == 'hn 5000'
+
+
+@authorize('anomaly_write')
+def test_cannot_patch_anomaly_with_versions(client):
+    h = HouseNumberFactory()
+    v = VersionFactory(model_pk=h.pk, data='{"nom":"test"}')
+    a = AnomalyFactory(versions=[v], kind="number vide")
+    data = {
+        "kind": "hn 5000",
+        "versions": [{"version":"9", "id":h.id, "resource":"housenumber"}]
+    }
+    resp = client.patch('/anomaly/{}'.format(a.id), data)
+    assert resp.status_code == 422
 
 
 @authorize('anomaly_write')

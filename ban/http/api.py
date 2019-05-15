@@ -64,6 +64,10 @@ class ModelEndpoint(CollectionEndpoint):
     endpoints = {}
     order_by = None
 
+    def prepare_data(self, request):
+        return request.json
+
+
     def get_object(self, identifier):
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         try:
@@ -96,6 +100,25 @@ class ModelEndpoint(CollectionEndpoint):
         except models.Model.ForcedVersionError as e:
             abort(409, error=str(e))
         return instance
+
+
+    def create_or_revive_object(self, json=None):
+        validator = self.model.validator(**json or {})
+
+        instance = validator.foundDuplicate;
+        if instance and instance.deleted_at:
+            json['version'] = instance.version + 1
+            instance.deleted_at = None
+            instance = self.save_object(instance=instance, json=json)
+            return instance, 200
+        elif validator.errors:
+            abort(422, error='Invalid data', errors=validator.errors)
+        try:
+            instance = validator.save()
+        except models.Model.ForcedVersionError as e:
+            abort(409, error=str(e))
+        return instance, 201
+
 
     def get_queryset(self):
         qs = self.model.select()
@@ -227,7 +250,7 @@ class ModelEndpoint(CollectionEndpoint):
                 $ref: '#/responses/422'
         """
         if not json:
-            json = request.json
+            json = self.prepare_data(request)
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True, json=json)
         return instance.as_resource, 200
@@ -264,8 +287,8 @@ class ModelEndpoint(CollectionEndpoint):
                 $ref: '#/responses/422'
         """
         if not json:
-            json = request.json
-        instance = self.save_object(json=json)
+            json = self.prepare_data(request)
+        instance, code = self.create_or_revive_object(json)
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         headers = {'Location': url_for(endpoint, identifier=instance.id)}
         return instance.as_resource, 201, headers
@@ -305,7 +328,7 @@ class ModelEndpoint(CollectionEndpoint):
                 $ref: '#/responses/422'
         """
         if not json:
-            json = request.json
+            json = self.prepare_data(request)
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True, json=json)
         return instance.as_resource, 200
@@ -345,7 +368,7 @@ class ModelEndpoint(CollectionEndpoint):
                 $ref: '#/responses/422'
         """
         if not json:
-            json = request.json
+            json = self.prepare_data(request)
         instance = self.get_object(identifier)
         if instance.deleted_at:
             # We want to create only one new version for a restore. Change the
@@ -862,39 +885,40 @@ class Anomaly(ModelEndpoint):
             qs = qs.where(versioning.Anomaly.insee == insee)
         return qs
 
-    def save_object(self, instance=None, update=False, json=None):
+
+    def prepare_data(self, request):
+        method = request.method
+        if method not in ['POST', 'PUT', 'PATCH']:
+            abort(400, error='Unknown method')
+        json = request.json
         versions = json.get('versions')
-        if not update:
-            if not versions:
-                abort(422, error='No versions given')
-            for i in range(len(versions)):
-                version = versions[i]
-                resource = version.get('resource')
-                if resource == 'municipality':
-                    re = Municipality.get_object(Municipality, version.get('id'))
-                elif resource == 'postcode':
-                    re = PostCode.get_object(PostCode, version.get('id'))
-                elif resource == 'group':
-                    re = Group.get_object(Group, version.get('id'))
-                elif resource == 'housenumber':
-                    re = HouseNumber.get_object(HouseNumber, version.get('id'))
-                elif resource == 'position':
-                    re = Position.get_object(Position, version.get('id'))
-                else:
-                    abort(422, error='Invalid resource in versions')
-                v = re.load_version(version.get('version'))
-                if not v:
-                    abort(422, error='Wrong version number')
-                json['versions'][i] = v.pk
-        validator = self.model.validator(update=update, instance=instance,
-                                         **json or {})
-        if validator.errors:
-            abort(422, error='Invalid data', errors=validator.errors)
-        try:
-            instance = validator.save()
-        except models.Model.ForcedVersionError as e:
-            abort(409, error=str(e))
-        return instance
+        if not versions and method == 'POST':
+            abort(422, error='No versions given')
+        elif versions and method != 'POST':
+            abort(422, error='Field versions not allowed with {}'.format(method))
+        elif not versions:
+            return json
+        for i in range(len(versions)):
+            version = versions[i]
+            resource = version.get('resource')
+            if resource == 'municipality':
+                re = Municipality.get_object(Municipality, version.get('id'))
+            elif resource == 'postcode':
+                re = PostCode.get_object(PostCode, version.get('id'))
+            elif resource == 'group':
+                re = Group.get_object(Group, version.get('id'))
+            elif resource == 'housenumber':
+                re = HouseNumber.get_object(HouseNumber, version.get('id'))
+            elif resource == 'position':
+                re = Position.get_object(Position, version.get('id'))
+            else:
+                abort(422, error='Invalid resource in versions')
+            v = re.load_version(version.get('version'))
+            if not v:
+                abort(422, error='Wrong version number')
+            json['versions'][i] = v.pk
+
+        return json
 
 
 @app.route('/bbox', methods=['GET'])
