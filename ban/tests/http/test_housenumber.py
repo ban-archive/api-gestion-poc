@@ -584,3 +584,20 @@ def test_cannot_duplicate_number_with_empty_ordinal_for_same_parent(client):
     assert 'number' in resp.json['errors']
     assert 'ordinal' in resp.json['errors']
     assert 'parent' in resp.json['errors']
+
+
+@authorize('housenumber_write')
+def test_cannot_create_housenumber_case_doublon_number_ordinal_parent(client):
+    assert not models.HouseNumber.select().count()
+    housenumber = HouseNumberFactory(number='1', ordinal='bis')
+    data = {
+        "number": "1",
+        "ordinal": "BIS",
+        "parent": housenumber.parent.id
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 422
+    assert models.HouseNumber.select().count() == 1
+    assert 'number' in resp.json['errors']
+    assert 'ordinal' in resp.json['errors']
+    assert 'parent' in resp.json['errors']

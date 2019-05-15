@@ -34,6 +34,7 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
     class Meta:
         validate_backrefs = False
         validator = VersionedResourceValidator
+        case_ignoring = ();
 
 
 class NamedModel(Model):
@@ -140,6 +141,7 @@ class HouseNumber(Model):
         indexes = (
             (('parent', 'number', 'ordinal'), True),
         )
+        case_ignoring = ('ordinal',)
 
     def __str__(self):
         return ' '.join([self.number or '', self.ordinal or ''])

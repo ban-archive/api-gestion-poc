@@ -300,7 +300,7 @@ class NameField(CharField):
         value = str(value)
         if value.isspace():
             raise ValidationError("Name must have non whitespace characters.");
-        value = ' '.join(value.split()) #nettoyage des espaces multiples et en debut/fin de chaine
+        value = ' '.join(value.split()) # clean userless whitespaces
 
         return value
 

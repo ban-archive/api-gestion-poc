@@ -123,11 +123,18 @@ class ResourceValidator:
             for name in names:
                 field = getattr(self.model, name)
 
+                value = None
                 if name in self.data:
-                    where.append(field == self.data.get(name))
+                    value = self.data.get(name)
                 else:
                     if self.instance:
-                        where.append(field == getattr(self.instance, name))
+                        value = getattr(self.instance, name)
+
+                if value and name not in self.model._meta.case_ignoring:
+                    where.append(field == value)
+                elif value and name in self.model._meta.case_ignoring:
+                    where.append(peewee.Expression(field, peewee.OP.ILIKE, value))
+
             if where != []:
                 qs = self.model.select().where(*where)
             else:
