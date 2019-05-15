@@ -294,6 +294,17 @@ class ManyToManyField(fields.ManyToManyField):
 
 
 class NameField(CharField):
+    def coerce(self, value):
+        if not value:
+            return None
+        value = str(value)
+        if value.isspace():
+            raise ValidationError("Name must have non whitespace characters.");
+        value = ' '.join(value.split()) #nettoyage des espaces multiples et en debut/fin de chaine
+
+        return value
+
+
     def search(self, **kwargs):
         ponctuation = '[\.\(\)\[\]\"\'\-,;:\/]'
         articles = '(^| )((LA|L|LE|LES|DU|DE|DES|D|ET|A|AU) )*'

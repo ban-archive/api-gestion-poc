@@ -63,7 +63,7 @@ def test_create_anomaly(client):
     data = {
         "kind": "nom vide",
         "insee": "33544",
-        "versions": [{"version":street.version, "id":street.id, "resource":"group"}],
+        "versions": [{"version":street.version, "id":street.id, "resource":"group"}]
     }
     resp = client.post('/anomaly', data)
     assert resp.status_code == 201
@@ -71,6 +71,7 @@ def test_create_anomaly(client):
     assert resp.json['kind'] == 'nom vide'
     assert resp.json['insee'] == '33544'
     assert resp.json['versions'][0]['data']
+
 
 
 @authorize('anomaly_write')
@@ -96,7 +97,6 @@ def test_get_anomaly_by_version(client):
     assert resp.status_code == 200
     assert resp.json["total"] == 1
     assert resp.json["collection"][0]["versions"][0]["data"]["id"] == hn1.id
-
 
 @authorize
 def test_cannot_create_anomaly_without_scopes(client):

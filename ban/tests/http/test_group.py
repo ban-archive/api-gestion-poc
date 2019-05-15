@@ -128,7 +128,7 @@ def test_create_group(client):
     municipality = MunicipalityFactory(name="Cabour")
     assert not models.Group.select().count()
     data = {
-        "name": "Rue de la Plage",
+        "name": "   Rue de   la Plage",
         "fantoir": "900010234",
         "municipality": municipality.id,
         "kind": models.Group.WAY,
@@ -151,6 +151,20 @@ def test_cannot_create_group_without_kind(client):
         "name": "Rue de la Plage",
         "fantoir": "900010234",
         "municipality": municipality.id,
+    }
+    resp = client.post('/group', data)
+    assert resp.status_code == 422
+
+
+@authorize('group_write')
+def test_cannot_create_group_whitespace_name(client):
+    municipality = MunicipalityFactory(name="Cabour")
+    assert not models.Group.select().count()
+    data = {
+        "name": "   ",
+        "kind": "area",
+        "fantoir": "900010234",
+        "municipality": municipality.id
     }
     resp = client.post('/group', data)
     assert resp.status_code == 422
