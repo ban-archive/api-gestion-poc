@@ -35,6 +35,7 @@ def test_get_housenumber(get):
         'ordinal': 'bis',
         'postcode': None,
         'status': 'active',
+        'positions': []
     }
 
 
@@ -326,6 +327,22 @@ def test_create_housenumber_with_street_fantoir(client):
 
 
 @authorize('housenumber_write')
+def create_housenumber_reactivation(client):
+    housenumber = HouseNumberFactory()
+    housenumber.mark_deleted()
+    data = {
+        "number": housenumber.number,
+        "ordinal": housenumber.ordinal,
+        "parent": housenumber.parent.id
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 200
+    assert resp.json['id'] == housenumber.id
+    assert resp.json['version'] == 3
+    assert resp.json['status'] == 'active'
+
+
+@authorize('housenumber_write')
 def test_create_housenumber_does_not_honour_version_field(client):
     street = GroupFactory(name="Rue de Bonbons")
     data = {
@@ -448,6 +465,7 @@ def test_patch_housenumber_with_districts(client):
     hn = models.HouseNumber.get(models.HouseNumber.id == housenumber.id)
     assert district in hn.ancestors
 
+
 @authorize('housenumber_write')
 def test_patch_housenumber_doublon_number_ordinal_parent(client):
     group = GroupFactory()
@@ -461,18 +479,20 @@ def test_patch_housenumber_doublon_number_ordinal_parent(client):
     resp = client.patch(uri, data=data)
     assert resp.status_code == 422
 
+
 @authorize('housenumber_write')
 def test_patch_housenumber_vidage_ign(client):
     group = GroupFactory()
-    housenumber1 = HouseNumberFactory(number='1', ign= 'ADRNIVX_0000000', parent=group)
-    housenumber2 = HouseNumberFactory(number='2', parent=group)
+    housenumber1 = HouseNumberFactory(number='1', ordinal=None, parent=group)
+    housenumber2 = HouseNumberFactory(number='2', ordinal=None, parent=group)
     data = {
         "version": 2,
-        "ign": "",
+        "number": "3",
     }
     uri = '/housenumber/{}'.format(housenumber1.id)
     resp = client.patch(uri, data=data)
     assert resp.status_code == 200
+
 
 @authorize('housenumber_write')
 def test_patch_housenumber_with_postcode(client):
@@ -573,6 +593,23 @@ def test_cannot_duplicate_number_with_empty_ordinal_for_same_parent(client):
     data = {
         "number": "4",
         "parent": housenumber.parent.id,
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 422
+    assert models.HouseNumber.select().count() == 1
+    assert 'number' in resp.json['errors']
+    assert 'ordinal' in resp.json['errors']
+    assert 'parent' in resp.json['errors']
+
+
+@authorize('housenumber_write')
+def test_cannot_create_housenumber_case_doublon_number_ordinal_parent(client):
+    assert not models.HouseNumber.select().count()
+    housenumber = HouseNumberFactory(number='1', ordinal='bis')
+    data = {
+        "number": "1",
+        "ordinal": "BIS",
+        "parent": housenumber.parent.id
     }
     resp = client.post('/housenumber', data)
     assert resp.status_code == 422

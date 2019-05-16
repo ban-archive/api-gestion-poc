@@ -20,7 +20,7 @@ class BaseResource(peewee.BaseModel):
         if name in cls.exclude_for_collection:
             return False
         attr = getattr(cls, name, None)
-        exclude = (db.ManyToManyField, peewee.ReverseRelationDescriptor,
+        exclude = (peewee.ReverseRelationDescriptor,
                    peewee.SelectQuery)
         if not attr or isinstance(attr, exclude):
             return False

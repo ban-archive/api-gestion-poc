@@ -64,6 +64,10 @@ class ModelEndpoint(CollectionEndpoint):
     endpoints = {}
     order_by = None
 
+    def prepare_data(self, request):
+        return request.json
+
+
     def get_object(self, identifier):
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         try:
@@ -96,6 +100,25 @@ class ModelEndpoint(CollectionEndpoint):
         except models.Model.ForcedVersionError as e:
             abort(409, error=str(e))
         return instance
+
+
+    def create_or_revive_object(self, json=None):
+        validator = self.model.validator(**json or {})
+
+        instance = validator.foundDuplicate;
+        if instance and instance.deleted_at:
+            json['version'] = instance.version + 1
+            instance.deleted_at = None
+            instance = self.save_object(instance=instance, json=json)
+            return instance, 200
+        elif validator.errors:
+            abort(422, error='Invalid data', errors=validator.errors)
+        try:
+            instance = validator.save()
+        except models.Model.ForcedVersionError as e:
+            abort(409, error=str(e))
+        return instance, 201
+
 
     def get_queryset(self):
         qs = self.model.select()
@@ -227,7 +250,7 @@ class ModelEndpoint(CollectionEndpoint):
                 $ref: '#/responses/422'
         """
         if not json:
-            json = request.json
+            json = self.prepare_data(request)
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True, json=json)
         return instance.as_resource, 200
@@ -264,8 +287,8 @@ class ModelEndpoint(CollectionEndpoint):
                 $ref: '#/responses/422'
         """
         if not json:
-            json = request.json
-        instance = self.save_object(json=json)
+            json = self.prepare_data(request)
+        instance, code = self.create_or_revive_object(json)
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         headers = {'Location': url_for(endpoint, identifier=instance.id)}
         return instance.as_resource, 201, headers
@@ -305,7 +328,7 @@ class ModelEndpoint(CollectionEndpoint):
                 $ref: '#/responses/422'
         """
         if not json:
-            json = request.json
+            json = self.prepare_data(request)
         instance = self.get_object(identifier)
         instance = self.save_object(instance, update=True, json=json)
         return instance.as_resource, 200
@@ -345,7 +368,7 @@ class ModelEndpoint(CollectionEndpoint):
                 $ref: '#/responses/422'
         """
         if not json:
-            json = request.json
+            json = self.prepare_data(request)
         instance = self.get_object(identifier)
         if instance.deleted_at:
             # We want to create only one new version for a restore. Change the
@@ -379,10 +402,14 @@ class ModelEndpoint(CollectionEndpoint):
                 $ref: '#/responses/410'
         """
         instance = self.get_object(identifier)
+        if self.__class__.__name__.lower() == 'anomaly':
+            self.delete_join(instance)
         try:
             instance.mark_deleted()
         except ResourceLinkedError as e:
             abort(409, error=str(e))
+        if self.__class__.__name__.lower() == 'anomaly':
+            return None, 204
         return instance.as_resource, 204
 
 
@@ -488,7 +515,6 @@ class VersionedModelEndpoint(ModelEndpoint):
             return '', 200
         else:
             abort(400, error='Body should contain a `status` boolean key')
-
 
     @auth.require_oauth()
     @app.endpoint('/<identifier>/redirects/<old>', methods=['PUT'])
@@ -732,6 +758,8 @@ def batch():
                 self = HouseNumber()
             elif path[:9] == Position.endpoint:
                 self = Position()
+            elif path[:8] == Anomaly.endpoint:
+                self = Anomaly()
             else:
                 abort(422, error="Wrong resource {}".format(path))
             scopes = '{}_write'.format(self.__class__.__name__.lower())
@@ -799,6 +827,99 @@ class Diff(CollectionEndpoint):
         else:
             qs = qs.where(versioning.Diff.pk > increment)
         return self.collection(qs.serialize())
+
+
+@app.resource
+class Anomaly(ModelEndpoint):
+    endpoint = '/anomaly'
+    model = versioning.Anomaly
+    filters = ['kind', 'versions', 'insee']
+    order_by = [peewee.SQL('pk ASC')]
+
+    def filter_versions(self, qs):
+        # versions is a m2m so we cannot use the basic filtering
+        # from self.filters.
+        versionParam = request.args.getlist('version')
+        resourceParam = request.args.getlist('resource')
+        if versionParam is not None and resourceParam is not None:
+            m2m = self.model.versions.get_through_model()
+            version = models.Version
+            qs = (qs.join(m2m, on=(m2m.anomaly == self.model.pk)))
+            qs = (qs.join(version, on=(version.pk == m2m.version)))
+            qs = qs.where(version.sequential == versionParam)
+
+            model_name = ''
+            if "group" in resourceParam[0]:
+                qs = (qs.join(models.Group, on=(version.model_pk == models.Group.pk)))
+                qs = qs.where(models.Group.id == resourceParam)
+                model_name = "group"
+            if "housenumber" in resourceParam[0]:
+                qs = (qs.join(models.HouseNumber, on=(version.model_pk == models.HouseNumber.pk)))
+                qs = qs.where(models.HouseNumber.id == resourceParam)
+                model_name = "housenumber"
+            if "position" in resourceParam[0]:
+                qs = (qs.join(models.Position, on=(version.model_pk == models.Position.pk)))
+                qs = qs.where(models.Position.id == resourceParam)
+                model_name = "position"
+            qs = qs.where(version.model_name == model_name)
+
+        mask = self.get_collection_mask()
+        qs = [h.serialize(mask) for h in qs.order_by(*self.order_by)]
+        return qs
+
+    def delete_join(self, instance):
+        m2m = self.model.versions.get_through_model()
+        m2m.delete().where(m2m.anomaly == instance.pk).execute()
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        version = request.args.get('version')
+        resource = request.args.get('resource')
+        if version is not None and resource is not None:
+            qs = self.filter_versions(qs)
+        dep = request.args.get('dep')
+        if dep:
+            qs = qs.where(peewee.Expression(versioning.Anomaly.insee, peewee.OP.LIKE, dep + '%'))
+        insee = request.args.get('insee')
+        if insee:
+            qs = qs.where(versioning.Anomaly.insee == insee)
+        return qs
+
+
+    def prepare_data(self, request):
+        method = request.method
+        if method not in ['POST', 'PUT', 'PATCH']:
+            abort(400, error='Unknown method')
+        json = request.json
+        versions = json.get('versions')
+        if not versions and method == 'POST':
+            abort(422, error='No versions given')
+        elif versions and method != 'POST':
+            abort(422, error='Field versions not allowed with {}'.format(method))
+        elif not versions:
+            return json
+        for i in range(len(versions)):
+            version = versions[i]
+            resource = version.get('resource')
+            if resource == 'municipality':
+                re = Municipality.get_object(Municipality, version.get('id'))
+            elif resource == 'postcode':
+                re = PostCode.get_object(PostCode, version.get('id'))
+            elif resource == 'group':
+                re = Group.get_object(Group, version.get('id'))
+            elif resource == 'housenumber':
+                re = HouseNumber.get_object(HouseNumber, version.get('id'))
+            elif resource == 'position':
+                re = Position.get_object(Position, version.get('id'))
+            else:
+                abort(422, error='Invalid resource in versions')
+            v = re.load_version(version.get('version'))
+            if not v:
+                abort(422, error='Wrong version number')
+            json['versions'][i] = v.pk
+
+        return json
+
 
 @app.route('/bbox', methods=['GET'])
 @auth.require_oauth()
@@ -926,7 +1047,7 @@ def bbox():
         }
         response["collection"].append(occ)
 
-    return response
+    return response, 200
 
 
 @app.route('/openapi', methods=['GET'])

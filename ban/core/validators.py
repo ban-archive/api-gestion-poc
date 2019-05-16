@@ -8,6 +8,7 @@ from .exceptions import RedirectError, MultipleRedirectsError, ValidationError, 
 
 class ResourceValidator:
     errors = None
+    foundDuplicate = None
 
     def __init__(self, model, update=False):
         self.model = model
@@ -113,6 +114,7 @@ class ResourceValidator:
         if self.instance:
             qs = qs.where(self.model.pk != self.instance.pk)
         if qs.exists():
+            self.foundDuplicate = qs.get()
             raise ValueError('`{}` already exists'.format(value))
 
     def validate_unique_indexes(self):
@@ -123,11 +125,18 @@ class ResourceValidator:
             for name in names:
                 field = getattr(self.model, name)
 
+                value = None
                 if name in self.data:
-                    where.append(field == self.data.get(name))
+                    value = self.data.get(name)
                 else:
                     if self.instance:
-                        where.append(field == getattr(self.instance, name))
+                        value = getattr(self.instance, name)
+
+                if value and name not in self.model._meta.case_ignoring:
+                    where.append(field == value)
+                elif value and name in self.model._meta.case_ignoring:
+                    where.append(peewee.Expression(field, peewee.OP.ILIKE, value))
+
             if where != []:
                 qs = self.model.select().where(*where)
             else:
@@ -135,6 +144,7 @@ class ResourceValidator:
             if self.instance:
                 qs = qs.where(self.model.pk != self.instance.pk)
             if qs.exists():
+                self.foundDuplicate = qs.get()
                 msg = 'Duplicate entries: {}'.format(', '.join(names))
                 for name in names:
                     self.error(name, msg)

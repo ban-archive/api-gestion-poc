@@ -6,7 +6,7 @@ from werkzeug.utils import cached_property
 
 from ban import db
 from ban.utils import compute_cia
-from .versioning import Versioned, BaseVersioned
+from .versioning import Versioned, BaseVersioned, Version
 from .resource import ResourceModel, BaseResource
 from .validators import VersionedResourceValidator
 
@@ -34,6 +34,7 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
     class Meta:
         validate_backrefs = False
         validator = VersionedResourceValidator
+        case_ignoring = ();
 
 
 class NamedModel(Model):
@@ -122,7 +123,9 @@ class HouseNumber(Model):
     # (like 0/O, 1/I…)) from La Poste.
     CEA_FORMAT = Municipality.INSEE_FORMAT + '[234679ABCEGHILMNPRSTUVXYZ]{5}'
     identifiers = ['cia', 'laposte', 'ign']
-    resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte', 'ancestors', 'ign', 'postcode']
+    resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
+                       'ancestors', 'positions', 'ign', 'postcode']
+    exclude_for_collection = ['ancestors']
 
     number = db.CharField(max_length=16, null=True)
     ordinal = db.CharField(max_length=16, null=True)
@@ -138,6 +141,7 @@ class HouseNumber(Model):
         indexes = (
             (('parent', 'number', 'ordinal'), True),
         )
+        case_ignoring = ('ordinal',)
 
     def __str__(self):
         return ' '.join([self.number or '', self.ordinal or ''])

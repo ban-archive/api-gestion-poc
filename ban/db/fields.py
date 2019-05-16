@@ -275,13 +275,14 @@ class ManyToManyField(fields.ManyToManyField):
         super().__init__(*args, **kwargs)
 
     def coerce(self, value, deleted=True, level1=0):
+        from ban.core.resource import ResourceModel
         if not value:
             return []
         if not isinstance(value, (tuple, list, peewee.SelectQuery)):
             value = [value]
         value = [self.rel_model.coerce(item, None, level1) for item in value]
         for elem in value:
-            if isinstance(elem, peewee.Model):
+            if isinstance(elem, ResourceModel):
                 if deleted is False and elem.deleted_at:
                     raise IsDeletedError(elem)
         return super().coerce(value)
@@ -293,6 +294,17 @@ class ManyToManyField(fields.ManyToManyField):
 
 
 class NameField(CharField):
+    def coerce(self, value):
+        if not value:
+            return None
+        value = str(value)
+        if value.isspace():
+            raise ValidationError("Name must have non whitespace characters.");
+        value = ' '.join(value.split()) # clean userless whitespaces
+
+        return value
+
+
     def search(self, **kwargs):
         ponctuation = '[\.\(\)\[\]\"\'\-,;:\/]'
         articles = '(^| )((LA|L|LE|LES|DU|DE|DES|D|ET|A|AU) )*'
