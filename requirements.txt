@@ -3,7 +3,7 @@ decorator==4.1.2
 Flask==1.0.2
 Flask-Cors==3.0.7
 Flask-OAuthlib==0.9.5
-requests-oauthlib==1.1.0
+requests-oauthlib==1.2.0
 Peewee==2.10.2
 progressist==0.0.6
 psycopg-postgis==0.4.0
