@@ -35,6 +35,7 @@ def test_get_anomalies_by_kind(get):
     resp = get('/anomaly?kind=hn+vide')
     assert resp.status_code == 200
     assert resp.json["total"] == 2
+    assert 'legitimate' in resp.json["collection"][0]
 
 
 @authorize
@@ -216,7 +217,7 @@ def test_cannot_create_anomaly_with_bad_version(client):
 
 
 @authorize('anomaly_write')
-def test_put_anomaly(client):
+def test_cannot_put_anomaly(client):
     h = HouseNumberFactory()
     v = VersionFactory(model_pk=h.pk, data='{"nom":"test"}')
     a = AnomalyFactory(versions = [v], kind="number vide")
@@ -225,10 +226,7 @@ def test_put_anomaly(client):
         "insee": "33544"
     }
     resp = client.put('/anomaly/{}'.format(a.id), data)
-    assert resp.status_code == 200
-    a2 = versioning.Anomaly.get(versioning.Anomaly.id==a.id)
-    assert a2.kind == 'hn 5000'
-    assert a2.versions == a.versions
+    assert resp.status_code == 400
 
 
 @authorize('anomaly_write')
@@ -241,8 +239,8 @@ def test_patch_anomaly(client):
     }
     resp = client.patch('/anomaly/{}'.format(a.id), data)
     assert resp.status_code == 200
-    a2 = versioning.Anomaly.get(versioning.Anomaly.id==a.id)
-    assert a2.kind == 'hn 5000'
+    assert resp.json["kind"] == 'hn 5000'
+    assert resp.json["versions"][0]["data"] == v.data
 
 
 @authorize('anomaly_write')

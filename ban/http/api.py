@@ -656,6 +656,13 @@ class HouseNumber(VersionedModelEndpoint):
     order_by = [peewee.SQL('number ASC NULLS FIRST'),
                 peewee.SQL('ordinal ASC NULLS FIRST')]
 
+    def filter_ordinal(self, qs):
+        value = request.args.get('ordinal')
+        if value:
+            field = getattr(self.model, 'ordinal')
+            qs = qs.where(peewee.Expression(field, peewee.OP.ILIKE, value))
+            return qs
+
 
     def filter_group(self, qs):
         values = request.args.getlist('group')
@@ -890,6 +897,8 @@ class Anomaly(ModelEndpoint):
         method = request.method
         if method not in ['POST', 'PUT', 'PATCH']:
             abort(400, error='Unknown method')
+        if method == 'PUT':
+            abort(400, error='PUT method is not allowed for Anomaly; use PATCH method')
         json = request.json
         versions = json.get('versions')
         if not versions and method == 'POST':

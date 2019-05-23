@@ -446,7 +446,7 @@ class Anomaly(resource.ResourceModel):
                             . key and value are separated by a ':'
             """
 
-    resource_fields = ['versions', 'kind', 'insee', 'created_at']
+    resource_fields = ['versions', 'kind', 'insee', 'created_at', 'legitimate']
     readonly_fields = (resource.ResourceModel.readonly_fields + ['created_at'])
     versions = db.ManyToManyField(Version, related_name='_anomalies')
     kind = db.CharField()
