@@ -34,7 +34,7 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
     class Meta:
         validate_backrefs = False
         validator = VersionedResourceValidator
-        case_ignoring = ();
+        case_ignoring = ()
 
 
 class NamedModel(Model):

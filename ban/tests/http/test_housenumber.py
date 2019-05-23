@@ -143,7 +143,7 @@ def test_get_housenumber_with_ordinal(get):
 
 @authorize
 def test_get_housenumber_with_bad_ordinal(get):
-    housenumber = HouseNumberFactory(number="TER")
+    housenumber = HouseNumberFactory(number="TER", ordinal="Z")
     resp = get('/housenumber?ordinal=BIS')
     assert resp.status_code == 200
     assert resp.json['total'] == 0
@@ -151,7 +151,7 @@ def test_get_housenumber_with_bad_ordinal(get):
 @authorize
 def test_get_housenumber_with_number_ordinal(get):
     housenumber = HouseNumberFactory(number="22", ordinal="BIS")
-    resp = get('/housenumber?number=22&ordinal=BIS')
+    resp = get('/housenumber?number=22&ordinal=bis')
     assert resp.status_code == 200
     assert resp.json['total'] == 1
 
