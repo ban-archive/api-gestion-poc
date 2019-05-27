@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import json
 import re
+from os import path, pardir
 
 import peewee
 
@@ -19,7 +20,7 @@ __all__ = ['PointField', 'ForeignKeyField', 'CharField', 'IntegerField',
 
 
 lonlat_pattern = re.compile('^[\[\(]{1}(?P<lon>-?\d{,3}(:?\.\d*)?), ?(?P<lat>-?\d{,3}(\.\d*)?)[\]\)]{1}$')  # noqa
-
+here = path.abspath(path.dirname(__file__))
 
 peewee.OP.update(
     BBOX2D='&&',
@@ -322,7 +323,7 @@ class NameField(CharField):
         elif kwargs['type'] == 'abbrev':
             import csv
             abbrev = []
-            with open('../../abbrev_type_voie.csv', newline='') as csvfile:
+            with open(path.join(here, pardir, pardir, 'abbrev_type_voie.csv'), newline='') as csvfile:
                 csv = csv.reader(csvfile, delimiter=';')
                 for row in csv:
                     if re.match(r"^{} ".format(row[1]),
@@ -349,7 +350,7 @@ class NameField(CharField):
         elif kwargs['type'] == 'libelle':
             import csv
             abbrev = '^('
-            with open('../../abbrev_type_voie.csv', newline='') as csvfile:
+            with open(path.join(here, pardir, pardir, 'abbrev_type_voie.csv'), newline='') as csvfile:
                 csv = csv.reader(csvfile, delimiter=';')
                 for row in csv:
                     abbrev = '{}|{}|{}'.format(abbrev, row[0], row[1])
@@ -367,7 +368,7 @@ class NameField(CharField):
         elif kwargs['type'] == 'direct':
             import csv
             abbrev = '^('
-            with open('../../abbrev_type_voie.csv', newline='') as csvfile:
+            with open(path.join(here, pardir, pardir, 'abbrev_type_voie.csv'), newline='') as csvfile:
                 csv = csv.reader(csvfile, delimiter=';')
                 for row in csv:
                     abbrev = '{}|{}|{}'.format(abbrev, row[0], row[1])
@@ -393,7 +394,7 @@ class NameField(CharField):
         elif kwargs['type'] == 'approx':
             import csv
             abbrev = '^('
-            with open('../../abbrev_type_voie.csv', newline='') as csvfile:
+            with open(path.join(here, pardir, pardir, 'abbrev_type_voie.csv'), newline='') as csvfile:
                 csv = csv.reader(csvfile, delimiter=';')
                 for row in csv:
                     abbrev = '{}|{}|{}'.format(abbrev, row[0], row[1])
