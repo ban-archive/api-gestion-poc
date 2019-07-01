@@ -8,8 +8,8 @@ from . import helpers
 models = [Version, Diff, Redirect, amodels.User, amodels.Client,
           amodels.Grant, amodels.Session, amodels.Token, cmodels.Municipality,
           cmodels.PostCode, cmodels.Group, cmodels.HouseNumber,
-          cmodels.HouseNumber.ancestors.get_through_model(),
-          cmodels.Position, Flag, Anomaly, Anomaly.versions.get_through_model()]
+          cmodels.HouseNumber.ancestors.through_model,
+          cmodels.Position, Flag, Anomaly, Anomaly.versions.through_model]
 
 
 @command

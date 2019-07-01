@@ -133,7 +133,8 @@ def test_modify_housenumber_ancestors(session, monkeypatch):
         models.HouseNumber.number == '1').first()
     gr_area = models.Group.select().where(
         models.Group.name == mun2.name).first()
-    assert hn.ancestors == gr_area
+    ancestors = hn.ancestors
+    assert list(ancestors) == [gr_area]
 
 
 def test_modify_destination_name(session, monkeypatch):

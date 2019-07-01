@@ -12,7 +12,8 @@ import decorator
 from progressist import ProgressBar
 
 from ban.auth.models import Session, Client, User
-from ban.db.model import SelectQuery
+from ban.db.model import ModelSelect
+from ban.db.connections import database
 from ban.core import context, config
 from ban.core.versioning import Diff
 
@@ -91,7 +92,7 @@ class ChunkedPool(Pool):
         - apply_async: needs manual chunking
         """
         assert self._state == RUN
-        if isinstance(iterable, SelectQuery):
+        if isinstance(iterable, ModelSelect):
             task_batches = self._get_tasks_from_query(func, iterable,
                                                       chunksize)
         else:
@@ -119,6 +120,7 @@ def batch(func, iterable, chunksize=1000, total=None, progress=True):
         except Exception as e:
             print("\n"+e.args[0])
             pool.terminate()
+        database.close()
 
 
 def prompt(text, default=..., confirmation=False, coerce=None, hidden=False):

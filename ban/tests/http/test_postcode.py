@@ -111,7 +111,7 @@ def test_postcode_select_use_default_orderby(get):
     PostCodeFactory(code="90101", municipality=mun2)
     resp = get('/postcode')
     assert resp.status_code == 200
-    assert resp.json['total'] == 3
+    assert len(resp.json['collection']) == 3
     assert resp.json['collection'][0]['code'] == '90101'
     assert resp.json['collection'][1]['municipality'] == mun1.id
     assert resp.json['collection'][2]['municipality'] == mun2.id
@@ -123,7 +123,7 @@ def test_get_postcode_collection_filtered_by_1_code_param(get):
     PostCodeFactory(code='91000')
     resp = get('/postcode?code=90000')
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
     assert resp.json['collection'][0]['code'] == '90000'
 
 
@@ -134,7 +134,7 @@ def test_get_postcode_collection_filtered_by_2_equals_codes_param(get):
     # 'code' given by the user is used twice but with the same value.
     resp = get('/postcode?code=90000&code=90000')
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
     assert resp.json['collection'][0]['code'] == '90000'
 
 
@@ -145,7 +145,7 @@ def test_get_postcode_collection_filtered_by_2_diff_codes_param(get):
     # 'code' given by the user is used with 2 differents values.
     resp = get('/postcode?code=90000&code=91000')
     assert resp.status_code == 200
-    assert resp.json['total'] == 2
+    assert len(resp.json['collection']) == 2
     assert resp.json['collection'][0]['code'] == '90000'
     assert resp.json['collection'][1]['code'] == '91000'
 
@@ -157,5 +157,5 @@ def test_get_postcode_collection_can_be_filtered_by_1_code_and_1_pk(get):
     # Only 'Code' param will be used to filter, not 'pk' one.
     resp = get('/postcode?code=90000&pk=405')
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
     assert resp.json['collection'][0]['code'] == '90000'

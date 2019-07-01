@@ -38,19 +38,20 @@ class CollectionEndpoint:
         limit = self.get_limit()
         offset = self.get_offset()
         end = offset + limit
-        count = len(queryset)
+        if(isinstance(queryset, list)):
+            coll = queryset[offset:end]
+        elif(isinstance(queryset, peewee.ModelSelect)):
+            coll = queryset.offset(offset).limit(limit)
         data = {
-            'collection': list(queryset[offset:end]),
-            'total': count,
+            'collection': list(coll)
         }
         headers = {}
         url = request.base_url
-        if count > end:
-            query_string = request.args.copy()
-            query_string['offset'] = end
-            uri = '{}?{}'.format(url, urlencode(sorted(query_string.items())))
-            data['next'] = uri
-            link(headers, uri, 'next')
+        query_string = request.args.copy()
+        query_string['offset'] = end
+        uri = '{}?{}'.format(url, urlencode(sorted(query_string.items())))
+        data['next'] = uri
+        link(headers, uri, 'next')
         if offset >= limit:
             query_string = request.args.copy()
             query_string['offset'] = offset - limit
@@ -71,7 +72,7 @@ class ModelEndpoint(CollectionEndpoint):
     def get_object(self, identifier):
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         try:
-            instance = self.model.coerce(identifier, None, 1)
+            instance = self.model.adapt(identifier, None, 1)
         except self.model.DoesNotExist:
             abort(404, error='Resource with identifier `{}` does not exist.'
                   .format(identifier))
@@ -131,7 +132,7 @@ class ModelEndpoint(CollectionEndpoint):
                     continue
                 field = getattr(self.model, key)
                 try:
-                    values = list(map(field.coerce, values))
+                    values = list(map(field.adapt, values))
                 except ValueError:
                     abort(400, error='Invalid value for filter {}'.format(key))
                 except peewee.DoesNotExist:
@@ -180,7 +181,7 @@ class ModelEndpoint(CollectionEndpoint):
         if qs is None:
             return self.collection([])
         if not isinstance(qs, list):
-            qs = qs.where(qs.model_class.deleted_at.is_null())
+            qs = qs.where(qs.model.deleted_at.is_null())
             order_by = (self.order_by if self.order_by is not None
                         else [self.model.pk])
             qs = qs.order_by(*order_by).serialize(self.get_collection_mask())
@@ -669,7 +670,7 @@ class HouseNumber(VersionedModelEndpoint):
         if values:
             field = getattr(self.model, 'parent')
             try:
-                values = list(map(field.coerce, values))
+                values = list(map(field.adapt, values))
             except ValueError:
                 abort(400, error='Invalid value for filter {}'.format('group'))
             except peewee.DoesNotExist:
@@ -682,9 +683,9 @@ class HouseNumber(VersionedModelEndpoint):
         # ancestors is a m2m so we cannot use the basic filtering
         # from self.filters.
         ancestors = request.args.getlist('ancestors')
-        values = list(map(self.model.ancestors.coerce, ancestors))
+        values = list(map(self.model.ancestors.adapt, ancestors))
         if values:
-            m2m = self.model.ancestors.get_through_model()
+            m2m = self.model.ancestors.through_model
             qs = (qs.join(m2m, on=(m2m.housenumber == self.model.pk)))
             # We evaluate the qs ourselves here, because it's a CompoundSelect
             # that does not know about our SelectQuery custom methods (like
@@ -810,10 +811,6 @@ class Diff(CollectionEndpoint):
                 schema:
                     type: object
                     properties:
-                        total:
-                            name: total
-                            type: integer
-                            description: total resources available
                         collection:
                             name: collection
                             type: array
@@ -849,7 +846,7 @@ class Anomaly(ModelEndpoint):
         versionParam = request.args.getlist('version')
         resourceParam = request.args.getlist('resource')
         if versionParam is not None and resourceParam is not None:
-            m2m = self.model.versions.get_through_model()
+            m2m = self.model.versions.through_model
             version = models.Version
             qs = (qs.join(m2m, on=(m2m.anomaly == self.model.pk)))
             qs = (qs.join(version, on=(version.pk == m2m.version)))
@@ -875,7 +872,7 @@ class Anomaly(ModelEndpoint):
         return qs
 
     def delete_join(self, instance):
-        m2m = self.model.versions.get_through_model()
+        m2m = self.model.versions.through_model
         m2m.delete().where(m2m.anomaly == instance.pk).execute()
 
     def get_queryset(self):

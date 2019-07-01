@@ -5,7 +5,7 @@ from os import path, pardir
 
 import peewee
 
-from playhouse import postgres_ext, fields
+from playhouse import postgres_ext
 from postgis import Point
 from psycopg2.extras import DateTimeTZRange
 
@@ -27,7 +27,7 @@ peewee.OP.update(
     BBOXCONTAINS='~',
     BBOXCONTAINED='@',
 )
-postgres_ext.PostgresqlExtDatabase.register_ops({
+postgres_ext.PostgresqlExtDatabase.operations.update({
     peewee.OP.BBOX2D: peewee.OP.BBOX2D,
     peewee.OP.BBOXCONTAINS: peewee.OP.BBOXCONTAINS,
     peewee.OP.BBOXCONTAINED: peewee.OP.BBOXCONTAINED,
@@ -36,7 +36,7 @@ postgres_ext.PostgresqlExtDatabase.register_ops({
 
 # TODO: mv to a third-party module.
 class PointField(peewee.Field, postgres_ext.IndexedFieldMixin):
-    db_field = 'point'
+    field_type = 'point'
     __data_type__ = Point
     # TODO how to deal properly with custom type?
     # Or should we just accept geojson (and not [lat, lon]…)?
@@ -46,12 +46,12 @@ class PointField(peewee.Field, postgres_ext.IndexedFieldMixin):
     index_type = 'GiST'
 
     def db_value(self, value):
-        return self.coerce(value)
+        return self.adapt(value)
 
     def python_value(self, value):
-        return self.coerce(value)
+        return self.adapt(value)
 
-    def coerce(self, value):
+    def adapt(self, value):
         if not value:
             return None
         if isinstance(value, Point):
@@ -81,23 +81,23 @@ class PointField(peewee.Field, postgres_ext.IndexedFieldMixin):
             )
 
 
-postgres_ext.PostgresqlExtDatabase.register_fields({'point':
-                                                    'geometry(Point)'})
+postgres_ext.PostgresqlExtDatabase.field_types.update({
+    'point': 'geometry(Point)'})
 
 
 class DateRangeField(peewee.Field):
-    db_field = 'tstzrange'
+    field_type = 'tstzrange'
     __data_type__ = datetime
     __schema_type__ = 'string'
     __schema_format__ = 'date-time'
 
     def db_value(self, value):
-        return self.coerce(value)
+        return self.adapt(value)
 
     def python_value(self, value):
-        return self.coerce(value)
+        return self.adapt(value)
 
-    def coerce(self, value):
+    def adapt(self, value):
         if not value:
             value = [None, None]
         if isinstance(value, (list, tuple)):
@@ -106,17 +106,25 @@ class DateRangeField(peewee.Field):
         return value
 
     def contains(self, dt):
-        return peewee.Expression(self, peewee.OP.ACONTAINS, dt)
+        return peewee.Expression(self, postgres_ext.ACONTAINS, dt)
 
 
-class CachedRelationDescriptor(peewee.RelationDescriptor):
+class CachedForeignKeyAccessor(peewee.ForeignKeyAccessor):
+    def __get__(self, instance, instance_type=None):
+        if instance is not None:
+            rel_id = instance.__data__.get(self.name)
+            keys = (self.rel_model.__name__, rel_id)
+            return cache.cache(keys, self.get_rel_instance, instance)
+        return self.field
 
-    def get_object_or_id(self, instance):
-        rel_id = instance._data.get(self.att_name)
-        if not rel_id:
-            return rel_id
-        keys = (self.rel_model.__name__, rel_id)
-        return cache.cache(keys, super().get_object_or_id, instance)
+
+class CachedNoQueryForeignKeyAccessor(CachedForeignKeyAccessor):
+    def get_rel_instance(self, instance):
+        value = instance.__data__.get(self.name)
+        if value is not None:
+            return instance.__rel__.get(self.name, value)
+        elif not self.field.null:
+            raise self.rel_model.DoesNotExist
 
 
 class ForeignKeyField(peewee.ForeignKeyField):
@@ -124,30 +132,29 @@ class ForeignKeyField(peewee.ForeignKeyField):
     __data_type__ = int
     __schema_type__ = 'integer'
 
-    def coerce(self, value, deleted=True, level1=0):
+    def adapt(self, value, deleted=True, level1=0):
         if not value:
             return None
         if isinstance(value, dict):
             # We have a resource dict.
             value = value['id']
-        if hasattr(self.rel_model, 'coerce'):
-            value = self.rel_model.coerce(value, None, level1)
+        if hasattr(self.rel_model, 'adapt'):
+            value = self.rel_model.adapt(value, None, level1)
         if isinstance(value, peewee.Model):
             if deleted is False and value.deleted_at:
                 raise IsDeletedError(value)
             value = value.pk
-        return super().coerce(value)
-
-    def _get_related_name(self):
-        # cf https://github.com/coleifer/peewee/pull/844
-        return (self._related_name or '{classname}_set').format(
-                                        classname=self.model_class._meta.name)
+        return super().adapt(value)
 
 
 class CachedForeignKeyField(ForeignKeyField):
 
-    def _get_descriptor(self):
-        return CachedRelationDescriptor(self, self.rel_model)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.lazy_load:
+            self.accessor_class = CachedForeignKeyAccessor
+        else:
+            self.accessor_class = CachedNoQueryForeignKeyAccessor
 
 
 class CharField(peewee.CharField):
@@ -162,40 +169,44 @@ class CharField(peewee.CharField):
         self.min_length = kwargs.pop('min_length', None)
         super().__init__(*args, **kwargs)
 
-    def coerce(self, value):
+    def adapt(self, value):
         if self.null and not value:
             return None
-        return super().coerce(value)
+        elif not value:
+            return ''
+        return super().adapt(value)
 
 
 class TextField(peewee.TextField):
     __data_type__ = str
     __schema_type__ = 'string'
 
-    def coerce(self, value):
+    def adapt(self, value):
         if self.null and not value:
             return None
-        return super().coerce(value)
+        elif not value:
+            return ''
+        return super().adapt(value)
 
 
 class IntegerField(peewee.IntegerField):
     __data_type__ = int
     __schema_type__ = 'integer'
 
-    def coerce(self, value):
+    def adapt(self, value):
         if not value:
             return None
-        return super().coerce(value)
+        return super().adapt(value)
 
 
 class HStoreField(postgres_ext.HStoreField):
     __data_type__ = dict
     __schema_type__ = 'object'
 
-    def coerce(self, value):
+    def adapt(self, value):
         if isinstance(value, str):
             value = json.loads(value)
-        return super().coerce(value)
+        return super().adapt(value)
 
 
 class BinaryJSONField(postgres_ext.BinaryJSONField):
@@ -211,7 +222,7 @@ class ArrayField(postgres_ext.ArrayField):
     __data_type__ = list
     __schema_type__ = 'array'
 
-    def coerce(self, value):
+    def adapt(self, value):
         if not value:
             return []  # Coerce None to [].
         if value and not isinstance(value, (list, tuple)):
@@ -219,7 +230,7 @@ class ArrayField(postgres_ext.ArrayField):
         return value
 
     def python_value(self, value):
-        return self.coerce(value)
+        return self.adapt(value)
 
     def db_value(self, value):
         if value is None:
@@ -249,7 +260,7 @@ class FantoirField(CharField):
 
     max_length = 9
 
-    def coerce(self, value):
+    def adapt(self, value):
         if not value:
             return None
         value = str(value)
@@ -262,45 +273,37 @@ class FantoirField(CharField):
         return value
 
 
-class ManyToManyField(fields.ManyToManyField):
+class ManyToManyField(peewee.ManyToManyField):
     __data_type__ = list
     __schema_type__ = 'array'
 
     def __init__(self, *args, **kwargs):
-        # ManyToManyField is not a real "Field", so try to better conform to
-        # Field API.
-        # https://github.com/coleifer/peewee/issues/794
         self.null = True
         self.unique = False
         self.index = False
         super().__init__(*args, **kwargs)
 
-    def coerce(self, value, deleted=True, level1=0):
+    def adapt(self, value, deleted=True, level1=0):
         from ban.core.resource import ResourceModel
         if not value:
             return []
         if not isinstance(value, (tuple, list, peewee.SelectQuery)):
             value = [value]
-        value = [self.rel_model.coerce(item, None, level1) for item in value]
+        value = [self.rel_model.adapt(item, None, level1) for item in value]
         for elem in value:
             if isinstance(elem, ResourceModel):
                 if deleted is False and elem.deleted_at:
                     raise IsDeletedError(elem)
-        return super().coerce(value)
-
-    def add_to_class(self, model_class, name):
-        # https://github.com/coleifer/peewee/issues/794
-        model_class._meta.fields[name] = self
-        super().add_to_class(model_class, name)
+        return value
 
 
 class NameField(CharField):
-    def coerce(self, value):
+    def adapt(self, value):
         if not value:
             return None
         value = str(value)
         if value.isspace():
-            raise ValidationError("Name must have non whitespace characters.");
+            raise ValidationError("Name must have non whitespace characters.")
         value = ' '.join(value.split()) # clean userless whitespaces
 
         return value

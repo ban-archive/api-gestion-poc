@@ -52,7 +52,7 @@ def test_get_group_housenumbers(get):
     hn3 = HouseNumberFactory(number="3", parent=street)
     resp = get('/housenumber?group={}'.format(street.id))
     assert resp.status_code == 200
-    assert resp.json['total'] == 3
+    assert len(resp.json['collection']) == 3
     assert resp.json['collection'][0] == json.loads(dumps({
         'attributes': None,
         'laposte': None,
@@ -259,7 +259,6 @@ def test_get_group_versions(get):
     resp = get('/group/{}/versions'.format(street.id))
     assert resp.status_code == 200
     assert len(resp.json['collection']) == 2
-    assert resp.json['total'] == 2
     assert resp.json['collection'][0]['data']['name'] == 'Rue de la Paix'
     assert resp.json['collection'][1]['data']['name'] == 'Rue de la Guerre'
 
@@ -344,6 +343,6 @@ def test_group_select_use_default_orderby(get):
     GroupFactory(insee="90001", fantoir="900010001")
     resp = get('/group')
     assert resp.status_code == 200
-    assert resp.json['total'] == 2
+    assert len(resp.json['collection']) == 2
     assert resp.json['collection'][0]['fantoir'] == '900010002'
     assert resp.json['collection'][1]['fantoir'] == '900010001'

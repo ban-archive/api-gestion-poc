@@ -1,6 +1,8 @@
 import uuid
 from datetime import timedelta
 
+import peewee
+
 from ban import db
 from ban.core.resource import ResourceModel
 

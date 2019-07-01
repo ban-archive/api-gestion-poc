@@ -37,7 +37,7 @@ def test_get_housenumber(get):
         'status': 'active',
         'positions': []
     }
-
+#
 
 @authorize
 def test_get_housenumber_with_filtered_fields(get):
@@ -109,7 +109,7 @@ def test_get_housenumber_with_number(get):
     housenumber = HouseNumberFactory(number="22")
     resp = get('/housenumber?number=22')
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
 
 @authorize
 def test_get_housenumber_with_group_number(get):
@@ -118,42 +118,42 @@ def test_get_housenumber_with_group_number(get):
     housenumber = HouseNumberFactory(parent=area, number="22")
     resp = get('/housenumber?group={}&number=22'.format(area.id))
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
 
 @authorize
 def test_get_housenumber_with_bad_group(get):
     housenumber = HouseNumberFactory(number="22")
     resp = get('/housenumber?group=6666')
     assert resp.status_code == 200
-    assert resp.json['total'] == 0
+    assert len(resp.json['collection']) == 0
 
 @authorize
 def test_get_housenumber_with_bad_number(get):
     housenumber = HouseNumberFactory(number="22")
     resp = get('/housenumber?number=23')
     assert resp.status_code == 200
-    assert resp.json['total'] == 0
+    assert len(resp.json['collection']) == 0
 
 @authorize
 def test_get_housenumber_with_ordinal(get):
     housenumber = HouseNumberFactory(ordinal="BIS")
     resp = get('/housenumber?ordinal=BIS')
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
 
 @authorize
 def test_get_housenumber_with_bad_ordinal(get):
     housenumber = HouseNumberFactory(number="TER", ordinal="Z")
     resp = get('/housenumber?ordinal=BIS')
     assert resp.status_code == 200
-    assert resp.json['total'] == 0
+    assert len(resp.json['collection']) == 0
 
 @authorize
 def test_get_housenumber_with_number_ordinal(get):
     housenumber = HouseNumberFactory(number="22", ordinal="BIS")
     resp = get('/housenumber?number=22&ordinal=bis')
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
 
 @authorize
 def test_get_housenumber_with_districts(get):
@@ -174,7 +174,7 @@ def test_get_housenumber_with_ancestors(get):
                                      parent__municipality=municipality)
     resp = get('/housenumber?ancestors={}'.format(ancestor.id))
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
 
 @authorize
 def test_get_housenumber_with_ancestors(get):
@@ -184,13 +184,13 @@ def test_get_housenumber_with_ancestors(get):
                                      parent__municipality=municipality)
     resp = get('/housenumber?ancestors={}&number=22'.format(ancestor.id))
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
 
 @authorize
 def test_get_housenumber_collection(get):
     objs = HouseNumberFactory.create_batch(5)
     resp = get('/housenumber')
-    assert resp.json['total'] == 5
+    assert len(resp.json['collection']) == 5
 
 
 @authorize
@@ -198,7 +198,7 @@ def test_get_housenumber_collection_can_be_filtered_by_bbox(get):
     position = PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     resp = get('/housenumber?north=2&south=0&west=0&east=2')
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
 
 
 @authorize
@@ -206,7 +206,7 @@ def test_get_housenumber_bbox_allows_floats(get):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     resp = get('/housenumber?north=2.23&south=0.12&west=0.56&east=2.34')
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
 
 
 @authorize
@@ -214,7 +214,7 @@ def test_get_housenumber_missing_bbox_param_makes_bbox_ignored(get):
     PositionFactory(center=(1, 1))
     PositionFactory(center=(-1, -1))
     resp = get('/housenumber?north=1&south=0&west=0')
-    assert resp.json['total'] == 2
+    assert len(resp.json['collection']) == 2
 
 
 @authorize
@@ -232,14 +232,11 @@ def test_get_housenumber_collection_filtered_by_bbox_is_paginated(get):
     resp = get('/housenumber?north=2&south=0&west=0&east=2&limit=5')
     page1 = resp.json
     assert len(page1['collection']) == 5
-    assert page1['total'] == 9
     assert 'next' in page1
     assert 'previous' not in page1
     resp = get(page1['next'])
     page2 = resp.json
     assert len(page2['collection']) == 4
-    assert page2['total'] == 9
-    assert 'next' not in page2
     assert 'previous' in page2
     resp = get(page2['previous'])
     assert resp.json == page1
@@ -250,7 +247,7 @@ def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get):
     position = PositionFactory(center=(1, 1))
     PositionFactory(center=(1.1, 1.1), housenumber=position.housenumber)
     resp = get('/housenumber?north=2&south=0&west=0&east=2')
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
 
 
 
@@ -269,7 +266,7 @@ def test_get_housenumber_positions(get):
     pos2 = PositionFactory(housenumber=housenumber, center=(2, 2))
     pos3 = PositionFactory(housenumber=housenumber, center=(3, 3))
     resp = get('/position?housenumber={}'.format(housenumber.id))
-    assert resp.json['total'] == 3
+    assert len(resp.json['collection']) == 3
 
 
 @authorize
@@ -556,7 +553,7 @@ def test_housenumber_select_use_default_orderby(get):
     HouseNumberFactory(number="2", ordinal="bis")
     resp = get('/housenumber')
     assert resp.status_code == 200
-    assert resp.json['total'] == 5
+    assert len(resp.json['collection']) == 5
     assert resp.json['collection'][0]['number'] == '1'
     assert resp.json['collection'][0]['ordinal'] is None
     assert resp.json['collection'][1]['number'] == '1'

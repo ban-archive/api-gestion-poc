@@ -34,7 +34,7 @@ class ForcedVersionError(Exception):
     pass
 
 
-class BaseVersioned(peewee.BaseModel):
+class BaseVersioned(peewee.ModelBase):
 
     registry = {}
 
@@ -55,16 +55,15 @@ class Versioned(db.Model, metaclass=BaseVersioned):
     modified_by = db.CachedForeignKeyField(Session)
 
     class Meta:
-        validate_backrefs = False
         unique_together = ('pk', 'version')
 
-    def prepared(self):
+    @property
+    def _lock_version(self):
         self.lock_version()
-        super().prepared()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.prepared()
+        self.lock_version()
 
     def store_version(self):
         new = Version.create(
@@ -123,7 +122,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
     def update_meta(self):
         session = context.get('session')
         if session:
-            if not self.created_by:
+            if not self.created_by_id:
                 self.created_by = session
             self.modified_by = session
         now = utcnow()
@@ -218,7 +217,7 @@ class Version(db.Model):
         return super().select(*selection)
 
     @classmethod
-    def coerce(cls, id, identifier=None, level1=0):
+    def adapt(cls, id, identifier=None, level1=0):
         if isinstance(id, db.Model):
             instance = id
         else:
@@ -288,7 +287,6 @@ class Diff(db.Model):
     created_at = db.DateTimeField()
 
     class Meta:
-        validate_backrefs = False
         order_by = ('pk', )
 
     def save(self, *args, **kwargs):
@@ -416,7 +414,7 @@ class Flag(db.Model):
                 description: identifier of the client who flagged the version
         """
 
-    version = db.ForeignKeyField(Version, related_name='flags')
+    version = db.ForeignKeyField(Version, backref='flags')
     client = db.ForeignKeyField(Client)
     session = db.ForeignKeyField(Session)
     created_at = db.DateTimeField()
@@ -448,7 +446,7 @@ class Anomaly(resource.ResourceModel):
 
     resource_fields = ['versions', 'kind', 'insee', 'created_at', 'legitimate']
     readonly_fields = (resource.ResourceModel.readonly_fields + ['created_at'])
-    versions = db.ManyToManyField(Version, related_name='_anomalies')
+    versions = db.ManyToManyField(Version, backref='_anomalies')
     kind = db.CharField()
     insee = db.CharField(length=5)
     created_at = db.DateTimeField()

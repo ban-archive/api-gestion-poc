@@ -9,7 +9,7 @@ class DB(PostgresqlExtDatabase):
     postgis_registered = False
 
     def __init__(self):
-        super().__init__(None, autorollback=True)
+        super().__init__(None, autorollback=True, register_hstore=True)
 
     def connect(self):
         # Deal with connection kwargs at connect time only, because we want
@@ -25,7 +25,7 @@ class DB(PostgresqlExtDatabase):
         )
         super().connect()
 
-    def initialize_connection(self, conn):
+    def _initialize_connection(self, conn):
         if not self.postgis_registered:
             postgis.register(conn.cursor())
             self.postgis_registered = True

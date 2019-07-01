@@ -17,7 +17,7 @@ def test_get_anomaly(get):
     anomaly = AnomalyFactory(kind="hn vide")
     resp = get('/anomaly'.format(anomaly.id))
     assert resp.status_code == 200
-    assert resp.json["total"] == 1
+    assert len(resp.json['collection']) == 1
 
 
 @authorize
@@ -34,7 +34,7 @@ def test_get_anomalies_by_kind(get):
     a2 = AnomalyFactory(kind="hn vide")
     resp = get('/anomaly?kind=hn+vide')
     assert resp.status_code == 200
-    assert resp.json["total"] == 2
+    assert len(resp.json['collection']) == 2
     assert 'legitimate' in resp.json["collection"][0]
 
 
@@ -44,7 +44,7 @@ def test_get_anomalies_by_insee(get):
     a2 = AnomalyFactory(insee="85001")
     resp = get('/anomaly?insee=33001')
     assert resp.status_code == 200
-    assert resp.json["total"] == 1
+    assert len(resp.json['collection']) == 1
     assert resp.json["collection"][0]["id"] == a1.id
 
 
@@ -54,7 +54,7 @@ def test_get_anomalies_by_dep(get):
     a2 = AnomalyFactory(insee="85001")
     resp = get('/anomaly?dep=85')
     assert resp.status_code == 200
-    assert resp.json["total"] == 1
+    assert len(resp.json['collection']) == 1
     assert resp.json["collection"][0]["id"] == a2.id
 
 
@@ -96,7 +96,7 @@ def test_get_anomaly_by_version(client):
 
     resp = client.get('/anomaly?resource={}&version={}'.format(hn1.id, 1))
     assert resp.status_code == 200
-    assert resp.json["total"] == 1
+    assert len(resp.json['collection']) == 1
     assert resp.json["collection"][0]["versions"][0]["data"]["id"] == hn1.id
 
 @authorize

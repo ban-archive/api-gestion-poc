@@ -14,14 +14,14 @@ from .exceptions import (IsDeletedError, MultipleRedirectsError, RedirectError,
 from .validators import ResourceValidator
 
 
-class BaseResource(peewee.BaseModel):
+class BaseResource(peewee.ModelBase):
 
     def include_field_for_collection(cls, name):
         if name in cls.exclude_for_collection:
             return False
         attr = getattr(cls, name, None)
-        exclude = (peewee.ReverseRelationDescriptor,
-                   peewee.SelectQuery)
+
+        exclude = (peewee.SelectQuery,)
         if not attr or isinstance(attr, exclude):
             return False
         return True
@@ -102,8 +102,9 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 raise ValueError('Unknown field {}'.format(name))
             value = getattr(self, name)
             if value is not None:
+                #@TODO-peewee-migration: verifier classe pour listes
                 if isinstance(field, (db.ManyToManyField,
-                                      peewee.ReverseRelationDescriptor)):
+                                      peewee.BackrefAccessor)):
                     value = [v.serialize(subfields) for v in value]
                 elif isinstance(field, db.ForeignKeyField):
                     value = value.serialize(subfields)
@@ -151,16 +152,16 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         self.save()
 
     def ensure_no_reverse_relation(self):
-        for name, field in self._meta.reverse_rel.items():
-            select = getattr(self, name)
-            if getattr(select.model_class,'deleted_at', None):
-                select = select.where(select.model_class.deleted_at.is_null())
+        for foreign_key in self._meta.backrefs:
+            select = getattr(self, foreign_key.backref)
+            if getattr(select.model,'deleted_at', None):
+                select = select.where(select.model.deleted_at.is_null())
             if select.count():
                 raise ResourceLinkedError(
-                    'Resource still linked by `{}`'.format(name))
+                    'Resource still linked by `{}`'.format(foreign_key.backref))
 
     @classmethod
-    def coerce(cls, id, identifier=None, level1=0):
+    def adapt(cls, id, identifier=None, level1=0):
 
         if isinstance(id, db.Model):
             instance = id
@@ -179,7 +180,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
             try:
 
                 if not hasattr(cls, 'auth') and level1 != 1:
-                    instance = cls.raw_select(cls._meta.model_class.pk).where(
+                    instance = cls.raw_select(cls._meta.model.pk).where(
                         getattr(cls, identifier) == id).get()
                 else:
                     instance = cls.raw_select().where(

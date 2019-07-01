@@ -107,7 +107,7 @@ class Schema(dict):
             print('Bad openapi docstring for {}'.format(func))
         else:
             try:
-                extra = yaml.load(doc.format(resource=resource.__name__))
+                extra = yaml.load(doc.format(resource=resource.__name__), Loader=yaml.FullLoader)
             except:
                 print('Bad openapi docstring for {}'.format(func))
             else:
@@ -116,7 +116,7 @@ class Schema(dict):
 
     def register_model(self, model):
         if hasattr(model, '__openapi__'):
-            definition = yaml.load(model.__openapi__)
+            definition = yaml.load(model.__openapi__, Loader=yaml.FullLoader)
         else:
             definition = self.model_definition(model)
         self['definitions'][model.__name__] = definition
@@ -148,7 +148,8 @@ class Schema(dict):
                         field.rel_model.__name__)
                 }
             elif type_ == 'array':
-                row['items'] = {'type': field.db_field}
+                ft = 'string' if (field.field_type == 'VARCHAR') else field.field_type
+                row['items'] = {'type': ft}
             if field.null and 'type' in row:
                 row['type'].append('null')
             if field.unique:

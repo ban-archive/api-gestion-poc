@@ -205,7 +205,7 @@ def process_housenumber(row):
         parent = 'laposte:{}'.format(group_laposte)
     if parent:
         try:
-            parent = Group.coerce(parent)
+            parent = Group.adapt(parent)
         except Group.DoesNotExist:
             reporter.error('Parent given but not found', parent)
             parent = None

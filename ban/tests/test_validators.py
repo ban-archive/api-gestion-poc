@@ -6,7 +6,6 @@ from ban.auth.models import User
 from .factories import (GroupFactory, HouseNumberFactory, MunicipalityFactory,
                         PositionFactory)
 
-
 def test_can_create_municipality(session):
     validator = models.Municipality.validator(name="Eu", insee="12345",
                                               siren="123456789")
@@ -355,7 +354,7 @@ def test_old_insee_return_an_error_with_new_identifier(session):
     assert municipality.id in validator.errors['municipality']
 
 
-def test_can_create_group_with_empty_laposte_id(session):
+def test_can_create_group_with_empty_laposte_idsession(session):
     municipality = MunicipalityFactory(insee="12345")
     validator = models.Group.validator(name='Rue des Girafes',
                                        kind=models.Group.WAY,
@@ -458,6 +457,7 @@ def test_can_create_housenumber_with_ancestors(session):
     assert district in housenumber.ancestors
 
 
+
 def test_can_create_housenumber_with_ancestor_ids(session):
     district = GroupFactory(name="IIIe arrondissement", kind=models.Group.AREA)
     street = GroupFactory()
@@ -480,7 +480,7 @@ def test_can_update_housenumber_ancestor(session):
     assert district in housenumber.ancestors
 
 
-def test_giving_wrong_version_should_patch_if_possible(session):
+def test_giving_wrong_version_should_patch_if_possible():
     # Create an object.
     housenumber = HouseNumberFactory(number="18", ordinal=None)
     # Update one field.
@@ -504,7 +504,7 @@ def test_giving_wrong_version_should_patch_if_possible(session):
     assert housenumber.ordinal == "bis"
 
 
-def test_giving_wrong_version_should_patch_if_possible_with_update(session):
+def test_giving_wrong_version_should_patch_if_possible_with_update():
     # Create an object.
     housenumber = HouseNumberFactory(number="18", ordinal=None)
     # Update one field.

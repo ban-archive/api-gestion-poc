@@ -146,7 +146,7 @@ def test_get_postcode_housenumbers_sorted():
     hn2ter = HouseNumberFactory(postcode=postcode, number="2", ordinal="ter")
     hn1 = HouseNumberFactory(postcode=postcode, number="1", ordinal="")
     hn2bis = HouseNumberFactory(postcode=postcode, number="2", ordinal="bis")
-    assert postcode.housenumbers == [hn1, hn2, hn2bis, hn2ter]
+    assert list(postcode.housenumbers) == [hn1, hn2, hn2bis, hn2ter]
 
 
 def test_get_group_housenumbers_parent_sorted():
@@ -155,7 +155,7 @@ def test_get_group_housenumbers_parent_sorted():
     hn2ter = HouseNumberFactory(parent=group, number="2", ordinal="ter")
     hn1 = HouseNumberFactory(parent=group, number="1", ordinal="")
     hn2bis = HouseNumberFactory(parent=group, number="2", ordinal="bis")
-    assert group.housenumbers == [hn1, hn1a, hn2bis, hn2ter]
+    assert list(group.housenumbers) == [hn1, hn1a, hn2bis, hn2ter]
 
 
 def test_get_group_housenumbers_ancestor_sorted():
@@ -164,7 +164,7 @@ def test_get_group_housenumbers_ancestor_sorted():
     hn2ter = HouseNumberFactory(ancestors=group, number="2", ordinal="ter")
     hn1 = HouseNumberFactory(ancestors=group, number="1", ordinal="")
     hn2bis = HouseNumberFactory(ancestors=group, number="2", ordinal="bis")
-    assert group.housenumbers == [hn1, hn1a, hn2bis, hn2ter]
+    assert list(group.housenumbers) == [hn1, hn1a, hn2bis, hn2ter]
 
 
 def test_get_group_housenumbers_parent_ancestor_sorted():
@@ -173,7 +173,7 @@ def test_get_group_housenumbers_parent_ancestor_sorted():
     hn2ter = HouseNumberFactory(parent=group, number="2", ordinal="ter")
     hn1 = HouseNumberFactory(ancestors=group, number="1", ordinal="")
     hn2bis = HouseNumberFactory(ancestors=group, number="2", ordinal="bis")
-    assert group.housenumbers == [hn1, hn1a, hn2bis, hn2ter]
+    assert list(group.housenumbers) == [hn1, hn1a, hn2bis, hn2ter]
 
 
 def test_cannot_duplicate_housenumber_on_same_street():
@@ -203,7 +203,7 @@ def test_can_create_two_housenumbers_with_same_number_but_different_streets():
 def test_housenumber_positions():
     housenumber = HouseNumberFactory()
     position = PositionFactory(housenumber=housenumber)
-    assert housenumber.positions == [position]
+    assert list(housenumber.positions) == [position]
 
 
 def test_create_housenumber_with_district():

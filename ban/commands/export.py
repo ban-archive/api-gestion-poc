@@ -31,7 +31,7 @@ def resources(resource, path, **kwargs):
     if resource not in resources:
         helpers.abort('Resource {} does not exists'.format(resource))
     query = QUERIES.get(resource)
-    query = query.where(query.model_class.deleted_at.is_null())
+    query = query.where(query.model.deleted_at.is_null())
     filename = '{}.ndjson'.format(resource.lower())
     with Path(path).joinpath(filename).open(mode='w') as f:
         print('Exporting to', f.name)
@@ -48,7 +48,7 @@ def resources(resource, path, **kwargs):
 
 
 def process_resource(*rows):
-    with database.execution_context():  # Reset connection in current process.
+    with database:  # Reset connection in current process.
         results = []
         for row in rows:
             results.append(dumps(row.as_export))

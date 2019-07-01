@@ -24,7 +24,8 @@ class ResourceValidator:
         self.instance = instance
         self.data = {}
 
-        for name, field in self.model._meta.fields.items():
+        all_fields = {**self.model._meta.fields, **self.model._meta.manytomany}
+        for name, field in all_fields.items():
             if not instance:
                 if (name in self.model.readonly_fields
                 or name not in self.model.resource_fields):
@@ -51,9 +52,9 @@ class ResourceValidator:
     def validate_field(self, field, value):
         try:
             if isinstance(field, db.ForeignKeyField) or isinstance(field, db.ManyToManyField):
-                value = field.coerce(value, False, 1)
+                value = field.adapt(value, False, 1)
             else:
-                value = field.coerce(value)
+                value = field.adapt(value)
 
         except (RedirectError, MultipleRedirectsError) as e:
             raise ValueError(e)

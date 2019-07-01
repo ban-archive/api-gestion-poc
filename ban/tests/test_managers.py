@@ -5,7 +5,9 @@ from .factories import GroupFactory, MunicipalityFactory
 
 def test_municipality_serialize():
     municipality = MunicipalityFactory()
-    assert list(models.Municipality.select().serialize()) == [municipality.serialize()]  # noqa
+    ser_mun = [municipality.serialize()]
+    malist = list(models.Municipality.select().serialize())
+    assert malist == ser_mun  # noqa
 
 
 def test_group_as_resource():

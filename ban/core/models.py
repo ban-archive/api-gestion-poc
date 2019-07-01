@@ -1,7 +1,4 @@
-import re
-
 import peewee
-from unidecode import unidecode
 from werkzeug.utils import cached_property
 
 from ban import db
@@ -17,11 +14,11 @@ __all__ = ['Municipality', 'Group', 'HouseNumber', 'PostCode',
 _ = lambda x: x
 
 
-class BaseModel(BaseResource, BaseVersioned):
+class ModelBase(BaseResource, BaseVersioned):
     pass
 
 
-class Model(ResourceModel, Versioned, metaclass=BaseModel):
+class Model(ResourceModel, Versioned, metaclass=ModelBase):
     resource_fields = ['version', 'created_at', 'created_by', 'modified_at',
                        'modified_by', 'attributes']
     exclude_for_collection = ['created_at', 'created_by',
@@ -32,7 +29,6 @@ class Model(ResourceModel, Versioned, metaclass=BaseModel):
     attributes = db.HStoreField(null=True)
 
     class Meta:
-        validate_backrefs = False
         validator = VersionedResourceValidator
         case_ignoring = ()
 
@@ -65,7 +61,7 @@ class PostCode(NamedModel):
     complement = db.CharField(max_length=38, null=True)
     code = db.CharField(index=True, format='\d*', length=5)
     municipality = db.CachedForeignKeyField(Municipality,
-                                            related_name='postcodes')
+                                            backref='postcodes')
 
     class Meta:
         indexes = (
@@ -108,7 +104,7 @@ class Group(NamedModel):
     laposte = db.CharField(max_length=8, null=True, unique=True, format='\d*')
     ign = db.CharField(max_length=24, null=True, unique=True)
     municipality = db.CachedForeignKeyField(Municipality,
-                                            related_name='groups')
+                                            backref='groups')
 
 
     @property
@@ -134,7 +130,7 @@ class HouseNumber(Model):
     laposte = db.CharField(length=10, null=True, unique=True,
                            format=CEA_FORMAT)
     ign = db.CharField(max_length=24, null=True, unique=True)
-    ancestors = db.ManyToManyField(Group, related_name='_housenumbers')
+    ancestors = db.ManyToManyField(Group, backref='_housenumbers')
     postcode = db.CachedForeignKeyField(PostCode, null=True)
 
     class Meta:
@@ -215,8 +211,8 @@ class Position(Model):
 
     name = db.CharField(max_length=200, null=True)
     center = db.PointField(verbose_name=_("center"), null=True, index=True)
-    housenumber = db.ForeignKeyField(HouseNumber, related_name='positions')
-    parent = db.ForeignKeyField('self', related_name='children', null=True)
+    housenumber = db.ForeignKeyField(HouseNumber, backref='positions')
+    parent = db.ForeignKeyField('self', backref='children', null=True)
     source = db.CharField(max_length=64, null=True)
     kind = db.CharField(max_length=64, choices=KIND)
     positioning = db.CharField(max_length=32, choices=POSITIONING)

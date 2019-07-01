@@ -34,7 +34,7 @@ def test_get_municipality_groups_collection(get):
     street = GroupFactory(municipality=municipality, name="Rue de la Plage")
     resp = get('/group?municipality={}'.format(municipality.id))
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
 
 
 @authorize
@@ -44,15 +44,12 @@ def test_get_municipality_groups_collection_is_paginated(get):
     resp = get('/group?municipality={}&limit=4'.format(municipality.id))
     page1 = resp.json
     assert len(page1['collection']) == 4
-    assert page1['total'] == 6
     assert 'next' in page1
     assert 'previous' not in page1
     assert page1['next'] in resp.headers['Link']
     resp = get(page1['next'])
     page2 = resp.json
     assert len(page2['collection']) == 2
-    assert page2['total'] == 6
-    assert 'next' not in page2
     assert 'previous' in page2
     assert page2['previous'] in resp.headers['Link']
     resp = get(page2['previous'])
@@ -66,7 +63,6 @@ def test_get_municipality_collection_is_ceiled(get, monkeypatch):
     resp = get('/municipality?limit=6')
     page1 = resp.json
     assert len(page1['collection']) == 4
-    assert page1['total'] == 6
 
 
 @authorize
@@ -78,7 +74,6 @@ def test_get_municipality_versions(get):
     resp = get('/municipality/{}/versions'.format(municipality.id))
     assert resp.status_code == 200
     assert len(resp.json['collection']) == 2
-    assert resp.json['total'] == 2
     assert resp.json['collection'][0]['data']['name'] == 'Cabour'
     assert resp.json['collection'][1]['data']['name'] == 'Cabour2'
 
@@ -270,7 +265,7 @@ def test_get_collection_without_deleted(get):
     municipality2.mark_deleted()
     resp = get('/municipality')
     assert resp.status_code == 200
-    assert resp.json['total'] == 1
+    assert len(resp.json['collection']) == 1
     assert resp.json['collection'][0]['id'] == municipality1.id
 
 
@@ -324,7 +319,7 @@ def test_can_get_deleted_municipality_versions(get):
     resp = get('/municipality/{}/versions'.format(municipality.id))
     assert resp.status_code == 200
     assert len(resp.json['collection']) == 2
-    assert resp.json['total'] == 2
+    assert len(resp.json['collection']) == 2
     assert resp.json['collection'][0]['data']['name'] == 'Cabour'
     assert resp.json['collection'][1]['data']['name'] == 'Cabour2'
 
@@ -399,7 +394,7 @@ def test_municipality_select_use_default_orderby(get):
     MunicipalityFactory(insee="90001")
     resp = get('/municipality')
     assert resp.status_code == 200
-    assert resp.json['total'] == 2
+    assert len(resp.json['collection']) == 2
     assert resp.json['collection'][0]['insee'] == '90001'
 
 
