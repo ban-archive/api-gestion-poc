@@ -179,7 +179,7 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                     identifier = 'pk'
             try:
 
-                if not hasattr(cls, 'auth') and level1 != 1:
+                if not hasattr(cls, 'auth') and level1 != 1 and identifier != cls._meta.model.pk.name:
                     instance = cls.raw_select(cls._meta.model.pk).where(
                         getattr(cls, identifier) == id).get()
                 else:
