@@ -58,6 +58,32 @@ def test_get_anomalies_by_dep(get):
     assert resp.json["collection"][0]["id"] == a2.id
 
 
+@authorize
+def test_get_anomalies_pos_pile_ordered(get):
+    h1 = HouseNumberFactory()
+    h2 = HouseNumberFactory()
+    h3 = HouseNumberFactory()
+    v1 = VersionFactory(model_pk=h1.pk, data='{"nom":"test"}')
+    v2 = VersionFactory(model_pk=h2.pk, data='{"nom":"test2"}')
+    v3 = VersionFactory(model_pk=h3.pk, data='{"nom":"test3"}')
+    a1 = AnomalyFactory(
+        kind="position_pile",
+        versions=[v1]
+    )
+    a2 = AnomalyFactory(
+        kind="position_pile",
+        versions=[v1,v2,v3]
+    )
+    a3 = AnomalyFactory(
+        kind="position_pile",
+        versions=[v1,v2]
+    )
+    resp = get('/anomaly?kind=position_pile')
+    assert resp.status_code == 200
+    assert len(resp.json['collection']) == 3
+    assert resp.json["collection"][0]["id"] == a2.id
+
+
 @authorize('anomaly_write')
 def test_create_anomaly(client):
     street = GroupFactory()

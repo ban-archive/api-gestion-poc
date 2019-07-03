@@ -184,7 +184,9 @@ class ModelEndpoint(CollectionEndpoint):
             qs = qs.where(qs.model.deleted_at.is_null())
             order_by = (self.order_by if self.order_by is not None
                         else [self.model.pk])
-            qs = qs.order_by(*order_by).serialize(self.get_collection_mask())
+            if(qs._order_by is None):
+                qs = qs.order_by(*order_by)
+            qs = qs.serialize(self.get_collection_mask())
         try:
             return self.collection(qs)
         except ValueError as e:
@@ -879,6 +881,14 @@ class Anomaly(ModelEndpoint):
         qs = super().get_queryset()
         version = request.args.get('version')
         resource = request.args.get('resource')
+        kind = request.args.get('kind')
+        if kind == 'position_pile':
+            m2m = self.model.versions.through_model
+            cte = m2m \
+                .select(m2m.anomaly, peewee.fn.COUNT(m2m.version).alias('count')) \
+                .group_by(m2m.anomaly) \
+                .cte("versions_count", columns=('anomaly', 'count'))
+            qs = qs.join(cte, on=(versioning.Anomaly.pk == cte.c.anomaly)).order_by(cte.c.count.desc()).with_cte(cte)
         if version is not None and resource is not None:
             qs = self.filter_versions(qs)
         dep = request.args.get('dep')
