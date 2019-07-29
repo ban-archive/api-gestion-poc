@@ -1,6 +1,6 @@
 bcrypt==3.1.4
 decorator==4.1.2
-Flask==1.0.2
+Flask==1.1.1
 Flask-Cors==3.0.7
 Flask-OAuthlib==0.9.5
 requests-oauthlib==1.1.0
