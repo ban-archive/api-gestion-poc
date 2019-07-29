@@ -53,17 +53,13 @@ class Versioned(db.Model, metaclass=BaseVersioned):
     created_by = db.CachedForeignKeyField(Session)
     modified_at = db.DateTimeField()
     modified_by = db.CachedForeignKeyField(Session)
+    locked_version = None
 
     class Meta:
         unique_together = ('pk', 'version')
 
-    @property
-    def _lock_version(self):
-        self.lock_version()
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.lock_version()
 
     def store_version(self):
         new = Version.create(
@@ -97,25 +93,15 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             qs = qs.where(Version.sequential == ref)
         return qs.first()
 
-    @property
-    def locked_version(self):
-        return getattr(self, '_locked_version', None)
-
-    @locked_version.setter
-    def locked_version(self, value):
-        # Should be set only once, and never updated.
-        assert not hasattr(self, '_locked_version'), 'locked_version is read only'  # noqa
-        self._locked_version = value
-
     def lock_version(self):
-        if not self.pk:
-            self.version = 1
-        self._locked_version = self.version if self.pk else 0
+        self.locked_version = self.version if self.pk else 0
 
     def increment_version(self):
         self.version = self.version + 1
 
     def check_version(self):
+        if self.locked_version is None:
+            self.locked_version = 0
         if self.version != self.locked_version + 1:
             raise ForcedVersionError('wrong version number: {}'.format(self.version))  # noqa
 
@@ -146,6 +132,12 @@ class Versioned(db.Model, metaclass=BaseVersioned):
         with self._meta.database.atomic():
             Redirect.clear(self)
             return super().delete_instance(*args, **kwargs)
+
+    def __setattr__(self, name, value):
+        setattrreturn = super().__setattr__(name, value)
+        if name == 'version' and self.locked_version is None:
+            self.lock_version()
+        return setattrreturn
 
 
 class Version(db.Model):

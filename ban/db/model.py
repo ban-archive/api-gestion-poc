@@ -44,6 +44,33 @@ class Model(peewee.Model):
         database = database
         manager = ModelSelect
 
+
+    @classmethod
+    def get_not_nullable_foreign_key_fields(cls):
+        fields = cls._meta.sorted_fields
+        foreign_key_fields = {}
+        for f in fields:
+            if isinstance(f, peewee.ForeignKeyField) and not f.null:
+                foreign_key_fields[f.name] = f.rel_model
+        return foreign_key_fields
+
+    @classmethod
+    def get_fk_need_alias_fields(cls):
+        fields = cls._meta.sorted_fields
+        fw = {}
+        need_alias = []
+        for f in fields:
+            if isinstance(f, peewee.ForeignKeyField):
+                if f.rel_model in fw:
+                    need_alias.append(f.name)
+                    need_alias.append(fw[f.rel_model])
+                elif f.rel_model == cls:
+                    need_alias.append(f.name)
+                else:
+                    fw[f.rel_model] = f.name
+        return need_alias
+
+
     def save(self, *args, **kwargs):
         cache.clear()
         super().save(*args, **kwargs)
@@ -75,6 +102,10 @@ class Model(peewee.Model):
 
     def __setattr__(self, name, value):
         attr = getattr(self.__class__, name, None)
-        if attr and hasattr(attr, 'adapt'):
+        if attr \
+                and hasattr(attr, 'adapt') \
+                and (not (isinstance(attr, peewee.ForeignKeyField) and isinstance(value, int))
+                     or (isinstance(attr, peewee.ForeignKeyField) and attr.null is True)):
+            # not nullable ForeignKeyFields are fetched by join
             value = attr.adapt(value)
         return super().__setattr__(name, value)

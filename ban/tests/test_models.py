@@ -12,13 +12,13 @@ from .factories import (GroupFactory, HouseNumberFactory, MunicipalityFactory,
 def test_get_model_locks_version():
     m = MunicipalityFactory()
     municipality = models.Municipality.get(models.Municipality.pk == m.pk)
-    assert municipality._locked_version == 1
+    assert municipality.locked_version == 1
 
 
 def test_select_first_model_locks_version():
     MunicipalityFactory()
     municipality = models.Municipality.select().first()
-    assert municipality._locked_version == 1
+    assert municipality.locked_version == 1
 
 
 def test_created_at_is_utc_aware():

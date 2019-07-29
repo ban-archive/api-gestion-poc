@@ -194,64 +194,6 @@ def test_get_housenumber_collection(get):
 
 
 @authorize
-def test_get_housenumber_collection_can_be_filtered_by_bbox(get):
-    position = PositionFactory(center=(1, 1))
-    PositionFactory(center=(-1, -1))
-    resp = get('/housenumber?north=2&south=0&west=0&east=2')
-    assert len(resp.json['collection']) == 1
-
-
-@authorize
-def test_get_housenumber_bbox_allows_floats(get):
-    PositionFactory(center=(1, 1))
-    PositionFactory(center=(-1, -1))
-    resp = get('/housenumber?north=2.23&south=0.12&west=0.56&east=2.34')
-    assert len(resp.json['collection']) == 1
-
-
-@authorize
-def test_get_housenumber_missing_bbox_param_makes_bbox_ignored(get):
-    PositionFactory(center=(1, 1))
-    PositionFactory(center=(-1, -1))
-    resp = get('/housenumber?north=1&south=0&west=0')
-    assert len(resp.json['collection']) == 2
-
-
-@authorize
-def test_get_housenumber_invalid_bbox_param_returns_bad_request(get):
-    PositionFactory(center=(1, 1))
-    PositionFactory(center=(-1, -1))
-    resp = get('/housenumber?north=2&south=0&west=0&east=invalid')
-    assert resp.status_code == 400
-
-
-@authorize
-def test_get_housenumber_collection_filtered_by_bbox_is_paginated(get):
-    PositionFactory.create_batch(9, center=(1, 1))
-    PositionFactory(center=(-1, -1))
-    resp = get('/housenumber?north=2&south=0&west=0&east=2&limit=5')
-    page1 = resp.json
-    assert len(page1['collection']) == 5
-    assert 'next' in page1
-    assert 'previous' not in page1
-    resp = get(page1['next'])
-    page2 = resp.json
-    assert len(page2['collection']) == 4
-    assert 'previous' in page2
-    resp = get(page2['previous'])
-    assert resp.json == page1
-
-
-@authorize
-def test_housenumber_with_two_positions_is_not_duplicated_in_bbox(get):
-    position = PositionFactory(center=(1, 1))
-    PositionFactory(center=(1.1, 1.1), housenumber=position.housenumber)
-    resp = get('/housenumber?north=2&south=0&west=0&east=2')
-    assert len(resp.json['collection']) == 1
-
-
-
-@authorize
 def test_get_housenumber_with_postcode(get):
     postcode = PostCodeFactory(code="12345")
     housenumber = HouseNumberFactory(postcode=postcode)

@@ -122,7 +122,7 @@ class ModelEndpoint(CollectionEndpoint):
 
 
     def get_queryset(self):
-        qs = self.model.select()
+        qs = self.model.select_eagerly()
         for key in self.filters:
             values = request.args.getlist(key)
             if values:
@@ -698,16 +698,6 @@ class HouseNumber(VersionedModelEndpoint):
         qs = [h.serialize(mask) for h in qs.order_by(*self.order_by)]
         return qs
 
-    def get_queryset(self):
-        qs = super().get_queryset()
-        bbox = get_bbox(request.args)
-        if bbox:
-            qs = (qs.join(models.Position)
-                    .where(models.Position.center.in_bbox(**bbox))
-                    .group_by(models.HouseNumber.pk)
-                    .order_by(models.HouseNumber.pk))
-        return qs
-
 
 @app.resource
 class Position(VersionedModelEndpoint):
@@ -943,17 +933,18 @@ class Anomaly(ModelEndpoint):
 def bbox():
     limit = min(int(request.args.get('limit', CollectionEndpoint.DEFAULT_LIMIT)), CollectionEndpoint.MAX_LIMIT)
     bbox = get_bbox(request.args)
+    if bbox is None:
+        abort(400, error='Invalid bbox')
     unique = request.args.get('unique')
 
-    dbname = config.DB_NAME
-    user = config.get('DB_USER')
-    password = config.get('DB_PASSWORD')
-    host = config.get('DB_HOST')
-    if (host is None):
-        host = "localhost"
-    port = config.get('DB_PORT')
+    db = models.HouseNumber._meta.database
 
-    connectString = "dbname='{}' user='{}' password='{}' host='{}' port='{}'".format(dbname,user,password,host,port)
+    connectString = "dbname='{}' user='{}' password='{}' host='{}' port='{}'".format(
+        db.database,
+        db.connect_params["user"],
+        db.connect_params["password"],
+        db.connect_params["host"] if db.connect_params["host"] is not None else "localhost",
+        db.connect_params["port"])
     conn = psycopg2.connect(connectString)
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     if unique == 'true':

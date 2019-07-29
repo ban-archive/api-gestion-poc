@@ -140,6 +140,29 @@ class ResourceModel(db.Model, metaclass=BaseResource):
         return super().select(*selection)
 
     @classmethod
+    def select_eagerly(cls, *selection):
+        #@TODO foreign key field null is not managed well with left outer join
+        if not hasattr(cls, 'get_not_nullable_foreign_key_fields'):
+            return super().select(*selection)
+        need_alias = cls.get_fk_need_alias_fields()
+        fk_fields = cls.get_not_nullable_foreign_key_fields()
+        for name, field in fk_fields.items():
+            if name in need_alias:
+                fk_fields[name] = field.alias()
+        selection = (cls,) + tuple(fk_fields.values())
+        select = super().select(*selection)
+        count_alias = 0
+        for name, field in fk_fields.items():
+            if name in need_alias:
+                count_alias = count_alias + 1
+                select = select.join(field, peewee.JOIN.LEFT_OUTER, on=(getattr(cls, name) == getattr(field, 'pk')).alias(name))
+            else:
+                select = select.join(field, peewee.JOIN.LEFT_OUTER)
+            if fk_fields != need_alias.__len__():
+                select = select.switch(cls)
+        return select
+
+    @classmethod
     def raw_select(cls, *selection):
         return super().select(*selection)
 
@@ -181,6 +204,9 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
                 if not hasattr(cls, 'auth') and level1 != 1 and identifier != cls._meta.model.pk.name:
                     instance = cls.raw_select(cls._meta.model.pk).where(
+                        getattr(cls, identifier) == id).get()
+                elif level1 == 1:
+                    instance = cls.select_eagerly().where(
                         getattr(cls, identifier) == id).get()
                 else:
                     instance = cls.raw_select().where(
