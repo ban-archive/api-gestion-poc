@@ -34,10 +34,9 @@ def test_get_housenumber(get):
         'laposte': None,
         'ordinal': 'bis',
         'postcode': None,
-        'status': 'active',
-        'positions': []
+        'status': 'active'
     }
-#
+
 
 @authorize
 def test_get_housenumber_with_filtered_fields(get):

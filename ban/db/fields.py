@@ -112,6 +112,10 @@ class DateRangeField(peewee.Field):
 class CachedForeignKeyAccessor(peewee.ForeignKeyAccessor):
     def __get__(self, instance, instance_type=None):
         if instance is not None:
+            # field = getattr(instance, self.name) if hasattr(instance, self.name) else None
+            # if isinstance(field, peewee.Model):
+            #     cache.set((self.rel_model.__name__, field.pk), field)
+            #     return field
             rel_id = instance.__data__.get(self.name)
             keys = (self.rel_model.__name__, rel_id)
             return cache.cache(keys, self.get_rel_instance, instance)

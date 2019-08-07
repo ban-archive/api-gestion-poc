@@ -151,8 +151,7 @@ def test_housenumber_as_version():
         'parent': street.id,
         'modified_by': hn.modified_by.serialize(),
         'attributes': None,
-        'status': 'active',
-        'positions': []
+        'status': 'active'
     }
 
 

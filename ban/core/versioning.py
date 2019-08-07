@@ -53,7 +53,6 @@ class Versioned(db.Model, metaclass=BaseVersioned):
     created_by = db.CachedForeignKeyField(Session)
     modified_at = db.DateTimeField()
     modified_by = db.CachedForeignKeyField(Session)
-    locked_version = None
 
     class Meta:
         unique_together = ('pk', 'version')
@@ -93,16 +92,21 @@ class Versioned(db.Model, metaclass=BaseVersioned):
             qs = qs.where(Version.sequential == ref)
         return qs.first()
 
-    def lock_version(self):
-        self.locked_version = self.version if self.pk else 0
+    def locked_version(self):
+        return getattr(self, '_locked_version', 0)
+
+    def lock_version(self, force=False):
+        # Should be set only once, and never updated.
+        if hasattr(self, '_locked_version') and not force:
+            return
+        self._locked_version = self.version if self.pk else 0
 
     def increment_version(self):
         self.version = self.version + 1
 
     def check_version(self):
-        if self.locked_version is None:
-            self.locked_version = 0
-        if self.version != self.locked_version + 1:
+        self.lock_version()
+        if self.version != self.locked_version() + 1:
             raise ForcedVersionError('wrong version number: {}'.format(self.version))  # noqa
 
     def update_meta(self):
@@ -126,7 +130,7 @@ class Versioned(db.Model, metaclass=BaseVersioned):
                 pass
             super().save(*args, **kwargs)
             self.store_version()
-            self.lock_version()
+            self.lock_version(force=True)
 
     def delete_instance(self, *args, **kwargs):
         with self._meta.database.atomic():
@@ -135,7 +139,9 @@ class Versioned(db.Model, metaclass=BaseVersioned):
 
     def __setattr__(self, name, value):
         setattrreturn = super().__setattr__(name, value)
-        if name == 'version' and self.locked_version is None:
+        if \
+                (name == 'version' and self.pk is not None) \
+                or (name == 'pk' and self.version is not None):
             self.lock_version()
         return setattrreturn
 

@@ -120,7 +120,7 @@ class HouseNumber(Model):
     CEA_FORMAT = Municipality.INSEE_FORMAT + '[234679ABCEGHILMNPRSTUVXYZ]{5}'
     identifiers = ['cia', 'laposte', 'ign']
     resource_fields = ['number', 'ordinal', 'parent', 'cia', 'laposte',
-                       'ancestors', 'positions', 'ign', 'postcode']
+                       'ancestors', 'ign', 'postcode']
     exclude_for_collection = ['ancestors']
 
     number = db.CharField(max_length=16, null=True)

@@ -201,10 +201,11 @@ class ResourceModel(db.Model, metaclass=BaseResource):
                 elif isinstance(id, int):
                     identifier = 'pk'
             try:
-
                 if not hasattr(cls, 'auth') and level1 != 1 and identifier != cls._meta.model.pk.name:
                     instance = cls.raw_select(cls._meta.model.pk).where(
                         getattr(cls, identifier) == id).get()
+                elif not hasattr(cls, 'auth') and level1 != 1 and identifier == cls._meta.model.pk.name:
+                    instance = id
                 elif level1 == 1:
                     instance = cls.select_eagerly().where(
                         getattr(cls, identifier) == id).get()

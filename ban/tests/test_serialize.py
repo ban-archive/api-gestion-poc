@@ -128,7 +128,6 @@ def test_serialize_with_double_wildcard():
         'ign': None,
         'attributes': None,
         'status': 'active',
-        'positions': [],
         'parent': {
             'name': 'Rue de la Banatouille',
             'id': group.id,

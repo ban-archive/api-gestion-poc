@@ -12,6 +12,14 @@ class SerializerModelObjectCursorWrapper(peewee.ModelObjectCursorWrapper):
         return instance
 
 
+class SerializerModelCursorWrapper(peewee.ModelCursorWrapper):
+    def process_row(self, row):
+        instance = super().process_row(row)
+        if hasattr(self, '_serializer'):
+            instance = self._serializer(instance)
+        return instance
+
+
 class ModelSelect(peewee.ModelSelect):
 
     @peewee.database_required
@@ -24,12 +32,17 @@ class ModelSelect(peewee.ModelSelect):
     @peewee.Node.copy
     def serialize(self, mask=None):
         self._serializer = lambda inst: inst.serialize(mask)
-        self._result_wrapper = SerializerModelObjectCursorWrapper
+        if len(self._from_list) == 1 and not self._joins:
+            self._result_wrapper = SerializerModelObjectCursorWrapper
+        else:
+            self._result_wrapper = SerializerModelCursorWrapper
 
     def _get_model_cursor_wrapper(self, cursor):
         wrapper = getattr(self, '_result_wrapper', None)
-        if wrapper is not None:
-            return wrapper(cursor, self.model, [], self.model)
+        if wrapper == SerializerModelObjectCursorWrapper:
+            return wrapper(cursor, self.model, self._returning, self.model)
+        elif wrapper == SerializerModelCursorWrapper:
+            return wrapper(cursor, self.model, self._returning, self._from_list, self._joins)
         else:
             return super()._get_model_cursor_wrapper(cursor)
 
@@ -103,9 +116,7 @@ class Model(peewee.Model):
     def __setattr__(self, name, value):
         attr = getattr(self.__class__, name, None)
         if attr \
-                and hasattr(attr, 'adapt') \
-                and (not (isinstance(attr, peewee.ForeignKeyField) and isinstance(value, int))
-                     or (isinstance(attr, peewee.ForeignKeyField) and attr.null is True)):
+                and hasattr(attr, 'adapt') and not isinstance(attr, peewee.ForeignKeyField):
             # not nullable ForeignKeyFields are fetched by join
             value = attr.adapt(value)
         return super().__setattr__(name, value)
