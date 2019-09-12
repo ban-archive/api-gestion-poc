@@ -155,6 +155,14 @@ def test_get_housenumber_with_number_ordinal(get):
     assert len(resp.json['collection']) == 1
 
 @authorize
+def test_get_housenumber_with_group_number_empty_ordinal(get):
+    group = GroupFactory()
+    housenumber = HouseNumberFactory(number="2", parent=group, ordinal=None)
+    resp = get('/housenumber?group={}&number=2&ordinal='.format(group.id))
+    assert resp.status_code == 200
+    assert len(resp.json['collection']) == 1
+
+@authorize
 def test_get_housenumber_with_districts(get):
     municipality = MunicipalityFactory()
     district = GroupFactory(municipality=municipality, kind=models.Group.AREA)

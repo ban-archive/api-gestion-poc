@@ -661,10 +661,12 @@ class HouseNumber(VersionedModelEndpoint):
 
     def filter_ordinal(self, qs):
         value = request.args.get('ordinal')
+        field = getattr(self.model, 'ordinal')
         if value:
-            field = getattr(self.model, 'ordinal')
             qs = qs.where(peewee.Expression(field, peewee.OP.ILIKE, value))
-            return qs
+        elif "ordinal" in request.args:
+            qs = qs.where(field.is_null())
+        return qs
 
 
     def filter_group(self, qs):
@@ -679,7 +681,7 @@ class HouseNumber(VersionedModelEndpoint):
                 # Return an empty collection as the fk is not found.
                 return None
             qs = qs.where(field << values)
-            return qs
+        return qs
 
     def filter_ancestors(self, qs):
         # ancestors is a m2m so we cannot use the basic filtering
