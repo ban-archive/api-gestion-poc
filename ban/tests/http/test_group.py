@@ -3,7 +3,7 @@ import json
 from ban.core import models
 from ban.core.encoder import dumps
 
-from ..factories import HouseNumberFactory, MunicipalityFactory, GroupFactory
+from ..factories import HouseNumberFactory, MunicipalityFactory, GroupFactory, PositionFactory
 from .utils import authorize
 
 
@@ -346,3 +346,76 @@ def test_group_select_use_default_orderby(get):
     assert len(resp.json['collection']) == 2
     assert resp.json['collection'][0]['fantoir'] == '900010002'
     assert resp.json['collection'][1]['fantoir'] == '900010001'
+
+
+@authorize('group_write')
+def test_group_merge_ok(client):
+    street = GroupFactory()
+    erased_street = GroupFactory()
+    master_ancestor = GroupFactory()
+    erased_ancestor = GroupFactory()
+    hn_master = HouseNumberFactory(number=4, parent=street, ancestors=[master_ancestor])
+    hn_erased = HouseNumberFactory(number=4, parent=erased_street, ancestors=[erased_ancestor])
+    oth_hn_erased = HouseNumberFactory(number=5, parent=erased_street)
+    pos_master = PositionFactory(center=(1,1), kind="entrance", housenumber=hn_master)
+    pos_erased = PositionFactory(center=(2,2), kind="entrance", housenumber=hn_erased)
+    pos_erased_oth = PositionFactory(center=(3,3), kind="parcel", housenumber=hn_erased)
+
+    data = {
+        "erased_group_id": erased_street.id,
+        "master_group_version": (street.version + 1),
+        "prior_position": "erased"
+    }
+    resp = client.post('/group/merge/{}'.format(street.id), data)
+    assert resp.status_code == 200
+    assert resp.json['id'] == street.id
+    assert list(street.housenumbers) == [hn_master, oth_hn_erased]
+    assert list(hn_master.ancestors) == [master_ancestor, erased_ancestor]
+    assert models.Position.raw_select().where(
+        models.Position.pk == pos_master.pk).get().deleted_at
+    assert models.Position.raw_select().where(
+        models.Position.pk == pos_erased.pk).get().housenumber == hn_master
+
+
+@authorize('group_write')
+def test_group_merge_invalid_data(client):
+    street = GroupFactory()
+    erased_street = GroupFactory()
+    resp = client.post('/group/merge/{}'.format(street.id), {"erased_group_id": street.id, "prior_position": "plop"})
+    assert resp.status_code == 422
+    assert "prior_position" in resp.json["errors"].keys()
+    assert "master_group_version" in resp.json["errors"].keys()
+
+
+@authorize('group_write')
+def test_group_merge_master_not_found(client):
+    street = GroupFactory()
+    erased_street = GroupFactory()
+    resp = client.post(
+        '/group/merge/{}'.format("plop"),
+        {"erased_group_id": erased_street.id, "prior_position": "master", "master_group_version": 2}
+    )
+    assert resp.status_code == 404
+
+
+@authorize('group_write')
+def test_group_merge_wrong_version(client):
+    street = GroupFactory()
+    erased_street = GroupFactory()
+    resp = client.post(
+        '/group/merge/{}'.format(street.id),
+        {"erased_group_id": erased_street.id, "prior_position": "master", "master_group_version": 4}
+    )
+    assert resp.status_code == 409
+
+
+@authorize('group_write')
+def test_group_merge_erased_deleted(client):
+    street = GroupFactory()
+    erased_street = GroupFactory()
+    erased_street.mark_deleted()
+    resp = client.post(
+        '/group/merge/{}'.format(street.id),
+        {"erased_group_id": erased_street.id, "prior_position": "master", "master_group_version": 2}
+    )
+    assert resp.status_code == 410

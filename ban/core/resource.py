@@ -176,6 +176,8 @@ class ResourceModel(db.Model, metaclass=BaseResource):
 
     def ensure_no_reverse_relation(self):
         for foreign_key in self._meta.backrefs:
+            if foreign_key.backref in self._meta.reverse_relation_ignoring:
+                continue
             select = getattr(self, foreign_key.backref)
             if getattr(select.model,'deleted_at', None):
                 select = select.where(select.model.deleted_at.is_null())

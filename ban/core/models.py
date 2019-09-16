@@ -31,6 +31,7 @@ class Model(ResourceModel, Versioned, metaclass=ModelBase):
     class Meta:
         validator = VersionedResourceValidator
         case_ignoring = ()
+        reverse_relation_ignoring = ()
 
 
 class NamedModel(Model):
@@ -106,12 +107,37 @@ class Group(NamedModel):
     municipality = db.CachedForeignKeyField(Municipality,
                                             backref='groups')
 
-
     @property
     def housenumbers(self):
         qs = (self._housenumbers | self.housenumber_set)
         return qs.order_by(peewee.SQL('number ASC NULLS FIRST'),
                            peewee.SQL('ordinal ASC NULLS FIRST'))
+
+
+    def merge(self, erased_group, prior="master"):
+        master_hn = {}
+        for hn in self.housenumbers:
+            uniq_key = "{}_{}".format(hn.number, hn.ordinal)
+            master_hn[uniq_key] = hn
+
+        # hn merge
+        for hn in erased_group.housenumbers:
+            uniq_key = "{}_{}".format(hn.number, hn.ordinal)
+            if uniq_key in master_hn.keys():
+                master_hn[uniq_key].merge(hn, prior)
+            else:
+                hn.parent = self
+                hn.increment_version()
+                hn.save()
+
+        # ids management
+        for id in self.identifiers:
+            if not getattr(self, id):
+                setattr(self, id, getattr(erased_group, id))
+
+        erased_group.mark_deleted()
+        self.increment_version()
+        self.save()
 
 
 class HouseNumber(Model):
@@ -138,6 +164,7 @@ class HouseNumber(Model):
             (('parent', 'number', 'ordinal'), True),
         )
         case_ignoring = ('ordinal',)
+        reverse_relation_ignoring = ('housenumbergroupthrough_set',)  # don't check these relations when mark as deleted
 
     def __str__(self):
         return ' '.join([self.number or '', self.ordinal or ''])
@@ -162,6 +189,51 @@ class HouseNumber(Model):
         """Resources plus relation references without metadata."""
         mask = {f: {} for f in self.resource_fields}
         return self.serialize(mask)
+
+
+    def merge(self, erased_hn, prior="master"):
+        # merge position
+        # keep all positions with different kind/source_kind/name
+        # keep prior position if same values
+        master_pos = {}
+        to_up = []
+        to_del_keys = []
+        for pos in self.positions:
+            uniq_key = "{}_{}_{}".format(pos.kind, pos.source_kind, pos.name)
+            if uniq_key not in master_pos.keys():
+                master_pos[uniq_key] = []
+            master_pos[uniq_key].append(pos)
+        for pos in erased_hn.positions:
+            uniq_key = "{}_{}_{}".format(pos.kind, pos.source_kind, pos.name)
+            if uniq_key in master_pos.keys() and prior == "erased":
+                to_up.append(pos)
+                to_del_keys.append(uniq_key)
+            elif uniq_key in master_pos.keys() and prior == "master":
+                pos.mark_deleted()
+            else:
+                to_up.append(pos)
+        for pos in to_up:
+            pos.housenumber = self
+            pos.increment_version()
+            pos.save()
+        for key in to_del_keys:
+            for pos in master_pos[key]:
+                pos.mark_deleted()
+
+        # ids and postcode management
+        for id in self.identifiers:
+            if not getattr(self, id):
+                setattr(self, id, getattr(erased_hn, id))
+        if not self.postcode:
+            self.postcode = erased_hn.postcode
+
+        # merge ancestors
+        self.ancestors.add(erased_hn.ancestors)
+
+        # delete erased_hn
+        erased_hn.mark_deleted()
+        self.increment_version()
+        self.save()
 
 
 class Position(Model):
