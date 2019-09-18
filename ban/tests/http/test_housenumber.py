@@ -273,8 +273,26 @@ def test_create_housenumber_with_street_fantoir(client):
 
 
 @authorize('housenumber_write')
-def create_housenumber_reactivation(client):
+def test_create_housenumber_reactivation(client):
     housenumber = HouseNumberFactory()
+    housenumber.mark_deleted()
+    data = {
+        "number": housenumber.number,
+        "ordinal": housenumber.ordinal,
+        "parent": housenumber.parent.id
+    }
+    resp = client.post('/housenumber', data)
+    assert resp.status_code == 200
+    assert resp.json['id'] == housenumber.id
+    assert resp.json['version'] == 3
+    assert resp.json['status'] == 'active'
+
+
+@authorize('housenumber_write')
+def test_create_housenumber_ordinal_reactivation(client):
+    street = GroupFactory()
+    housenumberOrd = HouseNumberFactory(number=2, ordinal="BIS", parent=street)
+    housenumber = HouseNumberFactory(number=2, ordinal=None, parent=street)
     housenumber.mark_deleted()
     data = {
         "number": housenumber.number,

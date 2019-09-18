@@ -137,6 +137,9 @@ class ResourceValidator:
                     where.append(field == value)
                 elif value and name in self.model._meta.case_ignoring:
                     where.append(peewee.Expression(field, peewee.OP.ILIKE, value))
+                else:
+                    field = getattr(self.model, name)
+                    where.append(field.is_null())
 
             if where != []:
                 qs = self.model.select().where(*where)

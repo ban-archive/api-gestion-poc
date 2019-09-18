@@ -106,7 +106,7 @@ class ModelEndpoint(CollectionEndpoint):
     def create_or_revive_object(self, json=None):
         validator = self.model.validator(**json or {})
 
-        instance = validator.foundDuplicate;
+        instance = validator.foundDuplicate
         if instance and instance.deleted_at:
             json['version'] = instance.version + 1
             instance.deleted_at = None
@@ -294,7 +294,7 @@ class ModelEndpoint(CollectionEndpoint):
         instance, code = self.create_or_revive_object(json)
         endpoint = '{}-get-resource'.format(self.__class__.__name__.lower())
         headers = {'Location': url_for(endpoint, identifier=instance.id)}
-        return instance.as_resource, 201, headers
+        return instance.as_resource, code, headers
 
     @app.jsonify
     @app.endpoint('/<identifier>', methods=['PATCH'])
@@ -655,7 +655,24 @@ class Group(VersionedModelEndpoint):
     @app.jsonify
     @app.endpoint('/merge/<identifier>', methods=['POST'])
     def merge(self, identifier):
-        # @TODO documenter
+        """Merge group with 'identifier'.
+
+        parameters:
+            - $ref: '#/parameters/identifier'
+        responses:
+            200:
+                description: Instance has been merged successfully.
+                schema:
+                    $ref: '#/definitions/{resource}'
+            422:
+                $ref: '#/responses/401'
+            404:
+                $ref: '#/responses/404'
+            409:
+                description: Conflict.
+                schema:
+                    $ref: '#/definitions/{resource}'
+        """
         check_merge_params(request.json)
         master_group = self.get_object(identifier)
         if not master_group:
