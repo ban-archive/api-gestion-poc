@@ -136,6 +136,7 @@ class Group(NamedModel):
         for id in self.identifiers:
             if not getattr(self, id):
                 setattr(self, id, getattr(erased_group, id))
+                setattr(erased_group, id, None)
 
         erased_group.mark_deleted()
         self.increment_version()
@@ -230,6 +231,7 @@ class HouseNumber(Model):
         for id in self.identifiers:
             if not getattr(self, id):
                 setattr(self, id, getattr(erased_hn, id))
+                setattr(erased_hn, id, None)
         if not self.postcode:
             self.postcode = erased_hn.postcode
 

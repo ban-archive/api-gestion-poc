@@ -355,7 +355,7 @@ def test_group_merge_ok(client):
     master_ancestor = GroupFactory()
     erased_ancestor = GroupFactory()
     hn_master = HouseNumberFactory(number=4, parent=street, ancestors=[master_ancestor])
-    hn_erased = HouseNumberFactory(number=4, parent=erased_street, ancestors=[erased_ancestor])
+    hn_erased = HouseNumberFactory(number=4, parent=erased_street, ign="test", ancestors=[erased_ancestor])
     oth_hn_erased = HouseNumberFactory(number=5, parent=erased_street)
     pos_master = PositionFactory(center=(1,1), kind="entrance", housenumber=hn_master)
     pos_erased = PositionFactory(center=(2,2), kind="entrance", housenumber=hn_erased)
