@@ -122,6 +122,8 @@ class Group(NamedModel):
 
         # hn merge
         for hn in erased_group.housenumbers:
+            if hn.deleted_at:
+                continue
             uniq_key = "{}_{}".format(hn.number, hn.ordinal)
             if uniq_key in master_hn.keys():
                 master_hn[uniq_key].merge(hn, prior)
@@ -199,11 +201,15 @@ class HouseNumber(Model):
         to_up = []
         to_del_keys = []
         for pos in self.positions:
+            if pos.deleted_at:
+                continue
             uniq_key = "{}_{}_{}".format(pos.kind, pos.source_kind, pos.name)
             if uniq_key not in master_pos.keys():
                 master_pos[uniq_key] = []
             master_pos[uniq_key].append(pos)
         for pos in erased_hn.positions:
+            if pos.deleted_at:
+                continue
             uniq_key = "{}_{}_{}".format(pos.kind, pos.source_kind, pos.name)
             if uniq_key in master_pos.keys() and prior == "erased":
                 to_up.append(pos)
@@ -232,6 +238,7 @@ class HouseNumber(Model):
 
         # delete erased_hn
         erased_hn.mark_deleted()
+        self.deleted_at = None
         self.increment_version()
         self.save()
 

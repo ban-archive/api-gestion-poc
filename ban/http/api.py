@@ -675,13 +675,9 @@ class Group(VersionedModelEndpoint):
         """
         check_merge_params(request.json)
         master_group = self.get_object(identifier)
-        if not master_group:
-            abort(422, error="Invalid data", errors="master group {} not found".format(identifier))
         erased_group = self.get_object(request.json.get("erased_group_id"))
-        if not erased_group:
-            abort(422, {"error": "Invalid data", "errors": "erased group {} not found".format(identifier)})
         if (master_group.version + 1) != request.json.get("master_group_version"):
-            abort(409, {"error": "wrong version number for master group: {}".format(request.json.get("master_group_version"))})
+            abort(409, error="wrong version number for master group: {}".format(request.json.get("master_group_version")))
 
         master_group.merge(erased_group, request.json.get("prior_position"))
 
