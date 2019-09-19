@@ -20,7 +20,12 @@ class App(Flask):
     def jsonify(self, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            rv = func(*args, **kwargs)
+            try:
+                rv = func(*args, **kwargs)
+            except Exception as e:
+                app.logger.error(str(e))
+                raise e
+
             if not isinstance(rv, tuple):
                 rv = [rv]
             else:

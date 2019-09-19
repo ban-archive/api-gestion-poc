@@ -139,7 +139,7 @@ class ResourceValidator:
                     where.append(peewee.Expression(field, peewee.OP.ILIKE, value))
                 else:
                     field = getattr(self.model, name)
-                    where.append(field.is_null())
+                    where.append(fielld.is_null())
 
             if where != []:
                 qs = self.model.select().where(*where)
