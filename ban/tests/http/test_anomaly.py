@@ -59,7 +59,7 @@ def test_get_anomalies_by_dep(get):
 
 
 @authorize
-def test_get_anomalies_pos_pile_ordered(get):
+def test_get_anomalies_pos_pile_ordered_on_mun(get):
     h1 = HouseNumberFactory()
     h2 = HouseNumberFactory()
     h3 = HouseNumberFactory()
@@ -78,7 +78,7 @@ def test_get_anomalies_pos_pile_ordered(get):
         kind="position_pile",
         versions=[v1,v2]
     )
-    resp = get('/anomaly?kind=position_pile')
+    resp = get('/anomaly?kind=position_pile&insee={}'.format(a1.insee))
     assert resp.status_code == 200
     assert len(resp.json['collection']) == 3
     assert resp.json["collection"][0]["id"] == a2.id

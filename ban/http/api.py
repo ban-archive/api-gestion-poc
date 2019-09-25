@@ -907,7 +907,8 @@ class Anomaly(ModelEndpoint):
         version = request.args.get('version')
         resource = request.args.get('resource')
         kind = request.args.get('kind')
-        if kind == 'position_pile':
+        insee = request.args.get('insee')
+        if kind == 'position_pile'and insee:
             m2m = self.model.versions.through_model
             cte = m2m \
                 .select(m2m.anomaly, peewee.fn.COUNT(m2m.version).alias('count')) \
@@ -919,7 +920,6 @@ class Anomaly(ModelEndpoint):
         dep = request.args.get('dep')
         if dep:
             qs = qs.where(peewee.Expression(versioning.Anomaly.insee, peewee.OP.LIKE, dep + '%'))
-        insee = request.args.get('insee')
         if insee:
             qs = qs.where(versioning.Anomaly.insee == insee)
         return qs
