@@ -150,9 +150,13 @@ def test_get_housenumber_with_bad_ordinal(get):
 @authorize
 def test_get_housenumber_with_number_ordinal(get):
     housenumber = HouseNumberFactory(number="22", ordinal="BIS")
+    group = GroupFactory()
+    hn_del = HouseNumberFactory(number="22", ordinal="BIS", parent=group)
+    hn_del.mark_deleted()
     resp = get('/housenumber?number=22&ordinal=bis')
     assert resp.status_code == 200
     assert len(resp.json['collection']) == 1
+    assert resp.json['collection'][0]['id'] == housenumber.id
 
 @authorize
 def test_get_housenumber_with_group_number_empty_ordinal(get):
@@ -161,6 +165,17 @@ def test_get_housenumber_with_group_number_empty_ordinal(get):
     resp = get('/housenumber?group={}&number=2&ordinal='.format(group.id))
     assert resp.status_code == 200
     assert len(resp.json['collection']) == 1
+
+@authorize
+def test_get_housenumber_deleted_with_number_ordinal(get):
+    housenumber = HouseNumberFactory(number="22", ordinal="BIS")
+    group = GroupFactory()
+    hn_del = HouseNumberFactory(number="22", ordinal="BIS", parent=group)
+    hn_del.mark_deleted()
+    resp = get('/housenumber?number=22&ordinal=bis&deleted=True')
+    assert resp.status_code == 200
+    assert len(resp.json['collection']) == 1
+    assert resp.json['collection'][0]['id'] == hn_del.id
 
 @authorize
 def test_get_housenumber_with_districts(get):

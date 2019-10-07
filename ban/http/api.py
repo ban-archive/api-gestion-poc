@@ -181,7 +181,11 @@ class ModelEndpoint(CollectionEndpoint):
         if qs is None:
             return self.collection([])
         if not isinstance(qs, list):
-            qs = qs.where(qs.model.deleted_at.is_null())
+            del_filter = request.args.getlist('deleted')
+            if del_filter and del_filter[0] in ['True', 'true', 'TRUE']:
+                qs = qs.where(qs.model.deleted_at.is_null(False))
+            else:
+                qs = qs.where(qs.model.deleted_at.is_null())
             order_by = (self.order_by if self.order_by is not None
                         else [self.model.pk])
             if(qs._order_by is None):
