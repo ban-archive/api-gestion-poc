@@ -357,6 +357,7 @@ def test_get_position_collection_filtered_by_bbox_is_paginated(get, url):
     page2 = resp.json
     assert len(page2['collection']) == 4
     assert 'previous' in page2
+    assert 'next' not in page2
     resp = get(page2['previous'])
     assert resp.json == page1
 

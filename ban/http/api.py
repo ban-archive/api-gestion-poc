@@ -42,16 +42,19 @@ class CollectionEndpoint:
             coll = queryset[offset:end]
         elif(isinstance(queryset, peewee.ModelSelect)):
             coll = queryset.offset(offset).limit(limit)
+        coll_list = list(coll)
+        count = len(coll_list)
         data = {
-            'collection': list(coll)
+            'collection': coll_list
         }
         headers = {}
         url = request.base_url
         query_string = request.args.copy()
         query_string['offset'] = end
         uri = '{}?{}'.format(url, urlencode(sorted(query_string.items())))
-        data['next'] = uri
-        link(headers, uri, 'next')
+        if count == limit:
+            data['next'] = uri
+            link(headers, uri, 'next')
         if offset >= limit:
             query_string = request.args.copy()
             query_string['offset'] = offset - limit
